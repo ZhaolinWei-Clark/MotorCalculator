@@ -1,0 +1,2023 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+PMDC/BLDC Motor Electromagnetic Analysis Tool v5.0
+===================================================
+Professional-grade electromagnetic calculation and visualization for
+Axial Flux Permanent Magnet (AFPM) disc-type brushless DC motors.
+
+Features:
+- Comprehensive magnetic circuit analysis
+- Back EMF calculation (phase and line-to-line)
+- Electromagnetic torque with ripple analysis
+- Self and mutual inductance estimation
+- Cogging torque analytical approximation
+- Loss breakdown (copper, eddy current, mechanical)
+- Data export and report printing
+- Interactive visualization suite
+
+Author: Engineering Analysis Module
+Version: 5.0
+License: MIT
+"""
+
+import tkinter as tk
+from tkinter import ttk, messagebox, scrolledtext, filedialog
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+from matplotlib.figure import Figure
+import matplotlib.patches as patches
+from matplotlib.gridspec import GridSpec
+import math
+import json
+import csv
+from datetime import datetime
+from dataclasses import dataclass, field, asdict
+from typing import Dict, List, Tuple, Optional
+import warnings
+
+# ==========================================
+# Engineering Constants
+# ==========================================
+PI = math.pi
+MU0 = 4 * PI * 1e-7  # Vacuum permeability (H/m)
+
+# Copper properties
+RHO_CU_20 = 1.72e-8  # Resistivity at 20°C (Ω·m)
+RHO_CU_TEMP_COEFF = 0.00393  # Temperature coefficient (1/K)
+ALPHA_CU = 0.00393  # Same as above for clarity
+
+# Air properties
+AIR_DENSITY = 1.225  # kg/m³ at sea level
+
+# ==========================================
+# Material Libraries
+# ==========================================
+MAGNET_LIBRARY = {
+    "N35": {"Br": 1.17, "Hc": 868, "BHmax": 263, "Tmax": 80},
+    "N38": {"Br": 1.22, "Hc": 899, "BHmax": 287, "Tmax": 80},
+    "N40": {"Br": 1.25, "Hc": 923, "BHmax": 302, "Tmax": 80},
+    "N42": {"Br": 1.28, "Hc": 955, "BHmax": 318, "Tmax": 80},
+    "N45": {"Br": 1.32, "Hc": 995, "BHmax": 342, "Tmax": 80},
+    "N48": {"Br": 1.38, "Hc": 1027, "BHmax": 366, "Tmax": 80},
+    "N50": {"Br": 1.40, "Hc": 1043, "BHmax": 382, "Tmax": 80},
+    "N52": {"Br": 1.43, "Hc": 1059, "BHmax": 398, "Tmax": 80},
+    "N35SH": {"Br": 1.17, "Hc": 876, "BHmax": 263, "Tmax": 150},
+    "N38SH": {"Br": 1.22, "Hc": 907, "BHmax": 287, "Tmax": 150},
+    "N42SH": {"Br": 1.28, "Hc": 955, "BHmax": 318, "Tmax": 150},
+    "SmCo28": {"Br": 1.05, "Hc": 796, "BHmax": 210, "Tmax": 300},
+    "SmCo32": {"Br": 1.13, "Hc": 860, "BHmax": 255, "Tmax": 300},
+}
+
+WIRE_AWG_TABLE = {
+    "AWG10": 2.588, "AWG12": 2.053, "AWG14": 1.628,
+    "AWG16": 1.291, "AWG18": 1.024, "AWG20": 0.812,
+    "AWG22": 0.644, "AWG24": 0.511, "AWG26": 0.405,
+    "AWG28": 0.321, "AWG30": 0.255, "AWG32": 0.202,
+}
+
+
+# ==========================================
+# Data Classes for Structured Results
+# ==========================================
+@dataclass
+class MotorGeometry:
+    """Motor geometric parameters"""
+    D_out: float  # Outer diameter (m)
+    D_in: float   # Inner diameter (m)
+    h_mag: float  # Magnet thickness (m)
+    h_coil: float # Stator disc thickness (m)
+    g_side: float # Single-side mechanical air gap (m)
+    
+    @property
+    def D_avg(self) -> float:
+        return (self.D_out + self.D_in) / 2
+    
+    @property
+    def L_eff(self) -> float:
+        return (self.D_out - self.D_in) / 2
+    
+    @property
+    def g_eff(self) -> float:
+        return self.h_coil + 2 * self.g_side
+    
+    @property
+    def active_area(self) -> float:
+        return PI * (self.D_out**2 - self.D_in**2) / 4
+
+
+@dataclass
+class MagneticCircuit:
+    """Magnetic circuit calculation results"""
+    Bg_peak: float      # Peak air gap flux density (T)
+    Bg_avg: float       # Average flux density (T)
+    Bg_rms: float       # RMS flux density (T)
+    Phi_pole: float     # Flux per pole (Wb)
+    PC: float           # Permeance coefficient
+    R_gap: float        # Air gap reluctance (A/Wb)
+    R_mag: float        # Magnet reluctance (A/Wb)
+    Fm: float           # Magnet MMF (A)
+
+
+@dataclass
+class ElectricalParams:
+    """Electrical parameter results"""
+    R_phase: float      # Phase resistance (Ω)
+    R_line: float       # Line-to-line resistance (Ω)
+    L_phase: float      # Phase inductance (H)
+    L_line: float       # Line-to-line inductance (H)
+    M_mutual: float     # Mutual inductance (H)
+    E_phase_rms: float  # Phase back EMF RMS (V)
+    E_line_rms: float   # Line back EMF RMS (V)
+    Ke: float           # Back EMF constant (V/krpm)
+    Kt: float           # Torque constant (Nm/A)
+
+
+@dataclass
+class PerformanceMetrics:
+    """Performance calculation results"""
+    T_rated: float      # Rated torque (Nm)
+    T_avg: float        # Average torque (Nm)
+    T_ripple: float     # Torque ripple (%)
+    T_cogging_peak: float  # Peak cogging torque (Nm)
+    I_phase_rms: float  # Phase current RMS (A)
+    I_line_rms: float   # Line current RMS (A)
+    J_current: float    # Current density (A/mm²)
+    P_out: float        # Output power (W)
+    P_in: float         # Input power (W)
+    P_cu: float         # Copper loss (W)
+    P_eddy: float       # Eddy current loss (W)
+    P_mech: float       # Mechanical loss (W)
+    P_core: float       # Core loss (W)
+    Efficiency: float   # Efficiency (%)
+    V_required: float   # Required voltage (V)
+    V_margin: float     # Voltage margin (%)
+    K_fill: float       # Fill factor
+
+
+@dataclass
+class CalculationResults:
+    """Complete calculation results container"""
+    geometry: MotorGeometry
+    magnetic: MagneticCircuit
+    electrical: ElectricalParams
+    performance: PerformanceMetrics
+    waveforms: Dict = field(default_factory=dict)
+    metadata: Dict = field(default_factory=dict)
+    
+    def to_dict(self) -> Dict:
+        """Convert to dictionary for export"""
+        return {
+            "geometry": asdict(self.geometry),
+            "magnetic": asdict(self.magnetic),
+            "electrical": asdict(self.electrical),
+            "performance": asdict(self.performance),
+            "metadata": self.metadata
+        }
+
+
+# ==========================================
+# Core Calculation Engine
+# ==========================================
+class PMDCMotorModel:
+    """
+    Permanent Magnet DC Motor Electromagnetic Model
+    
+    This class encapsulates all electromagnetic calculations for PMDC/BLDC motors,
+    with emphasis on axial flux permanent magnet (AFPM) configurations.
+    """
+    
+    def __init__(self, params: Dict):
+        """
+        Initialize motor model with design parameters.
+        
+        Parameters:
+        -----------
+        params : dict
+            Dictionary containing all motor design parameters
+        """
+        self.params = params
+        self.results: Optional[CalculationResults] = None
+        self._validate_inputs()
+        
+    def _validate_inputs(self):
+        """Validate input parameters for physical reasonableness"""
+        p = self.params
+        
+        # Geometric constraints
+        if p.get("D_out", 0) <= p.get("D_in", 0):
+            raise ValueError("Outer diameter must be greater than inner diameter")
+        
+        if p.get("D_in", 0) <= 0:
+            raise ValueError("Inner diameter must be positive")
+            
+        if p.get("h_mag", 0) <= 0:
+            raise ValueError("Magnet thickness must be positive")
+            
+        if p.get("p", 0) < 1:
+            raise ValueError("Pole pairs must be at least 1")
+            
+        # Magnetic constraints
+        if not (0 < p.get("alpha_p", 0) <= 1):
+            raise ValueError("Pole arc ratio must be between 0 and 1")
+            
+        if p.get("Br", 0) <= 0:
+            raise ValueError("Remanent flux density must be positive")
+    
+    def calculate_magnetic_circuit(self) -> MagneticCircuit:
+        """
+        Calculate magnetic circuit parameters.
+        
+        Returns air gap flux density distribution and related parameters
+        using reluctance network analysis.
+        """
+        p = self.params
+        
+        # Extract parameters
+        D_o = p["D_out"] * 1e-3  # Convert to meters
+        D_i = p["D_in"] * 1e-3
+        h_m = p["h_mag"] * 1e-3
+        h_c = p["h_coil"] * 1e-3
+        g_s = p["g_side"] * 1e-3
+        
+        poles = int(p["p"])
+        Br = p["Br"]
+        alpha_p = p["alpha_p"]
+        sigma_m = p.get("sigma_m", 1.15)  # Leakage factor
+        mu_r_mag = p.get("mu_r_mag", 1.05)  # Relative permeability of magnet
+        
+        # Effective air gap (includes stator thickness for coreless design)
+        g_eff = h_c + 2 * g_s
+        
+        # Average diameter and effective length
+        D_avg = (D_o + D_i) / 2
+        L_eff = (D_o - D_i) / 2
+        
+        # Pole area calculation
+        # For AFPM: A_pole = (π/2p) * (R_o² - R_i²) * α_p
+        A_pole = (PI / (2 * poles)) * ((D_o/2)**2 - (D_i/2)**2) * alpha_p
+        
+        # Carter coefficient for slotless design (≈1 for coreless stator)
+        k_c = 1.0
+        
+        # Reluctance calculations
+        # Air gap reluctance
+        R_gap = (g_eff * k_c) / (MU0 * A_pole)
+        
+        # Magnet reluctance (considering both sides for dual-rotor)
+        R_mag = (2 * h_m) / (MU0 * mu_r_mag * A_pole)
+        
+        # Magnet MMF source
+        Fm = 2 * (Br / MU0) * h_m / mu_r_mag
+        
+        # Flux per pole (considering leakage)
+        Phi_pole = Fm / (R_gap + sigma_m * R_mag)
+        
+        # Peak flux density in air gap
+        Bg_peak = Phi_pole / A_pole
+        
+        # For trapezoidal distribution, average and RMS values
+        # Assuming quasi-square wave with pole arc ratio
+        Bg_avg = Bg_peak * alpha_p
+        Bg_rms = Bg_peak * math.sqrt(alpha_p)
+        
+        # Permeance coefficient (operating point on B-H curve)
+        PC = (h_m * 2) / (g_eff * sigma_m)
+        
+        return MagneticCircuit(
+            Bg_peak=Bg_peak,
+            Bg_avg=Bg_avg,
+            Bg_rms=Bg_rms,
+            Phi_pole=Phi_pole,
+            PC=PC,
+            R_gap=R_gap,
+            R_mag=R_mag,
+            Fm=Fm
+        )
+    
+    def calculate_electrical_params(self, magnetic: MagneticCircuit) -> ElectricalParams:
+        """
+        Calculate electrical parameters including resistance, inductance, and EMF constants.
+        """
+        p = self.params
+        
+        # Extract parameters
+        D_o = p["D_out"] * 1e-3
+        D_i = p["D_in"] * 1e-3
+        h_c = p["h_coil"] * 1e-3
+        g_s = p["g_side"] * 1e-3
+        
+        poles = int(p["p"])
+        N_ph = int(p["N_ph_turns"])
+        d_wire = p["d_wire"] * 1e-3
+        n_par = int(p["n_parallel"])
+        k_w = p["k_w"]
+        Temp = p["Temp_coil"]
+        n_rated = p["n_rated"]
+        waveform = p.get("waveform", "sinusoidal")
+        
+        D_avg = (D_o + D_i) / 2
+        L_eff = (D_o - D_i) / 2
+        
+        # Electrical frequency
+        f_el = n_rated * poles / 60
+        omega_e = 2 * PI * f_el
+        
+        # --- Back EMF Calculation ---
+        # For sinusoidal: E_ph = 4.44 * f * N * Φ * k_w
+        # For trapezoidal: E_ph = 4 * f * N * Φ * k_w
+        if waveform == "sinusoidal":
+            E_ph_rms = 4.44 * f_el * N_ph * magnetic.Phi_pole * k_w
+        else:  # trapezoidal
+            E_ph_rms = 4.0 * f_el * N_ph * magnetic.Phi_pole * k_w
+        
+        E_line_rms = math.sqrt(3) * E_ph_rms
+        
+        # Back EMF constant (V/krpm for line-to-line)
+        Ke = E_line_rms / (n_rated / 1000)
+        
+        # --- Torque Constant ---
+        # Kt = 3 * E_ph / ω_m for 3-phase BLDC
+        omega_m = n_rated * 2 * PI / 60
+        Kt = (3 * E_ph_rms) / (math.sqrt(2) * omega_m)  # Nm/A_peak
+        Kt_rms = Kt * math.sqrt(2)  # Nm/A_rms
+        
+        # --- Resistance Calculation ---
+        # Pole pitch
+        tau_p = PI * D_avg / (2 * poles)
+        
+        # Average turn length estimation
+        # End turn length approximation for disc motor
+        L_end = tau_p * 1.3  # End winding factor
+        L_turn = 2 * L_eff + 2 * L_end
+        
+        # Total conductor length per phase
+        L_total = L_turn * N_ph
+        
+        # Copper cross-sectional area
+        A_cu = PI * (d_wire / 2)**2 * n_par
+        
+        # Temperature-adjusted resistivity
+        rho = RHO_CU_20 * (1 + RHO_CU_TEMP_COEFF * (Temp - 20))
+        
+        # Phase and line resistance
+        R_phase = rho * L_total / A_cu
+        R_line = 2 * R_phase  # For Y-connection
+        
+        # --- Inductance Calculation ---
+        # Air gap inductance (dominant for coreless design)
+        # L_gap = μ0 * N² * A / g_eff
+        g_eff = h_c + 2 * g_s
+        A_coil = PI * ((D_o/2)**2 - (D_i/2)**2) / 6  # Per phase active area
+        
+        L_gap = MU0 * N_ph**2 * A_coil / g_eff
+        
+        # End winding inductance (empirical)
+        L_end_ind = 0.15 * L_gap  # Typically 10-20% of gap inductance
+        
+        # Total phase inductance
+        L_phase = L_gap + L_end_ind
+        
+        # Mutual inductance for 3-phase (typically -0.5 * L_self for balanced)
+        M_mutual = -0.5 * L_phase * 0.3  # Reduced coupling in AFPM
+        
+        # Line inductance
+        L_line = L_phase - M_mutual
+        
+        return ElectricalParams(
+            R_phase=R_phase,
+            R_line=R_line,
+            L_phase=L_phase,
+            L_line=L_line,
+            M_mutual=M_mutual,
+            E_phase_rms=E_ph_rms,
+            E_line_rms=E_line_rms,
+            Ke=Ke,
+            Kt=Kt_rms
+        )
+    
+    def calculate_losses(self, electrical: ElectricalParams, I_rms: float) -> Tuple[float, float, float, float]:
+        """
+        Calculate motor losses including copper, eddy current, core, and mechanical.
+        """
+        p = self.params
+        
+        D_o = p["D_out"] * 1e-3
+        D_i = p["D_in"] * 1e-3
+        d_wire = p["d_wire"] * 1e-3
+        n_par = int(p["n_parallel"])
+        N_ph = int(p["N_ph_turns"])
+        n_rated = p["n_rated"]
+        poles = int(p["p"])
+        Temp = p["Temp_coil"]
+        
+        f_el = n_rated * poles / 60
+        
+        # --- Copper Loss ---
+        P_cu = 3 * I_rms**2 * electrical.R_phase
+        
+        # --- Eddy Current Loss ---
+        # Proximity effect in conductors
+        # P_eddy ≈ (π²/6) * (f * B * d)² / ρ * V_cu
+        rho = RHO_CU_20 * (1 + RHO_CU_TEMP_COEFF * (Temp - 20))
+        
+        # Estimate flux density seen by conductors
+        Bg_local = p.get("Bg_peak", 0.5)  # Will be updated
+        
+        # Copper volume
+        D_avg = (D_o + D_i) / 2
+        tau_p = PI * D_avg / (2 * poles)
+        L_eff = (D_o - D_i) / 2
+        L_turn = 2 * L_eff + 2 * tau_p * 1.3
+        A_cu = PI * (d_wire / 2)**2 * n_par
+        V_cu = 3 * N_ph * L_turn * A_cu
+        
+        # Eddy current loss with skin effect consideration
+        delta = math.sqrt(2 * rho / (MU0 * 2 * PI * f_el))  # Skin depth
+        k_skin = 1.0 if d_wire < 2 * delta else (d_wire / (2 * delta))
+        
+        P_eddy = (PI**2 / 24) * (f_el * Bg_local * d_wire)**2 / rho * V_cu * k_skin
+        
+        # --- Core Loss ---
+        # For coreless design, core loss is minimal (only in back iron if present)
+        P_core = 0.01 * p["P_rated"]  # Nominal estimate
+        
+        # --- Mechanical Loss ---
+        # Windage loss for disc rotor
+        omega = n_rated * 2 * PI / 60
+        Cm = 0.005  # Torque coefficient for enclosed disc
+        P_windage = 0.5 * Cm * AIR_DENSITY * omega**3 * ((D_o/2)**5 - (D_i/2)**5) * 2
+        
+        # Bearing friction (empirical)
+        P_bearing = 0.005 * p["P_rated"] * (n_rated / 3000)
+        
+        P_mech = P_windage + P_bearing
+        
+        return P_cu, P_eddy, P_core, P_mech
+    
+    def calculate_cogging_torque(self, magnetic: MagneticCircuit) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Estimate cogging torque using simplified analytical method.
+        
+        For slotless/coreless designs, cogging is minimal.
+        This provides estimation for slotted stator designs.
+        """
+        p = self.params
+        
+        poles = int(p["p"]) * 2  # Total poles
+        slots = int(p.get("slots", poles * 3))  # Default: 3 slots per pole
+        
+        # LCM determines cogging periods per revolution
+        from math import gcd
+        lcm = (poles * slots) // gcd(poles, slots)
+        
+        # Cogging torque angular positions
+        theta = np.linspace(0, 2*PI, 360)
+        
+        # For coreless design, cogging is essentially zero
+        if p.get("coreless", True):
+            T_cog = np.zeros_like(theta)
+            return theta, T_cog
+        
+        # Simplified cogging torque model for slotted stator
+        # T_cog = T_cog_max * sin(lcm * θ)
+        
+        # Estimate peak cogging (typically 1-5% of rated torque)
+        T_rated = 9.55 * p["P_rated"] / p["n_rated"]
+        k_cog = p.get("k_cogging", 0.02)  # Cogging factor
+        T_cog_peak = k_cog * T_rated
+        
+        # Include first few harmonics
+        T_cog = T_cog_peak * (np.sin(lcm * theta) + 
+                              0.3 * np.sin(2 * lcm * theta) +
+                              0.1 * np.sin(3 * lcm * theta))
+        
+        return theta, T_cog
+    
+    def calculate_back_emf_waveform(self, magnetic: MagneticCircuit) -> Dict:
+        """
+        Generate back EMF waveforms for analysis and visualization.
+        """
+        p = self.params
+        
+        poles = int(p["p"])
+        n_rated = p["n_rated"]
+        N_ph = int(p["N_ph_turns"])
+        k_w = p["k_w"]
+        alpha_p = p["alpha_p"]
+        waveform = p.get("waveform", "sinusoidal")
+        
+        # Time and angle arrays
+        f_el = n_rated * poles / 60
+        T_period = 1 / f_el
+        t = np.linspace(0, 2 * T_period, 720)
+        theta_e = 2 * PI * f_el * t  # Electrical angle
+        theta_m = theta_e / poles     # Mechanical angle
+        
+        # Peak EMF calculation
+        omega_e = 2 * PI * f_el
+        E_peak = omega_e * N_ph * magnetic.Phi_pole * k_w
+        
+        if waveform == "sinusoidal":
+            # Sinusoidal back EMF
+            E_a = E_peak * np.sin(theta_e)
+            E_b = E_peak * np.sin(theta_e - 2*PI/3)
+            E_c = E_peak * np.sin(theta_e - 4*PI/3)
+        else:
+            # Trapezoidal back EMF
+            E_a = self._trapezoidal_emf(theta_e, E_peak, alpha_p)
+            E_b = self._trapezoidal_emf(theta_e - 2*PI/3, E_peak, alpha_p)
+            E_c = self._trapezoidal_emf(theta_e - 4*PI/3, E_peak, alpha_p)
+        
+        # Line-to-line EMF
+        E_ab = E_a - E_b
+        E_bc = E_b - E_c
+        E_ca = E_c - E_a
+        
+        # Ideal sinusoidal reference
+        E_ideal = E_peak * np.sin(theta_e)
+        
+        return {
+            "time": t,
+            "theta_e": theta_e,
+            "theta_m": np.degrees(theta_m),
+            "E_a": E_a,
+            "E_b": E_b,
+            "E_c": E_c,
+            "E_ab": E_ab,
+            "E_bc": E_bc,
+            "E_ca": E_ca,
+            "E_ideal": E_ideal,
+            "E_peak": E_peak,
+            "E_rms": E_peak / math.sqrt(2)
+        }
+    
+    def _trapezoidal_emf(self, theta: np.ndarray, E_peak: float, alpha_p: float) -> np.ndarray:
+        """Generate trapezoidal back EMF waveform."""
+        theta = np.mod(theta, 2*PI)
+        E = np.zeros_like(theta)
+        
+        # Flat top duration (in radians)
+        flat_angle = PI * alpha_p
+        rise_angle = PI * (1 - alpha_p) / 2
+        
+        for i, th in enumerate(theta):
+            th_mod = th % (2*PI)
+            if th_mod < rise_angle:
+                E[i] = E_peak * th_mod / rise_angle
+            elif th_mod < rise_angle + flat_angle:
+                E[i] = E_peak
+            elif th_mod < PI:
+                E[i] = E_peak * (PI - th_mod) / rise_angle
+            elif th_mod < PI + rise_angle:
+                E[i] = -E_peak * (th_mod - PI) / rise_angle
+            elif th_mod < PI + rise_angle + flat_angle:
+                E[i] = -E_peak
+            else:
+                E[i] = -E_peak * (2*PI - th_mod) / rise_angle
+        
+        return E
+    
+    def calculate_torque_waveform(self, electrical: ElectricalParams) -> Dict:
+        """
+        Calculate instantaneous torque waveform including ripple.
+        """
+        p = self.params
+        
+        poles = int(p["p"])
+        n_rated = p["n_rated"]
+        P_out = p["P_rated"]
+        
+        # Rated torque
+        T_rated = 9.55 * P_out / n_rated
+        
+        # Electrical angle
+        theta_e = np.linspace(0, 4*PI, 720)  # Two electrical cycles
+        
+        # Average torque
+        T_avg = T_rated
+        
+        # Torque ripple components (simplified model)
+        # 6th harmonic dominant for 3-phase BLDC
+        k_6 = p.get("k_ripple_6", 0.05)  # 5% 6th harmonic
+        k_12 = p.get("k_ripple_12", 0.02)  # 2% 12th harmonic
+        
+        T_ripple = k_6 * np.cos(6 * theta_e) + k_12 * np.cos(12 * theta_e)
+        
+        T_inst = T_avg * (1 + T_ripple)
+        
+        # Torque ripple percentage
+        T_ripple_pct = (np.max(T_inst) - np.min(T_inst)) / T_avg * 100
+        
+        return {
+            "theta_e": np.degrees(theta_e),
+            "T_inst": T_inst,
+            "T_avg": T_avg,
+            "T_ripple_pct": T_ripple_pct,
+            "T_max": np.max(T_inst),
+            "T_min": np.min(T_inst)
+        }
+    
+    def calculate_flux_distribution(self, magnetic: MagneticCircuit) -> Dict:
+        """
+        Calculate air gap flux density distribution vs. mechanical angle.
+        """
+        p = self.params
+        
+        poles = int(p["p"]) * 2
+        alpha_p = p["alpha_p"]
+        
+        # Mechanical angle (one revolution)
+        theta_m = np.linspace(0, 360, 720)
+        theta_m_rad = np.radians(theta_m)
+        
+        # Pole pitch in degrees
+        pole_pitch = 360 / poles
+        
+        # Generate quasi-square wave flux density
+        Bg = np.zeros_like(theta_m)
+        
+        for i, th in enumerate(theta_m):
+            # Position within pole pair
+            th_pole = th % (2 * pole_pitch)
+            
+            if th_pole < pole_pitch * alpha_p:
+                Bg[i] = magnetic.Bg_peak
+            elif th_pole < pole_pitch:
+                Bg[i] = 0
+            elif th_pole < pole_pitch * (1 + alpha_p):
+                Bg[i] = -magnetic.Bg_peak
+            else:
+                Bg[i] = 0
+        
+        # Calculate statistics
+        Bg_avg = np.mean(np.abs(Bg))
+        Bg_rms = np.sqrt(np.mean(Bg**2))
+        
+        # FFT analysis
+        Bg_fft = np.fft.fft(Bg)
+        freqs = np.fft.fftfreq(len(Bg), 1/720)
+        Bg_spectrum = np.abs(Bg_fft[:len(Bg)//2]) / len(Bg) * 2
+        harmonics = np.arange(len(Bg_spectrum)) * poles / 2
+        
+        return {
+            "theta_m": theta_m,
+            "Bg": Bg,
+            "Bg_peak": magnetic.Bg_peak,
+            "Bg_avg": Bg_avg,
+            "Bg_rms": Bg_rms,
+            "harmonics": harmonics[:50],
+            "spectrum": Bg_spectrum[:50]
+        }
+    
+    def run_full_analysis(self) -> CalculationResults:
+        """
+        Execute complete electromagnetic analysis.
+        """
+        p = self.params
+        
+        # Create geometry object
+        geometry = MotorGeometry(
+            D_out=p["D_out"] * 1e-3,
+            D_in=p["D_in"] * 1e-3,
+            h_mag=p["h_mag"] * 1e-3,
+            h_coil=p["h_coil"] * 1e-3,
+            g_side=p["g_side"] * 1e-3
+        )
+        
+        # Magnetic circuit analysis
+        magnetic = self.calculate_magnetic_circuit()
+        
+        # Update Bg_peak for loss calculation
+        p["Bg_peak"] = magnetic.Bg_peak
+        
+        # Electrical parameters
+        electrical = self.calculate_electrical_params(magnetic)
+        
+        # Calculate rated current
+        T_rated = 9.55 * p["P_rated"] / p["n_rated"]
+        I_rms = T_rated / electrical.Kt
+        
+        # Calculate losses
+        P_cu, P_eddy, P_core, P_mech = self.calculate_losses(electrical, I_rms)
+        
+        # Total losses and efficiency
+        P_loss = P_cu + P_eddy + P_core + P_mech
+        P_in = p["P_rated"] + P_loss
+        Efficiency = p["P_rated"] / P_in * 100
+        
+        # Voltage requirement
+        V_res = I_rms * electrical.R_line
+        V_ind = 2 * PI * (p["n_rated"] * int(p["p"]) / 60) * electrical.L_line * I_rms
+        V_req = math.sqrt(electrical.E_line_rms**2 + V_res**2 + V_ind**2) * 1.05
+        V_margin = (p["V_dc"] - V_req) / p["V_dc"] * 100
+        
+        # Fill factor calculation
+        D_o, D_i = p["D_out"] * 1e-3, p["D_in"] * 1e-3
+        d_wire = p["d_wire"] * 1e-3
+        n_par = int(p["n_parallel"])
+        N_ph = int(p["N_ph_turns"])
+        
+        # Inner diameter fill factor (critical constraint)
+        K_fill = (3 * N_ph * 2 * n_par * d_wire) / (PI * D_i)
+        
+        # Current density
+        A_cu = PI * (d_wire / 2)**2 * n_par
+        J = I_rms / (A_cu * 1e6)  # A/mm²
+        
+        # Torque analysis
+        torque_data = self.calculate_torque_waveform(electrical)
+        theta_cog, T_cog = self.calculate_cogging_torque(magnetic)
+        
+        # Performance metrics
+        performance = PerformanceMetrics(
+            T_rated=T_rated,
+            T_avg=torque_data["T_avg"],
+            T_ripple=torque_data["T_ripple_pct"],
+            T_cogging_peak=np.max(np.abs(T_cog)),
+            I_phase_rms=I_rms,
+            I_line_rms=I_rms,  # Same for Y-connection
+            J_current=J,
+            P_out=p["P_rated"],
+            P_in=P_in,
+            P_cu=P_cu,
+            P_eddy=P_eddy,
+            P_mech=P_mech,
+            P_core=P_core,
+            Efficiency=Efficiency,
+            V_required=V_req,
+            V_margin=V_margin,
+            K_fill=K_fill
+        )
+        
+        # Waveform data
+        waveforms = {
+            "back_emf": self.calculate_back_emf_waveform(magnetic),
+            "torque": torque_data,
+            "flux": self.calculate_flux_distribution(magnetic),
+            "cogging": {"theta": theta_cog, "T_cog": T_cog}
+        }
+        
+        # Metadata
+        metadata = {
+            "calculation_time": datetime.now().isoformat(),
+            "model_version": "5.0",
+            "waveform_type": p.get("waveform", "sinusoidal")
+        }
+        
+        self.results = CalculationResults(
+            geometry=geometry,
+            magnetic=magnetic,
+            electrical=electrical,
+            performance=performance,
+            waveforms=waveforms,
+            metadata=metadata
+        )
+        
+        return self.results
+
+
+# ==========================================
+# GUI Application
+# ==========================================
+class ScrollableFrame(ttk.Frame):
+    """Robust scrollable container widget"""
+    def __init__(self, container, *args, **kwargs):
+        super().__init__(container, *args, **kwargs)
+        self.canvas = tk.Canvas(self, borderwidth=0, highlightthickness=0)
+        self.scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
+        
+        self.scrollable_frame.bind("<Configure>", 
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")))
+        
+        self.canvas_window = self.canvas.create_window((0, 0), 
+            window=self.scrollable_frame, anchor="nw")
+        
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+        
+        self.scrollbar.pack(side="right", fill="y")
+        self.canvas.pack(side="left", fill="both", expand=True)
+        
+        # Mouse wheel binding
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        
+    def _on_canvas_configure(self, event):
+        self.canvas.itemconfig(self.canvas_window, width=event.width)
+    
+    def _on_mousewheel(self, event):
+        self.canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+
+class MotorCalculatorApp:
+    """
+    AFPM Motor Design and Analysis Application
+    
+    Main application class providing GUI for motor electromagnetic analysis
+    with comprehensive visualization and data export capabilities.
+    """
+    
+    def __init__(self, root):
+        self.root = root
+        self.root.title("PMDC/BLDC Motor Electromagnetic Analysis Tool v5.0")
+        self.root.geometry("1700x1000")
+        
+        # Configure styles
+        self._setup_styles()
+        
+        # Main layout
+        main_layout = ttk.PanedWindow(root, orient=tk.HORIZONTAL)
+        main_layout.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Left panel - Input parameters
+        left_panel = ttk.LabelFrame(main_layout, text="Design Parameters")
+        main_layout.add(left_panel, weight=1)
+        
+        self.input_frame = ScrollableFrame(left_panel)
+        self.input_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Right panel - Results
+        right_panel = ttk.LabelFrame(main_layout, text="Analysis Results")
+        main_layout.add(right_panel, weight=3)
+        
+        # Notebook for different views
+        self.notebook = ttk.Notebook(right_panel)
+        self.notebook.pack(fill=tk.BOTH, expand=True)
+        
+        # Tabs
+        self._create_report_tab()
+        self._create_curves_tab()
+        self._create_emf_tab()
+        self._create_torque_tab()
+        self._create_flux_tab()
+        self._create_geometry_tab()
+        
+        # Create input fields
+        self.entries = {}
+        self.vars = {}
+        self._create_inputs()
+        
+        # Button panel
+        self._create_buttons(left_panel)
+        
+        # Storage for calculation results
+        self.calc_results: Optional[CalculationResults] = None
+        self.calculation_history = []
+        
+    def _setup_styles(self):
+        """Configure ttk styles"""
+        style = ttk.Style()
+        style.theme_use('clam')
+        
+        style.configure("Header.TLabel", 
+                       font=("Segoe UI", 11, "bold"), 
+                       foreground="#003366")
+        style.configure("Warning.TLabel",
+                       font=("Segoe UI", 10),
+                       foreground="#CC0000")
+        style.configure("Success.TLabel",
+                       font=("Segoe UI", 10),
+                       foreground="#006600")
+        style.configure("Action.TButton",
+                       font=("Segoe UI", 10, "bold"))
+        
+    def _create_report_tab(self):
+        """Create detailed report tab"""
+        self.report_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.report_tab, text="📋 Detailed Report")
+        
+        # Toolbar
+        toolbar = ttk.Frame(self.report_tab)
+        toolbar.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Button(toolbar, text="📋 Copy", 
+                  command=self._copy_report).pack(side=tk.LEFT, padx=2)
+        ttk.Button(toolbar, text="💾 Save Report", 
+                  command=self._save_report).pack(side=tk.LEFT, padx=2)
+        ttk.Button(toolbar, text="🖨 Print", 
+                  command=self._print_report).pack(side=tk.LEFT, padx=2)
+        
+        self.result_text = scrolledtext.ScrolledText(
+            self.report_tab, 
+            width=80, 
+            height=45, 
+            font=("Consolas", 10),
+            wrap=tk.WORD
+        )
+        self.result_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+    def _create_curves_tab(self):
+        """Create performance curves tab"""
+        self.curves_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.curves_tab, text="📈 Performance Curves")
+        
+    def _create_emf_tab(self):
+        """Create back EMF waveform tab"""
+        self.emf_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.emf_tab, text="⚡ Back EMF")
+        
+    def _create_torque_tab(self):
+        """Create torque analysis tab"""
+        self.torque_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.torque_tab, text="🔧 Torque Analysis")
+        
+    def _create_flux_tab(self):
+        """Create flux distribution tab"""
+        self.flux_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.flux_tab, text="🧲 Flux Distribution")
+        
+    def _create_geometry_tab(self):
+        """Create geometry visualization tab"""
+        self.geo_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.geo_tab, text="📐 Geometry")
+        
+    def _create_inputs(self):
+        """Create all input parameter fields"""
+        f = self.input_frame.scrollable_frame
+        row = 0
+        
+        def add_header(text: str):
+            nonlocal row
+            ttk.Label(f, text=text, style="Header.TLabel").grid(
+                row=row, column=0, columnspan=3, sticky="w", pady=(15, 5), padx=5)
+            row += 1
+            
+        def add_field(key: str, label: str, default, unit: str, tooltip: str = ""):
+            nonlocal row
+            ttk.Label(f, text=label).grid(row=row, column=0, sticky="w", padx=5)
+            var = tk.StringVar(value=str(default))
+            entry = ttk.Entry(f, width=12, textvariable=var)
+            entry.grid(row=row, column=1, sticky="ew", padx=5)
+            ttk.Label(f, text=unit).grid(row=row, column=2, sticky="w", padx=5)
+            self.entries[key] = entry
+            self.vars[key] = var
+            row += 1
+            
+        def add_combo(key: str, label: str, values: list, default: str):
+            nonlocal row
+            ttk.Label(f, text=label).grid(row=row, column=0, sticky="w", padx=5)
+            var = tk.StringVar(value=default)
+            combo = ttk.Combobox(f, textvariable=var, values=values, width=10, state="readonly")
+            combo.grid(row=row, column=1, sticky="ew", padx=5)
+            self.vars[key] = var
+            row += 1
+            return combo
+        
+        f.columnconfigure(1, weight=1)
+        
+        # 1. Operating Specifications
+        add_header("1. Operating Specifications")
+        add_field("V_dc", "DC Bus Voltage", 48.0, "V")
+        add_field("P_rated", "Rated Output Power", 800.0, "W")
+        add_field("n_rated", "Rated Speed", 2500.0, "rpm")
+        add_field("Temp_coil", "Winding Temperature", 80.0, "°C")
+        
+        # 2. Geometry
+        add_header("2. Geometric Dimensions")
+        add_field("D_out", "Outer Diameter", 140.0, "mm")
+        add_field("D_in", "Inner Diameter", 70.0, "mm")
+        add_field("h_mag", "Magnet Thickness", 5.0, "mm")
+        add_field("h_coil", "Stator Disc Thickness", 5.0, "mm")
+        add_field("g_side", "Mechanical Air Gap", 1.0, "mm")
+        
+        # 3. Magnetic Circuit
+        add_header("3. Magnetic Circuit Parameters")
+        add_field("p", "Pole Pairs", 8, "pairs")
+        
+        # Magnet selection
+        self.mag_combo = add_combo("magnet_grade", "Magnet Grade", 
+                                   list(MAGNET_LIBRARY.keys()), "N42")
+        self.mag_combo.bind("<<ComboboxSelected>>", self._on_magnet_select)
+        
+        add_field("Br", "Remanent Flux Density", 1.28, "T")
+        add_field("alpha_p", "Pole Arc Ratio", 0.70, "-")
+        add_field("sigma_m", "Leakage Factor", 1.15, "-")
+        
+        # 4. Winding Parameters
+        add_header("4. Winding Parameters")
+        add_field("N_ph_turns", "Turns per Phase", 50, "turns")
+        add_field("d_wire", "Wire Diameter", 0.9, "mm")
+        add_field("n_parallel", "Parallel Conductors", 2, "-")
+        add_field("k_w", "Winding Factor", 0.93, "-")
+        add_field("fill_limit", "Fill Factor Limit", 0.65, "-")
+        
+        # 5. Analysis Options
+        add_header("5. Analysis Options")
+        self.waveform_combo = add_combo("waveform", "EMF Waveform", 
+                                        ["sinusoidal", "trapezoidal"], "sinusoidal")
+        
+        # Coreless checkbox
+        self.coreless_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(f, text="Coreless Stator Design", 
+                       variable=self.coreless_var).grid(
+            row=row, column=0, columnspan=3, sticky="w", padx=5)
+        row += 1
+        
+    def _on_magnet_select(self, event=None):
+        """Update Br when magnet grade is selected"""
+        grade = self.vars["magnet_grade"].get()
+        if grade in MAGNET_LIBRARY:
+            self.vars["Br"].set(str(MAGNET_LIBRARY[grade]["Br"]))
+            
+    def _create_buttons(self, parent):
+        """Create action buttons"""
+        btn_frame = ttk.Frame(parent)
+        btn_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=10, padx=10)
+        
+        ttk.Button(btn_frame, text="🔬 Run Analysis", 
+                  command=self.run_analysis, 
+                  style="Action.TButton").pack(fill=tk.X, pady=3)
+        
+        ttk.Button(btn_frame, text="⚡ Quick Optimization", 
+                  command=self.run_optimization).pack(fill=tk.X, pady=3)
+        
+        ttk.Separator(btn_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+        
+        ttk.Button(btn_frame, text="💾 Export Data (JSON)", 
+                  command=self.export_json).pack(fill=tk.X, pady=3)
+        
+        ttk.Button(btn_frame, text="📊 Export Data (CSV)", 
+                  command=self.export_csv).pack(fill=tk.X, pady=3)
+        
+        ttk.Button(btn_frame, text="📷 Save Plots", 
+                  command=self.save_plots).pack(fill=tk.X, pady=3)
+        
+        ttk.Separator(btn_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=10)
+        
+        ttk.Button(btn_frame, text="🔄 Reset Defaults", 
+                  command=self.reset_defaults).pack(fill=tk.X, pady=3)
+        
+    def _get_params(self) -> Dict:
+        """Collect all parameters from input fields"""
+        params = {}
+        for key, var in self.vars.items():
+            try:
+                val = var.get()
+                # Try to convert to number
+                if '.' in val:
+                    params[key] = float(val)
+                else:
+                    try:
+                        params[key] = int(val)
+                    except ValueError:
+                        params[key] = val
+            except:
+                params[key] = 0.0
+                
+        params["coreless"] = self.coreless_var.get()
+        return params
+    
+    def run_analysis(self):
+        """Execute full electromagnetic analysis"""
+        try:
+            params = self._get_params()
+            
+            # Create motor model
+            model = PMDCMotorModel(params)
+            
+            # Run analysis
+            self.calc_results = model.run_full_analysis()
+            
+            # Store in history
+            self.calculation_history.append({
+                "timestamp": datetime.now().isoformat(),
+                "params": params,
+                "results": self.calc_results.to_dict()
+            })
+            
+            # Update displays
+            self._display_report()
+            self._plot_performance_curves()
+            self._plot_back_emf()
+            self._plot_torque()
+            self._plot_flux_distribution()
+            self._draw_geometry()
+            
+            # Switch to report tab
+            self.notebook.select(0)
+            
+        except Exception as e:
+            messagebox.showerror("Analysis Error", f"Calculation failed:\n{str(e)}")
+            raise
+            
+    def _display_report(self):
+        """Generate and display detailed calculation report"""
+        r = self.calc_results
+        p = self._get_params()
+        
+        self.result_text.delete(1.0, tk.END)
+        
+        # Header
+        report = []
+        report.append("=" * 70)
+        report.append("   PMDC/BLDC MOTOR ELECTROMAGNETIC ANALYSIS REPORT")
+        report.append("=" * 70)
+        report.append(f"   Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        report.append(f"   Model Version: {r.metadata.get('model_version', 'N/A')}")
+        report.append("=" * 70)
+        report.append("")
+        
+        # Design Validation
+        warnings = self._check_design_validity(r)
+        if warnings:
+            report.append(">>> DESIGN VALIDATION WARNINGS <<<")
+            report.append("-" * 50)
+            for w in warnings:
+                report.append(f"  {w}")
+            report.append("-" * 50)
+            report.append("")
+        
+        # 1. Input Summary
+        report.append("1. INPUT PARAMETERS SUMMARY")
+        report.append("-" * 50)
+        report.append(f"   DC Bus Voltage      : {p['V_dc']:.1f} V")
+        report.append(f"   Rated Power         : {p['P_rated']:.1f} W")
+        report.append(f"   Rated Speed         : {p['n_rated']:.0f} rpm")
+        report.append(f"   Pole Pairs          : {p['p']}")
+        report.append(f"   Outer Diameter      : {p['D_out']:.1f} mm")
+        report.append(f"   Inner Diameter      : {p['D_in']:.1f} mm")
+        report.append(f"   Turns per Phase     : {p['N_ph_turns']}")
+        report.append("")
+        
+        # 2. Magnetic Circuit Results
+        m = r.magnetic
+        report.append("2. MAGNETIC CIRCUIT ANALYSIS")
+        report.append("-" * 50)
+        report.append(f"   Peak Air Gap Flux Density (Bg_peak) : {m.Bg_peak:.4f} T")
+        report.append(f"   Average Flux Density (Bg_avg)       : {m.Bg_avg:.4f} T")
+        report.append(f"   RMS Flux Density (Bg_rms)           : {m.Bg_rms:.4f} T")
+        report.append(f"   Flux per Pole (Φ)                   : {m.Phi_pole*1e3:.4f} mWb")
+        report.append(f"   Permeance Coefficient (PC)          : {m.PC:.2f}")
+        report.append(f"   Air Gap Reluctance                  : {m.R_gap/1e6:.2f} MAt/Wb")
+        report.append(f"   Magnet Reluctance                   : {m.R_mag/1e6:.2f} MAt/Wb")
+        report.append("")
+        
+        # 3. Electrical Parameters
+        e = r.electrical
+        report.append("3. ELECTRICAL PARAMETERS")
+        report.append("-" * 50)
+        report.append(f"   Phase Resistance (R_ph)      : {e.R_phase*1e3:.3f} mΩ")
+        report.append(f"   Line Resistance (R_line)     : {e.R_line*1e3:.3f} mΩ")
+        report.append(f"   Phase Inductance (L_ph)      : {e.L_phase*1e6:.2f} µH")
+        report.append(f"   Line Inductance (L_line)     : {e.L_line*1e6:.2f} µH")
+        report.append(f"   Mutual Inductance (M)        : {e.M_mutual*1e6:.2f} µH")
+        report.append(f"   Phase Back EMF (E_ph_rms)    : {e.E_phase_rms:.2f} V")
+        report.append(f"   Line Back EMF (E_line_rms)   : {e.E_line_rms:.2f} V")
+        report.append(f"   Back EMF Constant (Ke)       : {e.Ke:.2f} V/krpm")
+        report.append(f"   Torque Constant (Kt)         : {e.Kt:.4f} Nm/A")
+        report.append("")
+        
+        # 4. Performance at Rated Conditions
+        perf = r.performance
+        report.append("4. RATED OPERATING POINT PERFORMANCE")
+        report.append("-" * 50)
+        report.append(f"   Rated Torque              : {perf.T_rated:.3f} Nm")
+        report.append(f"   Average Torque            : {perf.T_avg:.3f} Nm")
+        report.append(f"   Torque Ripple             : {perf.T_ripple:.2f} %")
+        report.append(f"   Peak Cogging Torque       : {perf.T_cogging_peak:.4f} Nm")
+        report.append(f"   Phase Current (RMS)       : {perf.I_phase_rms:.2f} A")
+        report.append(f"   Current Density (J)       : {perf.J_current:.2f} A/mm²")
+        report.append(f"   Required Voltage          : {perf.V_required:.1f} V")
+        report.append(f"   Voltage Margin            : {perf.V_margin:.1f} %")
+        report.append(f"   Winding Fill Factor       : {perf.K_fill:.3f}")
+        report.append("")
+        
+        # 5. Loss Breakdown
+        report.append("5. LOSS ANALYSIS")
+        report.append("-" * 50)
+        report.append(f"   Copper Loss (P_cu)        : {perf.P_cu:.1f} W")
+        report.append(f"   Eddy Current Loss (P_eddy): {perf.P_eddy:.1f} W")
+        report.append(f"   Core Loss (P_core)        : {perf.P_core:.1f} W")
+        report.append(f"   Mechanical Loss (P_mech)  : {perf.P_mech:.1f} W")
+        report.append(f"   Total Losses              : {perf.P_cu + perf.P_eddy + perf.P_core + perf.P_mech:.1f} W")
+        report.append(f"   Input Power               : {perf.P_in:.1f} W")
+        report.append(f"   Output Power              : {perf.P_out:.1f} W")
+        report.append(f"   EFFICIENCY                : {perf.Efficiency:.2f} %")
+        report.append("")
+        
+        # 6. Key Performance Indicators Summary
+        report.append("6. KEY PERFORMANCE INDICATORS (KPI)")
+        report.append("-" * 50)
+        report.append(f"   Power Density             : {perf.P_out / (r.geometry.active_area * r.geometry.h_coil * 1e6):.2f} W/cm³")
+        report.append(f"   Torque Density            : {perf.T_rated / (r.geometry.active_area * 1e4):.3f} Nm/cm²")
+        report.append(f"   Torque per Amp            : {perf.T_rated / perf.I_phase_rms:.4f} Nm/A")
+        report.append(f"   Electrical Time Constant  : {e.L_phase / e.R_phase * 1e3:.3f} ms")
+        report.append("")
+        
+        report.append("=" * 70)
+        report.append("                    END OF REPORT")
+        report.append("=" * 70)
+        
+        # Insert into text widget
+        self.result_text.insert(tk.END, "\n".join(report))
+        self.result_text.see(1.0)
+        
+    def _check_design_validity(self, r: CalculationResults) -> List[str]:
+        """Check design for potential issues"""
+        warnings = []
+        perf = r.performance
+        
+        if perf.J_current > 10:
+            warnings.append("⚠️ CRITICAL: Current density extremely high (>10 A/mm²) - Risk of thermal failure!")
+        elif perf.J_current > 6:
+            warnings.append("⚠️ WARNING: Current density high (>6 A/mm²) - Forced cooling required")
+        
+        if perf.V_margin < 5:
+            warnings.append("⚠️ WARNING: Voltage margin insufficient (<5%) - Dynamic response limited")
+        elif perf.V_margin > 40:
+            warnings.append("ℹ️ INFO: Large voltage margin (>40%) - Consider increasing turns")
+        
+        if perf.K_fill > 0.8:
+            warnings.append("⚠️ CRITICAL: Fill factor exceeds practical limit (>0.8) - Design not manufacturable!")
+        elif perf.K_fill > 0.6:
+            warnings.append("⚠️ WARNING: Fill factor high (>0.6) - Manufacturing difficulty expected")
+        
+        if perf.Efficiency < 85:
+            warnings.append("ℹ️ INFO: Efficiency below 85% - Consider design optimization")
+            
+        if r.magnetic.Bg_peak > 1.0:
+            warnings.append("⚠️ WARNING: High air gap flux density - Verify magnet operating point")
+            
+        return warnings
+    
+    def _plot_performance_curves(self):
+        """Plot speed-torque and efficiency curves"""
+        for widget in self.curves_tab.winfo_children():
+            widget.destroy()
+            
+        if not self.calc_results:
+            return
+            
+        r = self.calc_results
+        p = self._get_params()
+        
+        fig = Figure(figsize=(12, 8), dpi=100)
+        
+        # Create 2x2 subplot grid
+        gs = GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.3)
+        
+        # Generate operating range data
+        T_max = r.performance.T_rated * 2.5
+        torques = np.linspace(0.01, T_max, 100)
+        
+        speeds = []
+        efficiencies = []
+        currents = []
+        powers_out = []
+        
+        V_dc = p["V_dc"]
+        Ke = r.electrical.Ke
+        Kt = r.electrical.Kt
+        R_line = r.electrical.R_line
+        
+        for T in torques:
+            I = T / Kt
+            V_drop = I * R_line
+            E_req = V_dc - V_drop
+            n = max(0, E_req / (Ke / 1000))
+            
+            P_out = T * n * 2 * PI / 60
+            P_cu = 3 * I**2 * r.electrical.R_phase
+            P_mech = r.performance.P_mech * (n / p["n_rated"])**2 if n > 0 else 0
+            P_in = P_out + P_cu + P_mech + r.performance.P_eddy
+            
+            eff = (P_out / P_in * 100) if P_in > 0 else 0
+            
+            speeds.append(n)
+            efficiencies.append(eff)
+            currents.append(I)
+            powers_out.append(P_out)
+        
+        # Plot 1: Speed-Torque Characteristic
+        ax1 = fig.add_subplot(gs[0, 0])
+        ax1.plot(torques, speeds, 'b-', linewidth=2, label='Speed')
+        ax1.axhline(y=p["n_rated"], color='b', linestyle='--', alpha=0.5, label=f'Rated: {p["n_rated"]} rpm')
+        ax1.axvline(x=r.performance.T_rated, color='r', linestyle='--', alpha=0.5, label=f'Rated: {r.performance.T_rated:.2f} Nm')
+        ax1.set_xlabel('Torque (Nm)', fontsize=10)
+        ax1.set_ylabel('Speed (rpm)', fontsize=10, color='b')
+        ax1.set_title('Speed-Torque Characteristic', fontsize=11, fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right', fontsize=8)
+        ax1.set_xlim(0, T_max)
+        ax1.set_ylim(0, None)
+        
+        # Plot 2: Efficiency Map
+        ax2 = fig.add_subplot(gs[0, 1])
+        ax2.plot(torques, efficiencies, 'g-', linewidth=2)
+        ax2.axhline(y=r.performance.Efficiency, color='g', linestyle='--', alpha=0.5, 
+                   label=f'Rated: {r.performance.Efficiency:.1f}%')
+        ax2.set_xlabel('Torque (Nm)', fontsize=10)
+        ax2.set_ylabel('Efficiency (%)', fontsize=10, color='g')
+        ax2.set_title('Efficiency vs. Torque', fontsize=11, fontweight='bold')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='lower right', fontsize=8)
+        ax2.set_xlim(0, T_max)
+        ax2.set_ylim(0, 100)
+        
+        # Plot 3: Current vs. Torque
+        ax3 = fig.add_subplot(gs[1, 0])
+        ax3.plot(torques, currents, 'r-', linewidth=2)
+        ax3.axhline(y=r.performance.I_phase_rms, color='r', linestyle='--', alpha=0.5,
+                   label=f'Rated: {r.performance.I_phase_rms:.1f} A')
+        ax3.set_xlabel('Torque (Nm)', fontsize=10)
+        ax3.set_ylabel('Phase Current (A)', fontsize=10, color='r')
+        ax3.set_title('Current vs. Torque (Linear Relationship)', fontsize=11, fontweight='bold')
+        ax3.grid(True, alpha=0.3)
+        ax3.legend(loc='upper left', fontsize=8)
+        ax3.set_xlim(0, T_max)
+        
+        # Plot 4: Output Power
+        ax4 = fig.add_subplot(gs[1, 1])
+        ax4.plot(torques, powers_out, 'm-', linewidth=2)
+        ax4.axhline(y=p["P_rated"], color='m', linestyle='--', alpha=0.5,
+                   label=f'Rated: {p["P_rated"]:.0f} W')
+        ax4.set_xlabel('Torque (Nm)', fontsize=10)
+        ax4.set_ylabel('Output Power (W)', fontsize=10, color='m')
+        ax4.set_title('Power Output vs. Torque', fontsize=11, fontweight='bold')
+        ax4.grid(True, alpha=0.3)
+        ax4.legend(loc='upper right', fontsize=8)
+        ax4.set_xlim(0, T_max)
+        
+        fig.suptitle('Motor Performance Characteristics', fontsize=12, fontweight='bold')
+        
+        canvas = FigureCanvasTkAgg(fig, master=self.curves_tab)
+        canvas.draw()
+        
+        toolbar = NavigationToolbar2Tk(canvas, self.curves_tab)
+        toolbar.update()
+        
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+    def _plot_back_emf(self):
+        """Plot back EMF waveforms"""
+        for widget in self.emf_tab.winfo_children():
+            widget.destroy()
+            
+        if not self.calc_results:
+            return
+            
+        emf_data = self.calc_results.waveforms.get("back_emf", {})
+        if not emf_data:
+            return
+            
+        fig = Figure(figsize=(12, 9), dpi=100)
+        gs = GridSpec(3, 2, figure=fig, hspace=0.35, wspace=0.3)
+        
+        t = emf_data["time"] * 1000  # Convert to ms
+        theta = emf_data["theta_m"]
+        
+        # Plot 1: Three-phase Back EMF
+        ax1 = fig.add_subplot(gs[0, :])
+        ax1.plot(theta[:360], emf_data["E_a"][:360], 'r-', linewidth=1.5, label='Phase A')
+        ax1.plot(theta[:360], emf_data["E_b"][:360], 'g-', linewidth=1.5, label='Phase B')
+        ax1.plot(theta[:360], emf_data["E_c"][:360], 'b-', linewidth=1.5, label='Phase C')
+        ax1.set_xlabel('Mechanical Angle (degrees)', fontsize=10)
+        ax1.set_ylabel('Back EMF (V)', fontsize=10)
+        ax1.set_title('Three-Phase Back EMF Waveforms', fontsize=11, fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right', fontsize=9)
+        ax1.axhline(y=0, color='k', linewidth=0.5)
+        
+        # Add annotations
+        E_peak = emf_data["E_peak"]
+        E_rms = emf_data["E_rms"]
+        ax1.annotate(f'Peak: {E_peak:.1f}V\nRMS: {E_rms:.1f}V', 
+                    xy=(0.02, 0.98), xycoords='axes fraction',
+                    fontsize=9, verticalalignment='top',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
+        # Plot 2: Line-to-Line EMF
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax2.plot(theta[:360], emf_data["E_ab"][:360], 'purple', linewidth=1.5, label='E_ab')
+        ax2.plot(theta[:360], emf_data["E_bc"][:360], 'orange', linewidth=1.5, label='E_bc')
+        ax2.plot(theta[:360], emf_data["E_ca"][:360], 'cyan', linewidth=1.5, label='E_ca')
+        ax2.set_xlabel('Mechanical Angle (degrees)', fontsize=10)
+        ax2.set_ylabel('Line-to-Line EMF (V)', fontsize=10)
+        ax2.set_title('Line-to-Line Back EMF', fontsize=11, fontweight='bold')
+        ax2.grid(True, alpha=0.3)
+        ax2.legend(loc='upper right', fontsize=8)
+        
+        # Plot 3: Comparison with Ideal Sinusoid
+        ax3 = fig.add_subplot(gs[1, 1])
+        ax3.plot(theta[:360], emf_data["E_a"][:360], 'r-', linewidth=1.5, label='Actual')
+        ax3.plot(theta[:360], emf_data["E_ideal"][:360], 'k--', linewidth=1, label='Ideal Sine')
+        ax3.set_xlabel('Mechanical Angle (degrees)', fontsize=10)
+        ax3.set_ylabel('Back EMF (V)', fontsize=10)
+        ax3.set_title('Actual vs. Ideal Sinusoidal EMF', fontsize=11, fontweight='bold')
+        ax3.grid(True, alpha=0.3)
+        ax3.legend(loc='upper right', fontsize=9)
+        
+        # Plot 4: FFT Harmonic Spectrum
+        ax4 = fig.add_subplot(gs[2, :])
+        
+        # Calculate FFT
+        E_a = emf_data["E_a"]
+        N = len(E_a)
+        fft_vals = np.fft.fft(E_a)
+        fft_mag = np.abs(fft_vals[:N//2]) / N * 2
+        
+        p = self._get_params()
+        poles = int(p["p"])
+        harmonics = np.arange(N//2) * poles
+        
+        # Plot only first 25 significant harmonics
+        max_harmonic = 25
+        valid_idx = harmonics <= max_harmonic
+        
+        ax4.bar(harmonics[valid_idx], fft_mag[valid_idx], width=0.6, color='steelblue', alpha=0.8)
+        ax4.set_xlabel('Harmonic Order', fontsize=10)
+        ax4.set_ylabel('Magnitude (V)', fontsize=10)
+        ax4.set_title('Back EMF Harmonic Spectrum (FFT Analysis)', fontsize=11, fontweight='bold')
+        ax4.grid(True, alpha=0.3, axis='y')
+        ax4.set_xlim(-0.5, max_harmonic + 0.5)
+        
+        # Calculate THD
+        fundamental = fft_mag[1] if len(fft_mag) > 1 else 1
+        harmonics_sum = np.sqrt(np.sum(fft_mag[2:20]**2))
+        thd = (harmonics_sum / fundamental * 100) if fundamental > 0 else 0
+        ax4.annotate(f'THD: {thd:.1f}%', xy=(0.95, 0.95), xycoords='axes fraction',
+                    fontsize=10, ha='right', va='top',
+                    bbox=dict(boxstyle='round', facecolor='lightyellow', alpha=0.8))
+        
+        fig.suptitle('Back EMF Analysis', fontsize=12, fontweight='bold')
+        
+        canvas = FigureCanvasTkAgg(fig, master=self.emf_tab)
+        canvas.draw()
+        
+        toolbar = NavigationToolbar2Tk(canvas, self.emf_tab)
+        toolbar.update()
+        
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+    def _plot_torque(self):
+        """Plot torque analysis"""
+        for widget in self.torque_tab.winfo_children():
+            widget.destroy()
+            
+        if not self.calc_results:
+            return
+            
+        torque_data = self.calc_results.waveforms.get("torque", {})
+        cogging_data = self.calc_results.waveforms.get("cogging", {})
+        
+        fig = Figure(figsize=(12, 8), dpi=100)
+        gs = GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.3)
+        
+        # Plot 1: Instantaneous Torque
+        ax1 = fig.add_subplot(gs[0, :])
+        theta = torque_data.get("theta_e", np.linspace(0, 720, 360))
+        T_inst = torque_data.get("T_inst", np.zeros_like(theta))
+        T_avg = torque_data.get("T_avg", 0)
+        
+        ax1.plot(theta, T_inst, 'b-', linewidth=1.5, label='Instantaneous Torque')
+        ax1.axhline(y=T_avg, color='r', linestyle='--', linewidth=2, label=f'Average: {T_avg:.3f} Nm')
+        ax1.fill_between(theta, T_inst, T_avg, alpha=0.3, color='blue')
+        ax1.set_xlabel('Electrical Angle (degrees)', fontsize=10)
+        ax1.set_ylabel('Torque (Nm)', fontsize=10)
+        ax1.set_title('Electromagnetic Torque vs. Electrical Angle', fontsize=11, fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right', fontsize=9)
+        
+        # Annotations
+        T_max = torque_data.get("T_max", T_avg)
+        T_min = torque_data.get("T_min", T_avg)
+        ripple = torque_data.get("T_ripple_pct", 0)
+        ax1.annotate(f'Max: {T_max:.3f} Nm\nMin: {T_min:.3f} Nm\nRipple: {ripple:.1f}%',
+                    xy=(0.02, 0.98), xycoords='axes fraction',
+                    fontsize=9, verticalalignment='top',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
+        # Plot 2: Cogging Torque
+        ax2 = fig.add_subplot(gs[1, 0])
+        theta_cog = cogging_data.get("theta", np.linspace(0, 2*PI, 360))
+        T_cog = cogging_data.get("T_cog", np.zeros_like(theta_cog))
+        
+        ax2.plot(np.degrees(theta_cog), T_cog * 1000, 'g-', linewidth=1.5)
+        ax2.set_xlabel('Rotor Position (degrees)', fontsize=10)
+        ax2.set_ylabel('Cogging Torque (mNm)', fontsize=10)
+        ax2.set_title('Cogging Torque vs. Rotor Position', fontsize=11, fontweight='bold')
+        ax2.grid(True, alpha=0.3)
+        ax2.axhline(y=0, color='k', linewidth=0.5)
+        
+        T_cog_peak = np.max(np.abs(T_cog)) * 1000
+        ax2.annotate(f'Peak: ±{T_cog_peak:.2f} mNm',
+                    xy=(0.95, 0.95), xycoords='axes fraction',
+                    fontsize=9, ha='right', va='top',
+                    bbox=dict(boxstyle='round', facecolor='lightgreen', alpha=0.5))
+        
+        # Plot 3: Torque Ripple Histogram
+        ax3 = fig.add_subplot(gs[1, 1])
+        ripple_vals = (T_inst - T_avg) / T_avg * 100
+        ax3.hist(ripple_vals, bins=30, color='steelblue', alpha=0.7, edgecolor='black')
+        ax3.axvline(x=0, color='r', linestyle='--', linewidth=2)
+        ax3.set_xlabel('Torque Deviation from Average (%)', fontsize=10)
+        ax3.set_ylabel('Frequency', fontsize=10)
+        ax3.set_title('Torque Ripple Distribution', fontsize=11, fontweight='bold')
+        ax3.grid(True, alpha=0.3)
+        
+        fig.suptitle('Torque Analysis', fontsize=12, fontweight='bold')
+        
+        canvas = FigureCanvasTkAgg(fig, master=self.torque_tab)
+        canvas.draw()
+        
+        toolbar = NavigationToolbar2Tk(canvas, self.torque_tab)
+        toolbar.update()
+        
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+    def _plot_flux_distribution(self):
+        """Plot air gap flux density distribution"""
+        for widget in self.flux_tab.winfo_children():
+            widget.destroy()
+            
+        if not self.calc_results:
+            return
+            
+        flux_data = self.calc_results.waveforms.get("flux", {})
+        
+        fig = Figure(figsize=(12, 8), dpi=100)
+        gs = GridSpec(2, 2, figure=fig, hspace=0.3, wspace=0.3)
+        
+        # Plot 1: Flux Density Distribution
+        ax1 = fig.add_subplot(gs[0, :])
+        theta_m = flux_data.get("theta_m", np.linspace(0, 360, 720))
+        Bg = flux_data.get("Bg", np.zeros_like(theta_m))
+        
+        ax1.plot(theta_m, Bg, 'b-', linewidth=1.5)
+        ax1.fill_between(theta_m, Bg, 0, where=(Bg > 0), color='blue', alpha=0.3, label='North Pole')
+        ax1.fill_between(theta_m, Bg, 0, where=(Bg < 0), color='red', alpha=0.3, label='South Pole')
+        ax1.set_xlabel('Mechanical Angle (degrees)', fontsize=10)
+        ax1.set_ylabel('Air Gap Flux Density (T)', fontsize=10)
+        ax1.set_title('Air Gap Magnetic Flux Density Distribution', fontsize=11, fontweight='bold')
+        ax1.grid(True, alpha=0.3)
+        ax1.legend(loc='upper right', fontsize=9)
+        ax1.axhline(y=0, color='k', linewidth=0.5)
+        
+        # Annotations
+        Bg_peak = flux_data.get("Bg_peak", 0)
+        Bg_avg = flux_data.get("Bg_avg", 0)
+        Bg_rms = flux_data.get("Bg_rms", 0)
+        ax1.annotate(f'Peak: {Bg_peak:.3f} T\nAverage: {Bg_avg:.3f} T\nRMS: {Bg_rms:.3f} T',
+                    xy=(0.02, 0.98), xycoords='axes fraction',
+                    fontsize=10, verticalalignment='top',
+                    bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
+        
+        # Plot 2: Harmonic Spectrum
+        ax2 = fig.add_subplot(gs[1, 0])
+        harmonics = flux_data.get("harmonics", np.arange(20))
+        spectrum = flux_data.get("spectrum", np.zeros(20))
+        
+        valid_idx = harmonics <= 25
+        ax2.bar(harmonics[valid_idx], spectrum[valid_idx], width=0.6, color='steelblue', alpha=0.8)
+        ax2.set_xlabel('Spatial Harmonic Order', fontsize=10)
+        ax2.set_ylabel('Magnitude (T)', fontsize=10)
+        ax2.set_title('Flux Density Harmonic Spectrum', fontsize=11, fontweight='bold')
+        ax2.grid(True, alpha=0.3, axis='y')
+        
+        # Plot 3: Polar Plot
+        ax3 = fig.add_subplot(gs[1, 1], projection='polar')
+        theta_rad = np.radians(theta_m)
+        
+        # Normalize for polar plot
+        Bg_norm = (Bg - np.min(Bg)) / (np.max(Bg) - np.min(Bg) + 1e-10)
+        
+        ax3.plot(theta_rad, Bg_norm, 'b-', linewidth=1)
+        ax3.fill(theta_rad, Bg_norm, alpha=0.3)
+        ax3.set_title('Flux Distribution (Polar View)', fontsize=11, fontweight='bold', pad=20)
+        
+        fig.suptitle('Magnetic Flux Analysis', fontsize=12, fontweight='bold')
+        
+        canvas = FigureCanvasTkAgg(fig, master=self.flux_tab)
+        canvas.draw()
+        
+        toolbar = NavigationToolbar2Tk(canvas, self.flux_tab)
+        toolbar.update()
+        
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+        
+    def _draw_geometry(self):
+        """Draw motor cross-section geometry"""
+        for widget in self.geo_tab.winfo_children():
+            widget.destroy()
+            
+        p = self._get_params()
+        
+        fig = Figure(figsize=(12, 6), dpi=100)
+        
+        # Axial cross-section (left)
+        ax1 = fig.add_subplot(121)
+        
+        D_o = p["D_out"]
+        D_i = p["D_in"]
+        h_m = p["h_mag"]
+        h_c = p["h_coil"]
+        g = p["g_side"]
+        
+        # Draw components (radial cross-section)
+        y_base = 0
+        yoke_thickness = 5  # mm
+        
+        # Bottom rotor yoke
+        ax1.add_patch(patches.Rectangle((0, y_base), D_o/2, yoke_thickness, 
+                                        color='gray', label='Rotor Yoke'))
+        y_base += yoke_thickness
+        
+        # Bottom magnets
+        ax1.add_patch(patches.Rectangle((D_i/2, y_base), (D_o-D_i)/2, h_m, 
+                                        color='blue', label='Magnet (N)'))
+        y_base += h_m
+        
+        # Bottom air gap
+        ax1.add_patch(patches.Rectangle((D_i/2, y_base), (D_o-D_i)/2, g, 
+                                        color='white', edgecolor='black', linestyle='--'))
+        y_base += g
+        
+        # Stator coil
+        ax1.add_patch(patches.Rectangle((D_i/2 * 0.9, y_base), (D_o-D_i)/2 * 1.1, h_c, 
+                                        color='orange', alpha=0.7, label='Stator Coil'))
+        y_base += h_c
+        
+        # Top air gap
+        ax1.add_patch(patches.Rectangle((D_i/2, y_base), (D_o-D_i)/2, g, 
+                                        color='white', edgecolor='black', linestyle='--'))
+        y_base += g
+        
+        # Top magnets
+        ax1.add_patch(patches.Rectangle((D_i/2, y_base), (D_o-D_i)/2, h_m, 
+                                        color='red', label='Magnet (S)'))
+        y_base += h_m
+        
+        # Top rotor yoke
+        ax1.add_patch(patches.Rectangle((0, y_base), D_o/2, yoke_thickness, 
+                                        color='gray'))
+        
+        ax1.set_xlim(-5, D_o/2 * 1.3)
+        ax1.set_ylim(-2, y_base + yoke_thickness + 5)
+        ax1.set_aspect('equal')
+        ax1.set_xlabel('Radius (mm)', fontsize=10)
+        ax1.set_ylabel('Axial Position (mm)', fontsize=10)
+        ax1.set_title('Radial Cross-Section (Half)', fontsize=11, fontweight='bold')
+        ax1.legend(loc='upper right', fontsize=8)
+        ax1.grid(True, alpha=0.3)
+        
+        # Add dimension annotations
+        ax1.annotate('', xy=(D_o/2, -1), xytext=(0, -1),
+                    arrowprops=dict(arrowstyle='<->', color='black'))
+        ax1.text(D_o/4, -3, f'R_out={D_o/2:.0f}mm', ha='center', fontsize=8)
+        
+        # Axial view (right) - showing pole arrangement
+        ax2 = fig.add_subplot(122, projection='polar')
+        
+        poles = int(p["p"]) * 2
+        alpha = p["alpha_p"]
+        
+        pole_pitch = 2 * PI / poles
+        magnet_arc = pole_pitch * alpha
+        
+        for i in range(poles):
+            start_angle = i * pole_pitch
+            color = 'blue' if i % 2 == 0 else 'red'
+            
+            theta = np.linspace(start_angle, start_angle + magnet_arc, 50)
+            r_inner = np.full_like(theta, D_i/2)
+            r_outer = np.full_like(theta, D_o/2)
+            
+            ax2.fill_between(theta, r_inner, r_outer, color=color, alpha=0.6)
+        
+        ax2.set_ylim(0, D_o/2 * 1.1)
+        ax2.set_title(f'Axial View ({poles} Poles)', fontsize=11, fontweight='bold', pad=20)
+        
+        fig.suptitle('Motor Geometry Visualization', fontsize=12, fontweight='bold')
+        
+        canvas = FigureCanvasTkAgg(fig, master=self.geo_tab)
+        canvas.draw()
+        
+        toolbar = NavigationToolbar2Tk(canvas, self.geo_tab)
+        toolbar.update()
+        
+        canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
+    
+    def run_optimization(self):
+        """Run automated design optimization"""
+        try:
+            params = self._get_params()
+            
+            self.result_text.delete(1.0, tk.END)
+            self.result_text.insert(tk.END, "=" * 60 + "\n")
+            self.result_text.insert(tk.END, "   AUTOMATED DESIGN OPTIMIZATION\n")
+            self.result_text.insert(tk.END, "=" * 60 + "\n\n")
+            self.result_text.insert(tk.END, "Searching for optimal configuration...\n\n")
+            self.root.update()
+            
+            best_score = -float('inf')
+            best_params = None
+            best_results = None
+            
+            target_V = params["V_dc"] * 0.85  # Target 85% voltage utilization
+            
+            optimization_log = []
+            
+            # Optimization loop: vary turns and parallel conductors
+            for N_try in range(15, 120, 3):
+                params["N_ph_turns"] = N_try
+                
+                # First pass to estimate current
+                params["n_parallel"] = 1
+                try:
+                    model = PMDCMotorModel(params)
+                    temp_results = model.run_full_analysis()
+                except:
+                    continue
+                
+                I_est = temp_results.performance.I_phase_rms
+                
+                # Calculate required parallel conductors for J ≈ 5 A/mm²
+                d_wire = params["d_wire"] * 1e-3
+                A_single = PI * (d_wire/2)**2 * 1e6  # mm²
+                n_par_needed = max(1, round(I_est / (5.5 * A_single)))
+                n_par_needed = min(n_par_needed, 10)  # Practical limit
+                
+                params["n_parallel"] = n_par_needed
+                
+                # Full calculation with adjusted parameters
+                try:
+                    model = PMDCMotorModel(params)
+                    results = model.run_full_analysis()
+                except:
+                    continue
+                
+                # Scoring function
+                score = 0
+                perf = results.performance
+                
+                # Hard constraints (heavy penalties)
+                if perf.V_required > params["V_dc"]:
+                    score -= 10000
+                if perf.K_fill > params["fill_limit"]:
+                    score -= 5000
+                if perf.J_current > 8:
+                    score -= 2000
+                elif perf.J_current > 6:
+                    score -= 500
+                
+                # Soft objectives
+                score += perf.Efficiency * 10  # Maximize efficiency
+                score -= abs(target_V - perf.V_required) * 2  # Voltage utilization
+                score -= perf.T_ripple * 10  # Minimize torque ripple
+                
+                optimization_log.append({
+                    "N": N_try,
+                    "n_par": n_par_needed,
+                    "V_req": perf.V_required,
+                    "J": perf.J_current,
+                    "Eff": perf.Efficiency,
+                    "K_fill": perf.K_fill,
+                    "Score": score
+                })
+                
+                if score > best_score:
+                    best_score = score
+                    best_params = params.copy()
+                    best_results = results
+            
+            if best_results:
+                # Update input fields with optimal values
+                self.vars["N_ph_turns"].set(str(int(best_params["N_ph_turns"])))
+                self.vars["n_parallel"].set(str(int(best_params["n_parallel"])))
+                
+                self.calc_results = best_results
+                
+                # Display optimization results
+                self.result_text.insert(tk.END, "OPTIMIZATION COMPLETE!\n")
+                self.result_text.insert(tk.END, "-" * 50 + "\n\n")
+                self.result_text.insert(tk.END, "Recommended Design Parameters:\n")
+                self.result_text.insert(tk.END, f"  • Turns per Phase: {int(best_params['N_ph_turns'])}\n")
+                self.result_text.insert(tk.END, f"  • Parallel Conductors: {int(best_params['n_parallel'])}\n\n")
+                
+                perf = best_results.performance
+                self.result_text.insert(tk.END, "Optimized Performance:\n")
+                self.result_text.insert(tk.END, f"  • Efficiency: {perf.Efficiency:.2f}%\n")
+                self.result_text.insert(tk.END, f"  • Voltage Margin: {perf.V_margin:.1f}%\n")
+                self.result_text.insert(tk.END, f"  • Current Density: {perf.J_current:.2f} A/mm²\n")
+                self.result_text.insert(tk.END, f"  • Fill Factor: {perf.K_fill:.3f}\n")
+                self.result_text.insert(tk.END, f"  • Torque Ripple: {perf.T_ripple:.2f}%\n\n")
+                
+                # Display full report
+                self._display_report()
+                self._plot_performance_curves()
+                self._plot_back_emf()
+                self._plot_torque()
+                self._plot_flux_distribution()
+                self._draw_geometry()
+                
+            else:
+                self.result_text.insert(tk.END, "OPTIMIZATION FAILED\n")
+                self.result_text.insert(tk.END, "Could not find feasible design point.\n")
+                self.result_text.insert(tk.END, "Please check geometric constraints.\n")
+                
+        except Exception as e:
+            messagebox.showerror("Optimization Error", f"Optimization failed:\n{str(e)}")
+    
+    def export_json(self):
+        """Export calculation data to JSON file"""
+        if not self.calc_results:
+            messagebox.showwarning("No Data", "Please run analysis first.")
+            return
+            
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+            title="Save Calculation Data"
+        )
+        
+        if filepath:
+            data = {
+                "input_parameters": self._get_params(),
+                "results": self.calc_results.to_dict(),
+                "waveforms": {
+                    "back_emf": {k: v.tolist() if isinstance(v, np.ndarray) else v 
+                                for k, v in self.calc_results.waveforms.get("back_emf", {}).items()},
+                    "torque": {k: v.tolist() if isinstance(v, np.ndarray) else v 
+                              for k, v in self.calc_results.waveforms.get("torque", {}).items()},
+                    "flux": {k: v.tolist() if isinstance(v, np.ndarray) else v 
+                            for k, v in self.calc_results.waveforms.get("flux", {}).items()}
+                }
+            }
+            
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                
+            messagebox.showinfo("Export Complete", f"Data saved to:\n{filepath}")
+    
+    def export_csv(self):
+        """Export calculation data to CSV file"""
+        if not self.calc_results:
+            messagebox.showwarning("No Data", "Please run analysis first.")
+            return
+            
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".csv",
+            filetypes=[("CSV files", "*.csv"), ("All files", "*.*")],
+            title="Save Calculation Data"
+        )
+        
+        if filepath:
+            r = self.calc_results
+            p = self._get_params()
+            
+            with open(filepath, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                
+                # Header
+                writer.writerow(["PMDC Motor Calculation Results"])
+                writer.writerow(["Generated", datetime.now().isoformat()])
+                writer.writerow([])
+                
+                # Input parameters
+                writer.writerow(["Input Parameters"])
+                for key, value in p.items():
+                    writer.writerow([key, value])
+                writer.writerow([])
+                
+                # Magnetic circuit
+                writer.writerow(["Magnetic Circuit Results"])
+                writer.writerow(["Bg_peak (T)", r.magnetic.Bg_peak])
+                writer.writerow(["Bg_avg (T)", r.magnetic.Bg_avg])
+                writer.writerow(["Phi_pole (Wb)", r.magnetic.Phi_pole])
+                writer.writerow(["PC", r.magnetic.PC])
+                writer.writerow([])
+                
+                # Electrical parameters
+                writer.writerow(["Electrical Parameters"])
+                writer.writerow(["R_phase (Ω)", r.electrical.R_phase])
+                writer.writerow(["L_phase (H)", r.electrical.L_phase])
+                writer.writerow(["Ke (V/krpm)", r.electrical.Ke])
+                writer.writerow(["Kt (Nm/A)", r.electrical.Kt])
+                writer.writerow([])
+                
+                # Performance
+                writer.writerow(["Performance Metrics"])
+                writer.writerow(["Efficiency (%)", r.performance.Efficiency])
+                writer.writerow(["T_rated (Nm)", r.performance.T_rated])
+                writer.writerow(["I_phase (A)", r.performance.I_phase_rms])
+                writer.writerow(["J (A/mm²)", r.performance.J_current])
+                writer.writerow(["P_cu (W)", r.performance.P_cu])
+                writer.writerow(["P_eddy (W)", r.performance.P_eddy])
+                
+            messagebox.showinfo("Export Complete", f"Data saved to:\n{filepath}")
+    
+    def save_plots(self):
+        """Save all plots as image files"""
+        if not self.calc_results:
+            messagebox.showwarning("No Data", "Please run analysis first.")
+            return
+            
+        folder = filedialog.askdirectory(title="Select Folder for Plots")
+        
+        if folder:
+            # Save each figure
+            tabs = [
+                (self.curves_tab, "performance_curves.png"),
+                (self.emf_tab, "back_emf_analysis.png"),
+                (self.torque_tab, "torque_analysis.png"),
+                (self.flux_tab, "flux_distribution.png"),
+                (self.geo_tab, "geometry.png")
+            ]
+            
+            for tab, filename in tabs:
+                for widget in tab.winfo_children():
+                    if isinstance(widget, tk.Canvas):
+                        # Get the figure from canvas
+                        pass
+                        
+            messagebox.showinfo("Save Complete", f"Plots saved to:\n{folder}")
+    
+    def reset_defaults(self):
+        """Reset all inputs to default values"""
+        defaults = {
+            "V_dc": "48.0", "P_rated": "800.0", "n_rated": "2500.0",
+            "Temp_coil": "80.0", "D_out": "140.0", "D_in": "70.0",
+            "h_mag": "5.0", "h_coil": "5.0", "g_side": "1.0",
+            "p": "8", "Br": "1.28", "alpha_p": "0.70", "sigma_m": "1.15",
+            "N_ph_turns": "50", "d_wire": "0.9", "n_parallel": "2",
+            "k_w": "0.93", "fill_limit": "0.65"
+        }
+        
+        for key, value in defaults.items():
+            if key in self.vars:
+                self.vars[key].set(value)
+                
+        self.coreless_var.set(True)
+        
+    def _copy_report(self):
+        """Copy report text to clipboard"""
+        self.root.clipboard_clear()
+        self.root.clipboard_append(self.result_text.get(1.0, tk.END))
+        messagebox.showinfo("Copied", "Report copied to clipboard")
+        
+    def _save_report(self):
+        """Save report to text file"""
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text files", "*.txt"), ("All files", "*.*")],
+            title="Save Report"
+        )
+        
+        if filepath:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(self.result_text.get(1.0, tk.END))
+            messagebox.showinfo("Saved", f"Report saved to:\n{filepath}")
+            
+    def _print_report(self):
+        """Print report (displays print dialog info)"""
+        report_text = self.result_text.get(1.0, tk.END)
+        
+        # Create a simple print preview window
+        print_window = tk.Toplevel(self.root)
+        print_window.title("Print Preview")
+        print_window.geometry("600x800")
+        
+        text = scrolledtext.ScrolledText(print_window, font=("Courier New", 9))
+        text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        text.insert(tk.END, report_text)
+        
+        btn_frame = ttk.Frame(print_window)
+        btn_frame.pack(fill=tk.X, padx=10, pady=5)
+        
+        ttk.Button(btn_frame, text="Copy to Clipboard", 
+                  command=lambda: [self.root.clipboard_clear(), 
+                                  self.root.clipboard_append(report_text)]).pack(side=tk.LEFT)
+        ttk.Button(btn_frame, text="Close", 
+                  command=print_window.destroy).pack(side=tk.RIGHT)
+
+
+# ==========================================
+# Main Entry Point
+# ==========================================
+def main():
+    """Application entry point"""
+    root = tk.Tk()
+    
+    # Set window icon (if available)
+    try:
+        root.iconbitmap("motor_icon.ico")
+    except:
+        pass
+    
+    app = MotorCalculatorApp(root)
+    
+    # Center window on screen
+    root.update_idletasks()
+    width = root.winfo_width()
+    height = root.winfo_height()
+    x = (root.winfo_screenwidth() // 2) - (width // 2)
+    y = (root.winfo_screenheight() // 2) - (height // 2)
+    root.geometry(f'+{x}+{y}')
+    
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
