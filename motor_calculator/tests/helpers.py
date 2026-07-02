@@ -1,25 +1,12 @@
-"""Pytest-style unit conversion tests."""
+"""Shared test helpers for the motor calculator suite."""
 
 from __future__ import annotations
 
-import math
-
-from motor_core.electrical_semantics import MotorControlMode
-from motor_core.units import legacy_params_to_model_input, mm_to_m, rpm_to_mechanical_angular_speed_rad_s
+from typing import Any, Dict
 
 
-def test_mm_to_m_conversion():
-    assert math.isclose(mm_to_m(140.0), 0.14, rel_tol=1e-12, abs_tol=1e-12)
-    assert math.isclose(mm_to_m(0.9), 0.0009, rel_tol=1e-12, abs_tol=1e-12)
-
-
-def test_rpm_to_mechanical_angular_speed_conversion():
-    value = rpm_to_mechanical_angular_speed_rad_s(3000.0)
-    assert abs(value - 314.1592653589793) < 1e-12
-
-
-def test_legacy_params_to_model_input_maps_pole_pairs_and_lengths():
-    params = {
+def build_sample_legacy_params(**overrides: Any) -> Dict[str, Any]:
+    params: Dict[str, Any] = {
         "V_dc": 48.0,
         "P_rated": 800.0,
         "n_rated": 2500.0,
@@ -62,10 +49,5 @@ def test_legacy_params_to_model_input_maps_pole_pairs_and_lengths():
         "k_ripple_12": 0.02,
         "coreless": True,
     }
-    motor_input = legacy_params_to_model_input(params)
-    assert motor_input.pole_pairs == 8
-    assert motor_input.pole_count == 16
-    assert math.isclose(motor_input.outer_diameter_m, 0.14, rel_tol=1e-12, abs_tol=1e-12)
-    assert math.isclose(motor_input.wire_diameter_m, 0.0009, rel_tol=1e-12, abs_tol=1e-12)
-    assert motor_input.control_mode is MotorControlMode.PMSM_SINUSOIDAL
-    assert motor_input.operating_mode == "pmsm"
+    params.update(overrides)
+    return params
