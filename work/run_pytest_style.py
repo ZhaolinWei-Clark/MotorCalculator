@@ -1,4 +1,9 @@
-"""Minimal pytest-style test runner for environments without pytest installed."""
+"""Temporary compatibility runner for environments without pytest installed.
+
+Use ``python -m pytest -v`` as the formal test entry point for this project.
+This script is retained only to support legacy local environments during the
+transition to standard pytest execution.
+"""
 
 from __future__ import annotations
 
