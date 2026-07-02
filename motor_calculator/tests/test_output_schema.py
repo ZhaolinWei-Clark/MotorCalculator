@@ -17,6 +17,11 @@ def test_analysis_result_contains_explicit_speed_and_electrical_semantic_fields(
     assert hasattr(result.performance, "mechanical_angular_speed_rad_s")
     assert hasattr(result.performance, "electrical_frequency_hz")
     assert hasattr(result.performance, "electrical_angular_speed_rad_s")
+    assert hasattr(result.performance, "legacy_rated_torque_nm")
+    assert hasattr(result.performance, "revised_rated_torque_nm")
+    assert hasattr(result.performance, "rated_torque_absolute_difference_nm")
+    assert hasattr(result.performance, "rated_torque_relative_difference")
+    assert hasattr(result.performance, "rated_torque_model_status")
     assert hasattr(result.performance, "dc_bus_current_a")
 
 
