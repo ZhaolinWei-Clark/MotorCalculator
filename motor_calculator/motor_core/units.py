@@ -9,7 +9,12 @@ from .constants import (
     DEFAULT_FILL_LIMIT,
     DEFAULT_RIPPLE_6TH,
     DEFAULT_RIPPLE_12TH,
-    LEGACY_WAVEFORM_TO_MODE,
+)
+from .electrical_semantics import (
+    MotorControlMode,
+    mechanical_angular_speed_rad_s_to_mechanical_speed_rpm,
+    mechanical_speed_rpm_to_mechanical_angular_speed_rad_s,
+    normalize_motor_control_mode,
 )
 from .models import MotorAnalysisInput
 
@@ -31,30 +36,36 @@ def m2_to_mm2(value_m2: float) -> float:
 
 
 def rpm_to_mechanical_angular_speed_rad_s(speed_rpm: float) -> float:
-    return speed_rpm * 2.0 * 3.141592653589793 / 60.0
+    return mechanical_speed_rpm_to_mechanical_angular_speed_rad_s(speed_rpm)
 
 
 def mechanical_angular_speed_rad_s_to_rpm(speed_rad_s: float) -> float:
-    return speed_rad_s * 60.0 / (2.0 * 3.141592653589793)
+    return mechanical_angular_speed_rad_s_to_mechanical_speed_rpm(speed_rad_s)
 
 
-def legacy_waveform_to_operating_mode(waveform: str) -> str:
-    return LEGACY_WAVEFORM_TO_MODE.get(waveform, waveform)
+def legacy_waveform_to_control_mode(waveform: str) -> MotorControlMode:
+    try:
+        return normalize_motor_control_mode(waveform)
+    except Exception:
+        # Legacy compatibility: the original implementation treated unknown
+        # waveform labels as the non-sinusoidal branch.
+        return MotorControlMode.BLDC_120_DEGREE
 
 
-def operating_mode_to_legacy_waveform(operating_mode: str) -> str:
-    if operating_mode == "pmsm":
+def control_mode_to_legacy_waveform(control_mode: MotorControlMode | str) -> str:
+    normalized_mode = normalize_motor_control_mode(control_mode)
+    if normalized_mode is MotorControlMode.PMSM_SINUSOIDAL:
         return "正弦波"
-    if operating_mode == "bldc":
+    if normalized_mode is MotorControlMode.BLDC_120_DEGREE:
         return "梯形波"
-    return operating_mode
+    return str(control_mode)
 
 
 def legacy_params_to_model_input(params: Mapping[str, Any]) -> MotorAnalysisInput:
     return MotorAnalysisInput(
         dc_bus_voltage_v=float(params["V_dc"]),
         rated_output_power_w=float(params["P_rated"]),
-        rated_speed_rpm=float(params["n_rated"]),
+        mechanical_speed_rpm=float(params["n_rated"]),
         coil_temperature_c=float(params["Temp_coil"]),
         outer_diameter_m=mm_to_m(float(params["D_out"])),
         inner_diameter_m=mm_to_m(float(params["D_in"])),
@@ -88,7 +99,7 @@ def legacy_params_to_model_input(params: Mapping[str, Any]) -> MotorAnalysisInpu
         parallel_paths=int(params["n_parallel"]),
         winding_factor=float(params["k_w"]),
         fill_limit=float(params.get("fill_limit", DEFAULT_FILL_LIMIT)),
-        operating_mode=legacy_waveform_to_operating_mode(str(params.get("waveform", "正弦波"))),
+        control_mode=legacy_waveform_to_control_mode(str(params.get("waveform", "正弦波"))),
         cogging_factor=float(params.get("k_cogging", DEFAULT_COGGING_FACTOR)),
         torque_ripple_6th=float(params.get("k_ripple_6", DEFAULT_RIPPLE_6TH)),
         torque_ripple_12th=float(params.get("k_ripple_12", DEFAULT_RIPPLE_12TH)),

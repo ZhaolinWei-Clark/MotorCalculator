@@ -7,18 +7,20 @@ from typing import Any, Dict
 
 import numpy as np
 
+from .electrical_semantics import MotorControlMode, pole_pairs_to_pole_count
+
 
 @dataclass(frozen=True)
 class MotorAnalysisInput:
     """Normalized motor analysis input values.
 
-    Lengths use meters, voltages use volts, power uses watts, and speed currently
-    preserves the legacy rpm input to avoid unapproved regression drift.
+    Lengths use meters, voltages use volts, power uses watts, and public speed
+    quantities use explicit mechanical/electrical naming.
     """
 
     dc_bus_voltage_v: float
     rated_output_power_w: float
-    rated_speed_rpm: float
+    mechanical_speed_rpm: float
     coil_temperature_c: float
     outer_diameter_m: float
     inner_diameter_m: float
@@ -52,7 +54,7 @@ class MotorAnalysisInput:
     parallel_paths: int
     winding_factor: float
     fill_limit: float
-    operating_mode: str
+    control_mode: MotorControlMode
     cogging_factor: float
     torque_ripple_6th: float
     torque_ripple_12th: float
@@ -60,7 +62,17 @@ class MotorAnalysisInput:
 
     @property
     def pole_count(self) -> int:
-        return 2 * self.pole_pairs
+        return pole_pairs_to_pole_count(self.pole_pairs)
+
+    @property
+    def rated_speed_rpm(self) -> float:
+        return self.mechanical_speed_rpm
+
+    @property
+    def operating_mode(self) -> str:
+        if self.control_mode is MotorControlMode.PMSM_SINUSOIDAL:
+            return "pmsm"
+        return "bldc"
 
 
 @dataclass
@@ -295,15 +307,29 @@ class MagneticCircuitResult:
 class ElectricalResult:
     """Electrical outputs."""
 
+    control_mode: MotorControlMode
+    legacy_control_model_name: str
     phase_resistance_ohm: float
     line_resistance_ohm: float
     phase_inductance_h: float
     line_inductance_h: float
     mutual_inductance_h: float
+    dc_bus_voltage_v: float
     back_emf_phase_rms_v: float
+    back_emf_phase_peak_v: float | None
     back_emf_line_rms_v: float
-    back_emf_constant_v_per_krpm: float
-    torque_constant_nm_per_a_rms: float
+    back_emf_line_peak_v: float | None
+    legacy_back_emf_constant_line_rms_v_per_krpm: float
+    legacy_torque_constant_nm_per_phase_rms_a: float
+    back_emf_constant_phase_peak_v_per_rad_s: float | None
+    back_emf_constant_phase_rms_v_per_rad_s: float
+    back_emf_constant_line_rms_v_per_rad_s: float
+    back_emf_constant_line_rms_v_per_krpm: float
+    torque_constant_nm_per_phase_peak_a: float
+    torque_constant_nm_per_phase_rms_a: float
+    voltage_semantics_status: str
+    ke_semantics_status: str
+    kt_semantics_status: str
 
     @property
     def R_phase(self) -> float:
@@ -335,23 +361,32 @@ class ElectricalResult:
 
     @property
     def Ke(self) -> float:
-        return self.back_emf_constant_v_per_krpm
+        return self.legacy_back_emf_constant_line_rms_v_per_krpm
 
     @property
     def Kt(self) -> float:
-        return self.torque_constant_nm_per_a_rms
+        return self.legacy_torque_constant_nm_per_phase_rms_a
 
 
 @dataclass
 class PerformanceResult:
     """Performance outputs."""
 
+    control_mode: MotorControlMode
+    legacy_control_model_name: str
+    mechanical_speed_rpm: float
+    mechanical_angular_speed_rad_s: float
+    electrical_frequency_hz: float
+    electrical_angular_speed_rad_s: float
     rated_torque_nm: float
     average_torque_nm: float
     torque_ripple_percent: float
     cogging_torque_peak_nm: float
     phase_current_rms_a: float
+    phase_current_peak_a: float | None
     line_current_rms_a: float
+    line_current_peak_a: float | None
+    dc_bus_current_a: float
     current_density_a_per_mm2: float
     output_power_w: float
     input_power_w: float
@@ -363,6 +398,8 @@ class PerformanceResult:
     required_voltage_v: float
     voltage_margin_percent: float
     fill_factor: float
+    current_semantics_status: str
+    required_voltage_semantics_status: str
 
     @property
     def T_rated(self) -> float:

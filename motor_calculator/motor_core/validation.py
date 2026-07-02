@@ -7,6 +7,7 @@ from dataclasses import fields
 from typing import Any, Dict, Mapping
 
 from .constants import SLOT_TYPES
+from .electrical_semantics import MotorControlMode
 from .models import MotorAnalysisInput
 
 
@@ -131,6 +132,11 @@ def parse_legacy_gui_params(raw_values: Mapping[str, Any]) -> Dict[str, Any]:
 
 
 def validate_motor_input(motor_input: MotorAnalysisInput) -> None:
+    if not isinstance(motor_input.control_mode, MotorControlMode):
+        raise MotorValidationError(
+            f"控制模式当前输入为“{motor_input.control_mode}”，无法识别；建议：使用 PMSM_SINUSOIDAL 或 BLDC_120_DEGREE。"
+        )
+
     if motor_input.outer_diameter_m <= motor_input.inner_diameter_m:
         raise MotorValidationError(
             f"参数“电机外径/内径”当前输入为“{motor_input.outer_diameter_m} m / {motor_input.inner_diameter_m} m”，"
