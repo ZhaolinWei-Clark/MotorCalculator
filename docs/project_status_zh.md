@@ -139,7 +139,38 @@ python work/run_pytest_style.py
 
 所有会改变结果的公式修改都必须保留 legacy 与 revised 并行输出，不得直接覆盖旧字段。
 
-## 8. Phase 3B 范围
+## 8. Phase 3B 状态
+
+Phase 3B 已完成。
+
+本阶段完成内容：
+
+- 新增 legacy 与 strict SI 额定转矩并行比较
+- 新增输出字段：
+  - `legacy_rated_torque_nm`
+  - `revised_rated_torque_nm`
+  - `rated_torque_absolute_difference_nm`
+  - `rated_torque_relative_difference`
+  - `rated_torque_model_status`
+- 当前下游仍继续使用 legacy 额定转矩
+- 生成 `docs/phase3_formula_change_report_zh.md`
+
+Phase 3B 完成后测试状态：
+
+```text
+35 passed
+```
+
+确认事项：
+
+- legacy regression 仍通过
+- `legacy_baseline.json` 未修改
+- revised 结果未传播到额定电流、损耗、效率或电压需求
+- 未修改 `Ke` / `Kt`
+- 未修改 BLDC 模型
+- 未修改 `required_voltage_v`
+
+## 9. Phase 3B 范围
 
 Phase 3B 只允许处理额定转矩公式对比：
 
@@ -154,7 +185,7 @@ Phase 3B 的强约束：
 - 不得修改 `required_voltage_v`
 - 不得修改 `legacy_baseline.json`
 
-## 9. 下一阶段状态
+## 10. 下一阶段状态
 
 当前允许进入：
 
@@ -164,8 +195,17 @@ Phase 3B 的强约束：
 
 - Phase 3C：PMSM `Ke` / `Kt` 语义修正
 
-## 10. 当前未解决问题
+说明：
+
+- 虽然 Phase 3B 已完成，但当前不自动进入 Phase 3C，必须等待批准
+
+## 11. 当前未解决问题
 
 - BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系仍未建立
 - `9.55 * P / n` 是否应从 legacy 默认值切换为严格 SI 默认值，尚未批准
 - 如果未来启用 revised 默认转矩，将影响额定电流、铜损、效率和所需电压等下游结果
+
+当前建议：
+
+- 暂不将 revised 额定转矩设为默认值
+- 先保留并行输出与差异报告
