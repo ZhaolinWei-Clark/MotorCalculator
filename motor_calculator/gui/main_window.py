@@ -39,6 +39,22 @@ class MotorCalculatorApp(_LEGACY_MODULE.MotorCalculatorApp):
     def _get_params(self) -> Dict[str, Any]:
         return parse_legacy_gui_params(self._collect_raw_params())
 
+    def _inject_phase3a_report_summary(self) -> None:
+        if not getattr(self, "calc_results", None):
+            return
+        metadata = self.calc_results.metadata
+        summary_lines = [
+            "",
+            "Phase 3A Electrical Semantics",
+            f"控制模式: {metadata.get('控制模式', 'N/A')}",
+            f"legacy控制模型: {metadata.get('legacy控制模型', 'N/A')}",
+            f"机械转速: {metadata.get('机械转速_rpm', 'N/A')} rpm",
+            f"电频率: {metadata.get('电频率_Hz', 'N/A')} Hz",
+            "-" * 70,
+            "",
+        ]
+        self.result_text.insert("1.0", "\n".join(summary_lines))
+
     def run_analysis(self):
         try:
             params = self._get_params()
@@ -52,6 +68,7 @@ class MotorCalculatorApp(_LEGACY_MODULE.MotorCalculatorApp):
                 }
             )
             self._display_report()
+            self._inject_phase3a_report_summary()
             self._plot_performance_curves()
             self._plot_back_emf()
             self._plot_torque()
