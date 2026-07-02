@@ -4,23 +4,26 @@
 
 ## 1. 当前项目目标
 
-当前项目的目标是将原始单文件电机计算程序重构为可维护、可测试、可回归验证的工程结构，同时冻结现有模型定义和 legacy 行为。
+当前项目目标仍然是：
 
-当前阶段目标不包括：
+- 冻结已批准的模型定义
+- 保持 legacy 行为稳定
+- 提升结构可维护性、可测试性和语义清晰度
+- 在任何会改变结果的公式修改前，先建立并行输出、测试和差异报告
 
-- 不替换电磁公式
-- 不重做 GUI 设计
-- 不移除 `matplotlib`
-- 不增加优化、成本估算或新的设计功能
+当前项目目标不包括：
+
+- 未经批准直接替换 legacy 电磁经验公式
+- 重做 GUI 布局或视觉样式
+- 删除 `matplotlib`
+- EXE 打包
+- 在未批准前直接启用新的物理默认值
 
 ## 2. 项目对象
 
 - 目标电机：三相轴向磁通永磁无刷电机 AFPM PMSM/BLDC
 - 默认拓扑：双转子、单定子、双气隙
 - 默认连接：Y 接
-- 模式定义：
-  - `PMSM`：正弦反电势、正弦电流
-  - `BLDC`：梯形反电势、120° 方波导通
 
 ## 3. 已完成阶段
 
@@ -31,7 +34,6 @@
 - 审查原始单文件程序结构
 - 识别 GUI、计算逻辑、依赖和打包风险
 - 列出单位、相线值、峰值/有效值、极数/极对数等关键风险
-- 输出静态审查报告
 
 ### 第二阶段：安全基线、核心拆分、输入校验
 
@@ -40,58 +42,79 @@
 - 初始化 Git 仓库
 - 保留原始单文件版本
 - 创建 baseline 提交
-- 建立分支 `refactor/core-validation`
+- 建立 `refactor/core-validation` 分支
 - 保存 3 组 `legacy baseline`
 - 创建 `motor_core/` 纯计算内核
 - 创建 `gui/` GUI 包装层
 - 集中单位转换、常量、模型假设和输入校验
-- 补充中文文档
 - 建立回归测试、单位测试和输入校验测试
+
+### Phase 3A：电气语义澄清与标准 pytest
+
+已完成：
+
+- 启用标准 `pytest`
+- 标准测试命令固定为 `python -m pytest -v`
+- 引入明确的速度、频率、电压、电流和控制模式语义
+- 隔离 PMSM 与 BLDC 的电气语义边界
+- 保留 legacy 输出字段并新增明确语义字段
+- 新增电气语义测试覆盖
+- 编写 `docs/electrical_quantity_definitions_zh.md`
+
+Phase 3A 分支与提交：
+
+- 当前开发分支：`feature/electrical-semantics`
+- `724c305` `test: enable standard pytest`
+- `98ba044` `refactor: clarify speed and electrical quantity semantics`
+- `47e086a` `refactor: separate PMSM and BLDC control mode semantics`
+- `db9749d` `test: add electrical semantics coverage`
+- `c0da91b` `docs: document electrical quantity definitions`
+
+Phase 3A 验证状态：
+
+- 完整测试结果：`25 passed`
+- `legacy_baseline.json` 未修改
+- 3 组 legacy baseline、18 个输出字段均未发现数值漂移
+- PMSM 与 BLDC 的电气语义已经隔离
+- BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系尚未建立
+- legacy `Ke` / `Kt`、`required_voltage_v`、损耗、电感、槽满率等模型尚未修正
 
 ## 4. 当前 Git 状态
 
-- 当前分支：`refactor/core-validation`
-- 关键提交：
-  - `d2f9f67`：`baseline: preserve original single-file motor calculator`
-  - `aaeb2d7`：`refactor: split motor core and add validation baseline`
+- 当前开发基线：`feature/electrical-semantics`
+- 当前阶段文档固化后，将进入 Phase 3B
 
-## 5. 当前文件结构
+关键历史提交：
+
+- `d2f9f67`：`baseline: preserve original single-file motor calculator`
+- `aaeb2d7`：`refactor: split motor core and add validation baseline`
+- `c2d0039`：`docs: freeze project context and approved assumptions`
+
+## 5. 当前测试体系
+
+正式测试命令：
 
 ```text
-motor_calculator/
-  app.py
-  PMDC_Calculator_claude204.py
-  motor_core/
-    __init__.py
-    assumptions.py
-    calculations.py
-    constants.py
-    models.py
-    units.py
-    validation.py
-  gui/
-    __init__.py
-    main_window.py
-  tests/
-    test_legacy_regression.py
-    test_units.py
-    test_validation.py
-    fixtures/
-      legacy_baseline.json
-  docs/
-    model_assumptions_zh.md
-    formula_inventory_zh.md
-work/
-  run_pytest_style.py
-docs/
-  project_status_zh.md
-  approved_model_assumptions_zh.md
-  pending_decisions_zh.md
+python -m pytest -v
 ```
 
-## 6. legacy baseline 的用途
+当前完整测试结果：
 
-`motor_calculator/tests/fixtures/legacy_baseline.json` 的用途是：
+```text
+25 passed
+```
+
+兼容测试入口仍保留：
+
+```text
+python work/run_pytest_style.py
+```
+
+但它只用于临时兼容环境，不再作为正式测试入口。
+
+## 6. legacy baseline 的作用
+
+`motor_calculator/tests/fixtures/legacy_baseline.json` 的作用是：
 
 - 固化重构前程序行为
 - 作为回归测试对照
@@ -101,51 +124,48 @@ docs/
 
 - 物理真值
 - 最终设计值
-- 精度证明
+- 电机模型实验验证结果
 
-## 7. 当前测试方式
+## 7. 当前已知公式状态
 
-当前测试执行方式：
+当前仍保持 legacy 或未修正的内容包括：
 
-```text
-python work/run_pytest_style.py
-```
+- `9.55 * P / n`
+- legacy `Ke` / `Kt`
+- `required_voltage_v`
+- 铁损、机械损耗、涡流损耗模型
+- 电感模型
+- 槽满率代理模型
 
-说明：
+所有会改变结果的公式修改都必须保留 legacy 与 revised 并行输出，不得直接覆盖旧字段。
 
-- 当前运行环境未预装 `pytest`
-- 但测试文件已按 pytest 风格命名和组织
-- 后续如补齐 `pytest`，可平滑迁移到标准 pytest 运行方式
+## 8. Phase 3B 范围
 
-## 8. 已知经验公式与待确认公式
+Phase 3B 只允许处理额定转矩公式对比：
 
-已知经验公式和状态请以以下文件为准：
+- legacy：`T = 9.55 * P / n`
+- revised：`T = P / omega_m`
 
-- `motor_calculator/docs/formula_inventory_zh.md`
-- `motor_calculator/docs/model_assumptions_zh.md`
+Phase 3B 的强约束：
 
-当前重点：
+- revised 结果不得传播到额定电流、损耗、效率或电压需求
+- 不得修改 `Ke` / `Kt`
+- 不得修改 BLDC 模型
+- 不得修改 `required_voltage_v`
+- 不得修改 `legacy_baseline.json`
 
-- 经验公式已被保留并显式标记
-- 待确认公式未在本阶段擅自替换
+## 9. 下一阶段状态
 
-## 9. 当前尚未解决的工程问题
+当前允许进入：
 
-- `Kt` / `Ke` 的相值/线值与峰值/有效值语义仍需最终确认
-- `9.55 * P / n` 仍为 legacy 兼容实现
-- `K_fill` 仍是 legacy 占比指标，不是真实槽满率
-- 所需电压模型仍为简化表达
-- 铁损、机械损耗、涡流损耗等仍为经验模型
-- 当前测试运行器是轻量替代，不是标准 pytest
-- 旧 GUI 仍通过兼容桥接方式依赖 legacy 文件
+- Phase 3B：严格 SI 额定转矩公式对比
 
-## 10. 下一阶段目标
+当前不允许进入：
 
-继续第三阶段之前，应优先完成：
+- Phase 3C：PMSM `Ke` / `Kt` 语义修正
 
-- 固化所有已批准和未批准的模型决策
-- 明确哪些修改只影响结构，哪些会改变结果
-- 将“可改”和“需批准后才能改”的内容清楚分层
+## 10. 当前未解决问题
 
-下一阶段不应直接修改公式，除非先获得批准。
-
+- BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系仍未建立
+- `9.55 * P / n` 是否应从 legacy 默认值切换为严格 SI 默认值，尚未批准
+- 如果未来启用 revised 默认转矩，将影响额定电流、铜损、效率和所需电压等下游结果

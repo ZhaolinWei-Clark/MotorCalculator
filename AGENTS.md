@@ -13,18 +13,21 @@ The root documents in `docs/` are the canonical high-level project memory for fu
 3. `docs/pending_decisions_zh.md`
 4. `motor_calculator/docs/model_assumptions_zh.md`
 5. `motor_calculator/docs/formula_inventory_zh.md`
+6. `docs/electrical_quantity_definitions_zh.md`
+7. `docs/phase3_formula_change_report_zh.md`
 
 ## Current Project Goal
 
-The current goal is not to improve electromagnetic physics yet. The goal is to:
+The current track is still a controlled refactor and semantics-clarification effort, not a broad electromagnetic physics upgrade.
 
-- freeze model definitions
+Current priorities:
+
 - preserve legacy calculator behavior
-- split GUI from the calculation core
+- keep the legacy regression baseline stable
 - centralize units, constants, assumptions, and validation
-- maintain a regression baseline before any formula-level changes
+- make all result-changing formula work explicit, reviewable, and parallelized
 
-## Approved Model Definition
+## Current Approved State
 
 - Target machine type: three-phase axial-flux permanent-magnet motor, AFPM PMSM/BLDC
 - Not a brushed PMDC model
@@ -33,16 +36,56 @@ The current goal is not to improve electromagnetic physics yet. The goal is to:
 - `pole_pairs` means pole pairs
 - `pole_count = 2 * pole_pairs` means total poles
 - Internal calculations should use SI units
-- Two operating modes are defined:
-  - `PMSM`: sinusoidal back-EMF, sinusoidal current
-  - `BLDC`: trapezoidal back-EMF, 120-degree conduction
+- PMSM and BLDC electrical semantics have been separated in Phase 3A
+- Standard development test command is `python -m pytest -v`
+
+## Phase 3A Completion Snapshot
+
+Phase 3A is complete on branch `feature/electrical-semantics`.
+
+Recorded commits:
+
+- `724c305` `test: enable standard pytest`
+- `98ba044` `refactor: clarify speed and electrical quantity semantics`
+- `47e086a` `refactor: separate PMSM and BLDC control mode semantics`
+- `db9749d` `test: add electrical semantics coverage`
+- `c0da91b` `docs: document electrical quantity definitions`
+
+Validated state:
+
+- full pytest result: `25 passed`
+- `legacy_baseline.json` unchanged
+- 3 legacy baseline cases and 18 legacy output fields show no numeric drift
+- PMSM and BLDC electrical semantics are isolated
+- strict BLDC RMS, peak, `Ke`, and `Kt` relationships are still not established
+
+## Phase 3B Scope
+
+Phase 3B is limited to rated torque formula comparison only.
+
+Allowed:
+
+- keep legacy rated torque formula
+- add a strict SI rated torque formula in parallel
+- expose legacy and revised values side by side
+- compute and report difference metrics
+
+Not allowed in Phase 3B:
+
+- modify `Ke` / `Kt`
+- modify PMSM back-EMF formulas
+- modify BLDC model behavior
+- modify `required_voltage_v`
+- propagate revised rated torque into rated current, loss, efficiency, or voltage requirement calculations
+- modify empirical loss, inductance, fill-factor, demagnetization, or temperature-rise formulas
+- modify `legacy_baseline.json`
 
 ## Hard Rules
 
 - Do not delete or overwrite `motor_calculator/PMDC_Calculator_claude204.py`.
-- Do not modify electromagnetic formulas without explicit user approval.
+- Do not delete the legacy calculation implementation.
 - Do not silently change legacy baseline data to make tests pass.
-- Do not claim improved physical accuracy during the current restructuring track.
+- Do not claim improved physical accuracy without explicit evidence and approval.
 - GUI must not contain electromagnetic formulas.
 - `motor_core/calculations.py` must remain GUI-independent.
 - Unit conversions must stay centralized in `motor_core/units.py`.
@@ -59,10 +102,10 @@ Before changing any formula that could alter calculated outputs, obtain explicit
 - affected outputs
 - reason for change
 
-Examples that require prior approval:
+Examples requiring prior approval:
 
 - `Kt` / `Ke` semantic adjustments
-- replacement of `9.55 * P / n`
+- replacing legacy outputs with strict SI defaults
 - changes to voltage requirement model
 - changes to fill-factor definition
 - changes to empirical loss models
@@ -75,31 +118,30 @@ Examples that require prior approval:
 - It is a regression anchor for refactoring.
 - It is not proof of physical correctness.
 - Any mismatch against this file must be explained before updating the fixture.
+- Formula comparison work must keep legacy outputs intact unless the user explicitly approves a default switch.
 
 ## Testing
 
-Primary regression coverage currently includes:
+Formal test entry point:
 
-- legacy baseline regression
-- unit conversion checks
-- validation behavior checks
+- `python -m pytest -v`
 
-Current execution method:
+Temporary compatibility runner:
 
 - `work/run_pytest_style.py`
 
-Reason:
+Current expected result after Phase 3A freeze:
 
-- the current environment does not have a preinstalled `pytest` package
-- tests are still written in pytest-style naming so they can later migrate to standard pytest execution
+- `25 passed`
 
 ## Key Git State
 
-As of the current documentation freeze:
+Current development baseline:
 
-- working branch: `refactor/core-validation`
+- working branch: `feature/electrical-semantics`
 - baseline commit: `d2f9f67` `baseline: preserve original single-file motor calculator`
 - phase 2 refactor commit: `aaeb2d7` `refactor: split motor core and add validation baseline`
+- context documentation commit: `c2d0039` `docs: freeze project context and approved assumptions`
 
 ## Main File Layout
 
@@ -115,24 +157,28 @@ docs/
   project_status_zh.md
   approved_model_assumptions_zh.md
   pending_decisions_zh.md
+  electrical_quantity_definitions_zh.md
+  phase3_formula_change_report_zh.md
 work/
   run_pytest_style.py
 ```
 
 ## Next Phase Intent
 
-The next phase should focus on decision preparation before any formula edits:
+Phase 3B should:
 
-- enumerate all formula semantics that may change results
-- separate approved structural changes from unapproved physics changes
-- seek approval before touching calculation semantics
+- keep `legacy_rated_torque_nm = 9.55 * P / n`
+- add `revised_rated_torque_nm = P / omega_m`
+- report absolute and relative differences
+- keep all downstream production calculations on legacy rated torque
+
+Phase 3C, if approved later, is where `Ke` / `Kt` semantics may be revisited.
 
 ## Open Engineering Issues
 
 - `Kt` / `Ke` semantics still need formal confirmation
-- `9.55 * P / n` is still preserved for legacy compatibility
+- BLDC 120-degree conduction RMS/peak semantics are still provisional
+- `9.55 * P / n` remains the active downstream legacy implementation
+- voltage requirement model is still simplified
 - fill factor is still a legacy proxy, not a true slot fill factor
-- voltage requirement model is simplified
 - several loss models remain empirical
-- standard pytest is not yet available in the local runtime
-
