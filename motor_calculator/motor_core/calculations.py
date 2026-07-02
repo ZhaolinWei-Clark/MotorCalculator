@@ -18,7 +18,6 @@ from .constants import (
     CORE_LOSS_RATED_POWER_RATIO,
     END_WINDING_INDUCTANCE_RATIO,
     END_WINDING_LENGTH_FACTOR,
-    LEGACY_POWER_SPEED_TO_TORQUE_FACTOR,
     LEGACY_SINE_EMF_FACTOR,
     LEGACY_TRAPEZOIDAL_EMF_FACTOR,
     MU0,
@@ -54,6 +53,7 @@ from .models import (
     SlotGeometry,
     StatorGeometry,
 )
+from .rated_torque_models import calculate_legacy_rated_torque_nm, compare_rated_torque_models
 from .units import control_mode_to_legacy_waveform, legacy_params_to_model_input
 from .validation import validate_finite_result, validate_motor_input, validate_result_object_finite
 
@@ -256,7 +256,7 @@ class MotorAnalysisEngine:
         if i.is_coreless:
             return rotor_position_rad, np.zeros_like(rotor_position_rad)
 
-        rated_torque_nm = LEGACY_POWER_SPEED_TO_TORQUE_FACTOR * i.rated_output_power_w / i.mechanical_speed_rpm
+        rated_torque_nm = calculate_legacy_rated_torque_nm(i.rated_output_power_w, i.mechanical_speed_rpm)
         cogging_peak_nm = i.cogging_factor * rated_torque_nm
         cogging_waveform = cogging_peak_nm * (
             np.sin(least_common_multiple * rotor_position_rad)
@@ -344,7 +344,7 @@ class MotorAnalysisEngine:
 
     def calculate_torque_waveform(self) -> Dict[str, Any]:
         i = self.motor_input
-        rated_torque_nm = LEGACY_POWER_SPEED_TO_TORQUE_FACTOR * i.rated_output_power_w / i.mechanical_speed_rpm
+        rated_torque_nm = calculate_legacy_rated_torque_nm(i.rated_output_power_w, i.mechanical_speed_rpm)
         electrical_angle_rad = np.linspace(0.0, 4.0 * PI, 720)
         ripple = i.torque_ripple_6th * np.cos(6.0 * electrical_angle_rad) + i.torque_ripple_12th * np.cos(12.0 * electrical_angle_rad)
         instantaneous_torque_nm = rated_torque_nm * (1.0 + ripple)
@@ -439,7 +439,10 @@ class MotorAnalysisEngine:
 
         magnetic_result = self.calculate_magnetic_circuit()
         electrical_result = self.calculate_electrical_parameters(magnetic_result)
-        rated_torque_nm = LEGACY_POWER_SPEED_TO_TORQUE_FACTOR * i.rated_output_power_w / i.mechanical_speed_rpm
+        rated_torque_comparison = compare_rated_torque_models(i.rated_output_power_w, i.mechanical_speed_rpm)
+        # Phase 3B only exposes the strict-SI result for comparison. All
+        # downstream production calculations continue to use the legacy torque.
+        rated_torque_nm = rated_torque_comparison.legacy_rated_torque_nm
         phase_current_rms_a = rated_torque_nm / electrical_result.legacy_torque_constant_nm_per_phase_rms_a
         copper_loss_w, eddy_loss_w, core_loss_w, mechanical_loss_w = self.calculate_losses(
             electrical_result,
@@ -488,6 +491,11 @@ class MotorAnalysisEngine:
             electrical_frequency_hz=electrical_frequency_hz,
             electrical_angular_speed_rad_s=electrical_angular_speed_rad_s,
             rated_torque_nm=rated_torque_nm,
+            legacy_rated_torque_nm=rated_torque_comparison.legacy_rated_torque_nm,
+            revised_rated_torque_nm=rated_torque_comparison.revised_rated_torque_nm,
+            rated_torque_absolute_difference_nm=rated_torque_comparison.rated_torque_absolute_difference_nm,
+            rated_torque_relative_difference=rated_torque_comparison.rated_torque_relative_difference,
+            rated_torque_model_status=rated_torque_comparison.rated_torque_model_status,
             average_torque_nm=torque_waveform["T_avg"],
             torque_ripple_percent=torque_waveform["T_ripple_pct"],
             cogging_torque_peak_nm=np.max(np.abs(cogging_torque_nm)),

@@ -379,6 +379,11 @@ class PerformanceResult:
     electrical_frequency_hz: float
     electrical_angular_speed_rad_s: float
     rated_torque_nm: float
+    legacy_rated_torque_nm: float
+    revised_rated_torque_nm: float
+    rated_torque_absolute_difference_nm: float
+    rated_torque_relative_difference: float
+    rated_torque_model_status: str
     average_torque_nm: float
     torque_ripple_percent: float
     cogging_torque_peak_nm: float
