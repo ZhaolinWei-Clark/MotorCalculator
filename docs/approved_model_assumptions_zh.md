@@ -34,7 +34,7 @@
   - 梯形反电势
   - 120°导通
 
-## 6. Phase 3A 已批准的电气语义
+## 6. 公共电气语义
 
 - `pole_pairs` 表示极对数
 - `pole_count = 2 * pole_pairs` 表示总极数
@@ -44,35 +44,29 @@
   - `electrical_frequency_hz`
   - `electrical_angular_speed_rad_s`
 - 公共字段中不再继续传播含糊的 `p`、`poles`、`omega`、`f`
-- PMSM 与 BLDC 的电气语义已隔离
-- BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系尚未建立，只能保留 provisional 或 legacy 标记
-
-## 7. 单位语义
-
 - 内部计算统一使用 SI 单位
 - `mm -> m`、`rpm -> rad/s` 等转换必须集中处理
-- GUI、报告和计算层不得重复做不一致的单位换算
 
-## 8. legacy 公式策略
+## 7. legacy 公式策略
 
 - 当前所有电磁经验公式暂时保留
 - 不得擅自替换经验公式
 - 只允许明确标记其来源状态、适用限制和风险
 
-## 9. 结果稳定性约束
+## 8. 结果稳定性约束
 
 - 原则上不得改变现有正常输入下的计算结果
 - 任何会改变结果的修改，必须先单独列出并等待批准
 - 所有会改变结果的公式修改，都必须保留 legacy 与 revised 并行输出
 
-## 10. baseline 规则
+## 9. baseline 规则
 
 - `legacy_baseline.json` 是重构前行为基线
 - 它只用于回归比较
 - 不能把它当作物理正确值
 - 不得为了通过测试而擅自修改基准数据
 
-## 11. 当前不允许擅自修改的公式类别
+## 10. 当前不允许擅自修改的公式类别
 
 以下内容在未获批准前不得主动修改：
 
@@ -83,55 +77,57 @@
 - 铁损、机械损耗、涡流损耗经验公式
 - 双转子 / 双气隙相关系数
 
-## 12. Phase 3B 已批准范围
+## 11. Phase 3A 到 Phase 3D 固化结论
 
-Phase 3B 只允许处理额定转矩公式对比：
+- revised 额定转矩只允许并行比较，不得传播到额定电流、损耗、效率或 `required_voltage_v`
+- revised PMSM `Ke` / `Kt` 只允许并行输出，不得传播到额定电流、损耗、效率、`required_voltage_v` 或 GUI 默认链路
+- revised PMSM `Ke` / `Kt` 已通过独立 analytical validation
+- 现有 3 组 `legacy_baseline` 全部为 BLDC 路径，不是 PMSM revised `Ke` / `Kt` 的数值参考
 
-- legacy：`legacy_rated_torque_nm = 9.55 * rated_power_w / mechanical_speed_rpm`
-- revised：`revised_rated_torque_nm = rated_power_w / mechanical_angular_speed_rad_s`
+## 12. Phase 3E 已批准且已完成的边界
 
-并且明确批准以下边界：
+Phase 3E 只允许建立 BLDC revised 语义、公式和独立 analytical reference cases，并已完成以下内容：
 
-- revised 结果只能用于比较、报告和测试
-- 当前下游继续使用 `legacy_rated_torque_nm`
-- revised 结果不得传播到：
-  - 额定电流
-  - 铜损
-  - 铁损
-  - 机械损耗
-  - 效率
-  - `required_voltage_v`
-  - 转矩波形
+- 建立 ideal BLDC 三相、Y 接、梯形反电势、120°导通的 revised 波形语义
+- 建立 `phase_flat_top`、`phase_peak`、`phase_rms`、`line_to_line_peak`、`line_to_line_rms` 的显式定义
+- 建立 BLDC revised `Ke` 字段：
+  - `revised_bldc_back_emf_constant_phase_flat_top_v_per_rad_s`
+  - `revised_bldc_back_emf_constant_phase_peak_v_per_rad_s`
+  - `revised_bldc_back_emf_constant_phase_rms_v_per_rad_s`
+  - `revised_bldc_back_emf_constant_line_rms_v_per_rad_s`
+  - `revised_bldc_back_emf_constant_line_rms_v_per_krpm`
+- 建立 BLDC revised `Kt` 字段：
+  - `revised_bldc_torque_constant_nm_per_conduction_a`
+  - `revised_bldc_torque_constant_nm_per_phase_rms_a`
+- 建立 4 个独立 BLDC analytical reference cases
+- 建立 piecewise formula 与高分辨率 numeric integration 的交叉验证
 
-## 13. Phase 3B 已完成固化状态
+## 13. Phase 3E 明确不允许且实际未修改的内容
 
-- 当前开发分支：`feature/strict-si-rated-torque`
-- Phase 3A 状态固化提交：`d9e675f`
-- Phase 3B 提交：
-  - `1c74397` `feat: add strict SI rated torque comparison`
-  - `28cc132` `test: cover legacy and strict SI torque models`
-  - `0adbca7` `docs: document rated torque formula comparison`
-- 当前完整测试结果：`35 passed`
-- `legacy_baseline.json` 未修改
-- `revised_rated_torque_nm` 尚未设为默认值
-- revised 转矩没有传播到任何下游计算
+- 不修改 PMSM revised 公式
+- 不修改 PMSM reference cases
+- 不修改 `required_voltage_v`
+- 不修改额定电流默认链路
+- 不修改损耗
+- 不修改效率
+- 不修改电感
+- 不修改槽满率
+- 不修改退磁或温升
+- 不切换 revised 为默认
+- 不修改 `legacy_baseline.json`
+- 不重新设计 GUI
+- 不打包 EXE
 
-## 14. Phase 3C 已批准边界
+## 14. 当前 revised 默认值策略
 
-Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义。
-
-明确边界：
-
-- BLDC 120°导通仍保持 legacy / provisional
-- 所有 revised `Ke` / `Kt` 必须与 legacy 并行输出
-- 未经批准，不得使用 revised `Ke` / `Kt` 重新计算：
-  - 额定电流
-  - 铜损
-  - 效率
-  - `required_voltage_v`
-  - GUI 默认链路
-- 不得删除 legacy `Ke` / `Kt` 实现
-- 不得修改 `legacy_baseline.json`
+- revised PMSM `Ke` / `Kt` 不是默认值
+- revised BLDC `Ke` / `Kt` 不是默认值
+- revised 额定转矩不是默认值
+- 所有 revised 结果当前只用于：
+  - 比较
+  - 报告
+  - 测试
+  - 实验性输出
 
 ## 15. 计算层与 GUI 分层规则
 
@@ -141,7 +137,22 @@ Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义。
 - `motor_core/units.py` 负责单位转换
 - `motor_core/constants.py` 负责常量和 legacy magic numbers 的集中存放
 
-## 16. 修改公式前必须获得批准
+## 16. 当前已验证与未验证边界
+
+当前已验证：
+
+- PMSM revised `Ke` / `Kt` 的 analytical validation
+- BLDC revised `Ke` / `Kt` 的 piecewise waveform + numeric integration + independent analytical reference validation
+- revised 字段未传播到下游默认链路
+
+当前仍未验证：
+
+- FEA 一致性
+- 实验台架一致性
+- 公开论文 benchmark 一致性
+- 完整样机验证
+
+## 17. 修改公式前必须获得批准
 
 修改公式前至少需要向用户提交：
 
@@ -151,101 +162,3 @@ Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义。
 - 修改理由
 - 预计影响的输出项
 - 是否会打破 legacy baseline
-
-## 17. Phase 3C 当前物理假设
-
-本阶段冻结的 PMSM revised `Ke` / `Kt` 假设为：
-
-- 三相系统
-- Y 接
-- 正弦相反电势
-- 正弦相电流
-- 稳态
-- 三相平衡
-- 电流与反电势同相
-- 暂不考虑 d 轴电流、弱磁、凸极效应和磁阻转矩
-- 暂不考虑逆变器谐波
-- 转矩只考虑永磁同步转矩分量
-- `pole_pairs` 表示极对数
-- `mechanical_angular_speed_rad_s` 表示机械角速度
-
-## 18. Phase 3C 已完成固化状态
-
-- 当前分支：`feature/pmsm-ke-kt-semantics`
-- Phase 3B 状态固化提交：`f62abed`
-- Phase 3C 提交：
-  - `85bb881` `feat: add revised PMSM back emf constant definitions`
-  - `55882de` `feat: derive PMSM torque constants from power balance`
-  - `3d5ac40` `test: cover PMSM Ke Kt semantics and isolation`
-  - `830e200` `docs: document PMSM Ke Kt formula semantics`
-- 当前完整测试结果：`63 passed`
-- `legacy_baseline.json` 未修改
-- 现有 3 组 legacy baseline 全部为 BLDC 模式
-- 现有 baseline 不能作为 PMSM revised `Ke` / `Kt` 的数值验证案例
-- revised PMSM `Ke` / `Kt` 当前仅通过：
-  - 单位转换测试
-  - 三相功率平衡测试
-  - 下游隔离测试
-- revised PMSM `Ke` / `Kt` 尚未经过独立 PMSM reference case 验证
-- BLDC `Ke` / `Kt` 仍保持 legacy / provisional
-- revised `Ke` / `Kt`、revised rated torque 均不得自动传播到下游
-
-## 19. Phase 3D 已批准边界
-
-Phase 3D 的目标是建立独立 PMSM 验证案例，而不是继续修改公式。
-
-明确边界：
-
-- 不进入 BLDC `Ke` / `Kt` 修正
-- 不修改 `required_voltage_v`
-- 不将 revised PMSM `Ke` / `Kt` 设为默认值
-- 不将 revised rated torque 设为默认值
-- 不把 revised `Ke` / `Kt` 或 revised rated torque 传播到：
-  - 额定电流
-  - 铜损
-  - 效率
-  - `required_voltage_v`
-  - GUI 默认链路
-- 不修改 `legacy_baseline.json`
-
-## 20. Phase 3D 已完成固化状态
-
-- 当前工作分支：`test/pmsm-reference-cases`
-- Phase 3C 状态固化提交：`941551d`
-- Phase 3D 提交：
-  - `a07e0b5` `test: add independent PMSM analytical reference cases`
-  - `47ab1ca` `test: validate PMSM Ke Kt and power consistency`
-  - `144458f` `docs: document PMSM analytical reference validation`
-- 修改前完整测试结果：`63 passed`
-- 修改后完整测试结果：`84 passed`
-- 正式测试入口：`.venv\Scripts\python.exe -m pytest -v`
-- `legacy_baseline.json` 未修改
-- `legacy_baseline.json` SHA-256：`15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
-- 已建立 4 个独立 PMSM `analytical_reference` cases
-- PMSM revised `Ke` / `Kt` 当前已通过：
-  - 单位语义测试
-  - 三相功率平衡测试
-  - 独立 analytical reference validation
-  - 下游隔离测试
-- 当前验证仍不是：
-  - FEA 验证
-  - 实验台架验证
-  - 公开论文 benchmark
-  - 完整样机验证
-- PMSM revised `Ke` / `Kt` 尚未设为默认值
-- revised rated torque 尚未设为默认值
-- BLDC 120°导通下严格 `Ke` / `Kt`、RMS、peak、电流和功率关系尚未建立
-
-## 21. Phase 3E 已批准边界
-
-Phase 3E 只允许建立 BLDC revised 语义、公式和独立 analytical reference cases。
-
-明确边界：
-
-- 不修改 `required_voltage_v`
-- 不修改损耗模型
-- 不修改电感模型
-- 不修改槽满率定义
-- 不切换任何默认链路
-- 不修改 PMSM revised 公式
-- 不修改 `legacy_baseline.json`
