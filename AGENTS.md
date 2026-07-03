@@ -40,6 +40,9 @@ Current priorities:
 - Phase 3B is complete and keeps strict-SI rated torque in parallel with legacy rated torque
 - `revised_rated_torque_nm` is not the production default
 - Revised rated torque must not propagate into downstream current, loss, efficiency, or voltage calculations without approval
+- Phase 3C is complete and keeps revised PMSM `Ke` / `Kt` in parallel with legacy outputs
+- Existing legacy baseline cases are all BLDC-path cases and are not valid numerical reference cases for revised PMSM `Ke` / `Kt`
+- Revised PMSM `Ke` / `Kt` are currently validated only by unit-conversion, three-phase power-balance, and downstream-isolation tests
 - Standard development test command is `python -m pytest -v`
 
 ## Phase 3A Completion Snapshot
@@ -80,24 +83,44 @@ Validated state:
 - revised rated torque remains comparison-only
 - revised rated torque has not propagated into rated current, loss, efficiency, GUI default paths, or `required_voltage_v`
 
-## Phase 3C Scope
+## Phase 3C Completion Snapshot
 
-Phase 3C is limited to PMSM sinusoidal `Ke` / `Kt` semantics only.
+Phase 3C is complete on branch `feature/pmsm-ke-kt-semantics`.
+
+Recorded commits:
+
+- `f62abed` `docs: record phase 3B completion and phase 3C scope`
+- `85bb881` `feat: add revised PMSM back emf constant definitions`
+- `55882de` `feat: derive PMSM torque constants from power balance`
+- `3d5ac40` `test: cover PMSM Ke Kt semantics and isolation`
+- `830e200` `docs: document PMSM Ke Kt formula semantics`
+
+Validated state:
+
+- full pytest result: `63 passed`
+- `legacy_baseline.json` unchanged
+- existing 3 legacy baseline cases are all BLDC-mode paths
+- existing baseline is not a valid numerical reference case for revised PMSM `Ke` / `Kt`
+- revised PMSM `Ke` / `Kt` are validated only by unit-conversion, three-phase power-balance, and downstream-isolation tests
+- revised PMSM `Ke` / `Kt`, revised rated torque, and revised defaults do not propagate into downstream calculations
+
+## Phase 3D Scope
+
+Phase 3D is limited to building independent PMSM validation cases, not changing formulas again.
 
 Allowed:
 
-- define revised PMSM back-EMF constants with explicit units and mechanical-speed basis
-- derive revised PMSM torque constants from power balance
-- expose legacy and revised values side by side
-- document which legacy/revised quantities are directly comparable
-- add tests proving revised results do not propagate downstream
+- add independent PMSM reference or validation cases
+- verify revised PMSM `Ke` / `Kt` against explicit PMSM numerical cases
+- keep legacy and revised values side by side
+- document what the new PMSM validation cases prove and what they still do not prove
 
-Not allowed in Phase 3C:
+Not allowed in Phase 3D:
 
-- modify BLDC `Ke` / `Kt` behavior beyond legacy or provisional labeling
+- modify BLDC `Ke` / `Kt`
 - modify `required_voltage_v`
-- use revised `Ke` / `Kt` to recalculate rated current, loss, efficiency, or GUI defaults
-- delete or overwrite legacy `Ke` / `Kt` fields
+- set revised PMSM `Ke` / `Kt` or revised rated torque as production defaults
+- propagate revised values into rated current, loss, efficiency, or GUI defaults
 - modify `legacy_baseline.json`
 
 ## Hard Rules
@@ -150,15 +173,15 @@ Temporary compatibility runner:
 
 - `work/run_pytest_style.py`
 
-Current expected result after Phase 3B freeze:
+Current expected result after Phase 3C freeze:
 
-- `35 passed`
+- `63 passed`
 
 ## Key Git State
 
 Current development baseline:
 
-- working branch: `feature/strict-si-rated-torque`
+- working branch: `feature/pmsm-ke-kt-semantics`
 - baseline commit: `d2f9f67` `baseline: preserve original single-file motor calculator`
 - phase 2 refactor commit: `aaeb2d7` `refactor: split motor core and add validation baseline`
 - context documentation commit: `c2d0039` `docs: freeze project context and approved assumptions`
@@ -185,12 +208,11 @@ work/
 
 ## Next Phase Intent
 
-Phase 3C should:
+Phase 3D should:
 
-- keep all legacy `Ke` / `Kt` outputs intact
-- add revised PMSM sinusoidal `Ke` fields with explicit phase/line and RMS/peak semantics
-- derive revised PMSM sinusoidal `Kt` from three-phase power balance
-- keep all downstream production calculations on legacy `Kt`
+- add independent PMSM validation cases for revised `Ke` / `Kt`
+- keep all legacy and revised formula outputs intact
+- avoid any default-value switch or downstream propagation
 
 BLDC `Ke` / `Kt` corrections remain out of scope until a later approved phase.
 
@@ -200,6 +222,7 @@ BLDC `Ke` / `Kt` corrections remain out of scope until a later approved phase.
 - BLDC 120-degree conduction RMS/peak semantics are still provisional
 - `9.55 * P / n` remains the active downstream legacy implementation
 - revised PMSM `Ke` / `Kt` defaults must not be enabled without explicit approval
+- revised PMSM `Ke` / `Kt` still need independent PMSM reference-case validation
 - voltage requirement model is still simplified
 - fill factor is still a legacy proxy, not a true slot fill factor
 - several loss models remain empirical

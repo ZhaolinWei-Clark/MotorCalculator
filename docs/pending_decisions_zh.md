@@ -9,6 +9,7 @@
 - Phase 3A 已完成
 - Phase 3B 已完成
 - Phase 3C 已完成：PMSM 正弦模式 `Ke` / `Kt` revised 定义
+- 当前进入 Phase 3D：建立独立 PMSM 验证案例
 - 当前不进入 BLDC `Ke` / `Kt` 修正
 
 ## 2. Phase 3A 固化状态
@@ -185,6 +186,13 @@ Phase 3C 当前完成确认：
 - BLDC `Ke` / `Kt` 仍保持 legacy / provisional
 - `legacy_baseline.json` 未修改
 - 完整测试结果已提升为 `63 passed`
+- 现有 3 组 legacy baseline 全部为 BLDC 模式
+- 现有 baseline 不能作为 PMSM revised `Ke` / `Kt` 的数值验证案例
+- revised PMSM `Ke` / `Kt` 当前仅通过：
+  - 单位转换测试
+  - 三相功率平衡测试
+  - 下游隔离测试
+- revised PMSM `Ke` / `Kt` 尚未经过独立 PMSM reference case 验证
 
 ## 7. baseline 相关风险
 
@@ -194,11 +202,25 @@ Phase 3C 当前完成确认：
 - 如果未来启用 revised 默认值，应新增差异报告，而不是静默改写 baseline
 - 当前 3 组 baseline 样例仍走 legacy BLDC 分支，因此不能直接当作 PMSM revised `Ke` / `Kt` 误差基准
 
-## 8. 当前不应做的事
+## 8. Phase 3D 的核心决策点
+
+Phase 3D 完成后仍需用户决策：
+
+1. 是否接受新增独立 PMSM reference case 作为 revised `Ke` / `Kt` 的数值验证样例
+2. 是否允许未来基于独立 PMSM 验证案例评估 revised `Ke` / `Kt` 默认值切换
+3. 是否继续保持 legacy BLDC baseline 与 PMSM reference case 两套独立验证路径
+
+当前建议：
+
+- 先建立独立 PMSM 验证案例
+- 继续保持 BLDC legacy baseline 不变
+- 暂不切换任何 revised 默认值
+
+## 9. 当前不应做的事
 
 - 不要把 revised 额定转矩直接传播到下游
 - 不要在未批准时把 revised `Ke` / `Kt` 传播到下游
-- 不要在 Phase 3C 中修改 BLDC 模型
+- 不要在 Phase 3D 中修改 BLDC 模型
 - 不要在未批准时修改 `required_voltage_v`
 - 不要为了让测试通过而重写 baseline
 - 不要把 Phase 3B 的单位严谨性提升夸大为“整个电机模型已得到实验验证”

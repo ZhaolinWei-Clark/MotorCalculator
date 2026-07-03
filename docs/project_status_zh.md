@@ -214,16 +214,31 @@ Phase 3C 提交：
 - `85bb881` `feat: add revised PMSM back emf constant definitions`
 - `55882de` `feat: derive PMSM torque constants from power balance`
 - `3d5ac40` `test: cover PMSM Ke Kt semantics and isolation`
+- `830e200` `docs: document PMSM Ke Kt formula semantics`
+
+Phase 3C 验收确认：
+
+- `legacy_baseline.json` 未修改
+- 现有 3 组 legacy baseline 全部为 BLDC 模式
+- 现有 baseline 不能作为 PMSM revised `Ke/Kt` 的数值验证案例
+- revised PMSM `Ke/Kt` 当前仅通过：
+  - 单位转换测试
+  - 三相功率平衡测试
+  - 下游隔离测试
+- revised PMSM `Ke/Kt` 尚未经过独立 PMSM reference case 验证
+- BLDC `Ke/Kt` 仍保持 legacy / provisional
+- revised `Ke/Kt`、revised rated torque 均不得自动传播到下游
 
 ## 10. 下一阶段状态
 
 当前允许进入：
 
-- 后续独立阶段：BLDC `Ke` / `Kt` 语义修正
+- Phase 3D：建立独立 PMSM 验证案例
 
 当前不允许进入：
 
 - 未经批准把 revised PMSM `Ke` / `Kt` 切换为默认值
+- 未经批准把 revised rated torque 切换为默认值
 - BLDC `Ke` / `Kt` 修正与默认值切换混在同一阶段处理
 - `required_voltage_v` 修正
 - 未经批准把任何 revised 结果切换为生产默认值
@@ -231,6 +246,7 @@ Phase 3C 提交：
 说明：
 
 - Phase 3C 已证明 PMSM 正弦模式下 revised `Ke` / `Kt` 可定义、可测试、可隔离
+- Phase 3D 的目标是建立独立 PMSM 验证案例，而不是继续修改公式
 - 所有 revised `Ke` / `Kt` 仍保持并行输出和下游隔离
 
 ## 11. 当前未解决问题
@@ -239,6 +255,7 @@ Phase 3C 提交：
 - `9.55 * P / n` 是否应从 legacy 默认值切换为严格 SI 默认值，尚未批准
 - PMSM revised `Ke` / `Kt` 尚未成为默认值
 - baseline 的 3 组历史样例仍是 legacy BLDC 分支，不能直接拿来做 PMSM revised `Ke` / `Kt` 误差表
+- PMSM revised `Ke` / `Kt` 仍缺少独立 PMSM reference case 验证
 - 如果未来启用 revised 默认转矩，将影响额定电流、铜损、效率和所需电压等下游结果
 
 当前建议：

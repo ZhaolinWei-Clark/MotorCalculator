@@ -168,3 +168,42 @@ Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义。
 - 转矩只考虑永磁同步转矩分量
 - `pole_pairs` 表示极对数
 - `mechanical_angular_speed_rad_s` 表示机械角速度
+
+## 18. Phase 3C 已完成固化状态
+
+- 当前分支：`feature/pmsm-ke-kt-semantics`
+- Phase 3B 状态固化提交：`f62abed`
+- Phase 3C 提交：
+  - `85bb881` `feat: add revised PMSM back emf constant definitions`
+  - `55882de` `feat: derive PMSM torque constants from power balance`
+  - `3d5ac40` `test: cover PMSM Ke Kt semantics and isolation`
+  - `830e200` `docs: document PMSM Ke Kt formula semantics`
+- 当前完整测试结果：`63 passed`
+- `legacy_baseline.json` 未修改
+- 现有 3 组 legacy baseline 全部为 BLDC 模式
+- 现有 baseline 不能作为 PMSM revised `Ke` / `Kt` 的数值验证案例
+- revised PMSM `Ke` / `Kt` 当前仅通过：
+  - 单位转换测试
+  - 三相功率平衡测试
+  - 下游隔离测试
+- revised PMSM `Ke` / `Kt` 尚未经过独立 PMSM reference case 验证
+- BLDC `Ke` / `Kt` 仍保持 legacy / provisional
+- revised `Ke` / `Kt`、revised rated torque 均不得自动传播到下游
+
+## 19. Phase 3D 已批准边界
+
+Phase 3D 的目标是建立独立 PMSM 验证案例，而不是继续修改公式。
+
+明确边界：
+
+- 不进入 BLDC `Ke` / `Kt` 修正
+- 不修改 `required_voltage_v`
+- 不将 revised PMSM `Ke` / `Kt` 设为默认值
+- 不将 revised rated torque 设为默认值
+- 不把 revised `Ke` / `Kt` 或 revised rated torque 传播到：
+  - 额定电流
+  - 铜损
+  - 效率
+  - `required_voltage_v`
+  - GUI 默认链路
+- 不修改 `legacy_baseline.json`
