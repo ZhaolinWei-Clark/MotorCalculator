@@ -2,7 +2,7 @@
 
 本文档用于记录当前已经明确批准、后续不得在未获批准前擅自更改的模型假设。
 
-更新时间：2026-07-02
+更新时间：2026-07-03
 
 ## 1. 项目目标定义
 
@@ -103,7 +103,37 @@ Phase 3B 只允许处理额定转矩公式对比：
   - `required_voltage_v`
   - 转矩波形
 
-## 13. 计算层与 GUI 分层规则
+## 13. Phase 3B 已完成固化状态
+
+- 当前开发分支：`feature/strict-si-rated-torque`
+- Phase 3A 状态固化提交：`d9e675f`
+- Phase 3B 提交：
+  - `1c74397` `feat: add strict SI rated torque comparison`
+  - `28cc132` `test: cover legacy and strict SI torque models`
+  - `0adbca7` `docs: document rated torque formula comparison`
+- 当前完整测试结果：`35 passed`
+- `legacy_baseline.json` 未修改
+- `revised_rated_torque_nm` 尚未设为默认值
+- revised 转矩没有传播到任何下游计算
+
+## 14. Phase 3C 已批准边界
+
+Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义。
+
+明确边界：
+
+- BLDC 120°导通仍保持 legacy / provisional
+- 所有 revised `Ke` / `Kt` 必须与 legacy 并行输出
+- 未经批准，不得使用 revised `Ke` / `Kt` 重新计算：
+  - 额定电流
+  - 铜损
+  - 效率
+  - `required_voltage_v`
+  - GUI 默认链路
+- 不得删除 legacy `Ke` / `Kt` 实现
+- 不得修改 `legacy_baseline.json`
+
+## 15. 计算层与 GUI 分层规则
 
 - GUI 不得直接实现电磁公式
 - `motor_core/calculations.py` 只负责纯计算
@@ -111,7 +141,7 @@ Phase 3B 只允许处理额定转矩公式对比：
 - `motor_core/units.py` 负责单位转换
 - `motor_core/constants.py` 负责常量和 legacy magic numbers 的集中存放
 
-## 14. 修改公式前必须获得批准
+## 16. 修改公式前必须获得批准
 
 修改公式前至少需要向用户提交：
 
@@ -122,10 +152,19 @@ Phase 3B 只允许处理额定转矩公式对比：
 - 预计影响的输出项
 - 是否会打破 legacy baseline
 
-## 15. Phase 3C 预留边界
+## 17. Phase 3C 当前物理假设
 
-Phase 3C 才允许进入以下内容：
+本阶段冻结的 PMSM revised `Ke` / `Kt` 假设为：
 
-- PMSM `Ke` / `Kt` 语义修正
-- 更严格的相量 / 线量、RMS / peak 关系落地
-- 评估 revised 默认值向下游传播的影响
+- 三相系统
+- Y 接
+- 正弦相反电势
+- 正弦相电流
+- 稳态
+- 三相平衡
+- 电流与反电势同相
+- 暂不考虑 d 轴电流、弱磁、凸极效应和磁阻转矩
+- 暂不考虑逆变器谐波
+- 转矩只考虑永磁同步转矩分量
+- `pole_pairs` 表示极对数
+- `mechanical_angular_speed_rad_s` 表示机械角速度

@@ -1,6 +1,6 @@
 # 项目状态
 
-更新时间：2026-07-02
+更新时间：2026-07-03
 
 ## 1. 当前项目目标
 
@@ -81,8 +81,9 @@ Phase 3A 验证状态：
 
 ## 4. 当前 Git 状态
 
-- 当前开发基线：`feature/electrical-semantics`
-- 当前阶段文档固化后，将进入 Phase 3B
+- 当前开发基线：`feature/strict-si-rated-torque`
+- Phase 3B 已完成并验收
+- 当前阶段文档固化后，将进入 Phase 3C
 
 关键历史提交：
 
@@ -101,7 +102,7 @@ python -m pytest -v
 当前完整测试结果：
 
 ```text
-25 passed
+35 passed
 ```
 
 兼容测试入口仍保留：
@@ -155,6 +156,13 @@ Phase 3B 已完成。
 - 当前下游仍继续使用 legacy 额定转矩
 - 生成 `docs/phase3_formula_change_report_zh.md`
 
+Phase 3B 相关提交：
+
+- Phase 3A 状态固化提交：`d9e675f`
+- `1c74397` `feat: add strict SI rated torque comparison`
+- `28cc132` `test: cover legacy and strict SI torque models`
+- `0adbca7` `docs: document rated torque formula comparison`
+
 Phase 3B 完成后测试状态：
 
 ```text
@@ -165,47 +173,47 @@ Phase 3B 完成后测试状态：
 
 - legacy regression 仍通过
 - `legacy_baseline.json` 未修改
+- `revised_rated_torque_nm` 尚未设为默认值
 - revised 结果未传播到额定电流、损耗、效率或电压需求
 - 未修改 `Ke` / `Kt`
 - 未修改 BLDC 模型
 - 未修改 `required_voltage_v`
 
-## 9. Phase 3B 范围
+## 9. Phase 3C 范围
 
-Phase 3B 只允许处理额定转矩公式对比：
+Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义：
 
-- legacy：`T = 9.55 * P / n`
-- revised：`T = P / omega_m`
-
-Phase 3B 的强约束：
-
-- revised 结果不得传播到额定电流、损耗、效率或电压需求
-- 不得修改 `Ke` / `Kt`
-- 不得修改 BLDC 模型
-- 不得修改 `required_voltage_v`
-- 不得修改 `legacy_baseline.json`
+- 必须保留 legacy `Ke` / `Kt` 输出
+- 必须与 legacy 并行输出 revised `Ke` / `Kt`
+- revised `Ke` / `Kt` 不得传播到额定电流、损耗、效率、GUI 默认链路或 `required_voltage_v`
+- BLDC 120°导通仍保持 legacy / provisional
 
 ## 10. 下一阶段状态
 
 当前允许进入：
 
-- Phase 3B：严格 SI 额定转矩公式对比
+- Phase 3C：PMSM `Ke` / `Kt` 语义修正
 
 当前不允许进入：
 
-- Phase 3C：PMSM `Ke` / `Kt` 语义修正
+- BLDC `Ke` / `Kt` 修正
+- `required_voltage_v` 修正
+- 未经批准把任何 revised 结果切换为生产默认值
 
 说明：
 
-- 虽然 Phase 3B 已完成，但当前不自动进入 Phase 3C，必须等待批准
+- Phase 3C 当前只处理 PMSM 正弦模式
+- 所有 revised `Ke` / `Kt` 都必须保持并行输出和下游隔离
 
 ## 11. 当前未解决问题
 
 - BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系仍未建立
 - `9.55 * P / n` 是否应从 legacy 默认值切换为严格 SI 默认值，尚未批准
+- PMSM revised `Ke` / `Kt` 尚未成为默认值
 - 如果未来启用 revised 默认转矩，将影响额定电流、铜损、效率和所需电压等下游结果
 
 当前建议：
 
 - 暂不将 revised 额定转矩设为默认值
+- 暂不将 revised `Ke` / `Kt` 设为默认值
 - 先保留并行输出与差异报告

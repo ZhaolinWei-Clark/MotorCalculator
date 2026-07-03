@@ -2,13 +2,14 @@
 
 本文档记录当前尚未关闭、且在修改计算语义前必须确认的决策与工程问题。
 
-更新时间：2026-07-02
+更新时间：2026-07-03
 
 ## 1. 当前阶段划分
 
 - Phase 3A 已完成
-- 当前进入 Phase 3B：严格 SI 额定转矩公式对比
-- 当前不进入 Phase 3C
+- Phase 3B 已完成
+- 当前进入 Phase 3C：PMSM 正弦模式 `Ke` / `Kt` revised 定义
+- 当前不进入 BLDC `Ke` / `Kt` 修正
 
 ## 2. Phase 3A 固化状态
 
@@ -68,12 +69,20 @@ Phase 3B 已完成并确认：
 - revised 结果仅用于比较、测试和报告
 - baseline 文件未修改
 - legacy regression 仍通过
+- 当前分支：`feature/strict-si-rated-torque`
+- Phase 3A 状态固化提交：`d9e675f`
+- Phase 3B 提交：
+  - `1c74397` `feat: add strict SI rated torque comparison`
+  - `28cc132` `test: cover legacy and strict SI torque models`
+  - `0adbca7` `docs: document rated torque formula comparison`
+- 当前完整测试结果：`35 passed`
 
 当前结论：
 
 - 差异来源是 `9.55` 与 `60 / (2π)` 的近似常数差异
 - 本阶段不能据此宣称整个电机模型精度已得到实验验证
 - 当前不建议直接把 revised 额定转矩设为默认值
+- revised 转矩没有传播到任何下游计算
 
 ## 5. 待确认的关键公式问题
 
@@ -89,7 +98,8 @@ Phase 3B 已完成并确认：
 当前状态：
 
 - Phase 3A 只完成字段澄清与模式边界隔离
-- Phase 3C 前不处理默认公式修正
+- Phase 3C 只允许处理 PMSM 正弦模式 revised 定义
+- BLDC `Ke` / `Kt` 仍保持 legacy / provisional
 
 ### 4.2 `9.55 * P / n`
 
@@ -117,14 +127,31 @@ Phase 3B 已完成并确认：
 
 - Phase 3B 明确不修改 `required_voltage_v`
 
-### 4.4 `K_fill`
+### 4.4 PMSM revised `Ke` / `Kt` 的默认值策略
+
+待确认内容：
+
+- revised `Ke` / `Kt` 是否未来允许替代 legacy 默认值
+- 若替代，是否同步传播到：
+  - 额定电流
+  - 铜损
+  - 效率
+  - `required_voltage_v`
+  - GUI 默认链路
+
+当前状态：
+
+- 本阶段只允许并行输出和功率一致性验证
+- 未经批准不得把 revised `Ke` / `Kt` 传播到下游
+
+### 4.5 `K_fill`
 
 待确认内容：
 
 - 当前 legacy 定义是否只作为占比代理量保留
 - 是否将来替换为真实槽满率模型
 
-### 4.5 经验损耗模型
+### 4.6 经验损耗模型
 
 待确认内容：
 
@@ -132,35 +159,36 @@ Phase 3B 已完成并确认：
 - 机械损耗与风阻损耗是否需要按拓扑细化
 - 涡流损耗经验式是否需要限制适用范围
 
-## 6. Phase 3B 的核心决策点
+## 6. Phase 3C 的核心决策点
 
-Phase 3B 完成后仍需用户决策：
+Phase 3C 完成后仍需用户决策：
 
-1. 是否接受在报告层长期并行显示 legacy 与 revised 额定转矩
-2. 是否允许未来把 `revised_rated_torque_nm` 设为默认值
+1. 是否接受在报告层长期并行显示 legacy 与 revised PMSM `Ke` / `Kt`
+2. 是否允许未来把 revised PMSM `Ke` / `Kt` 设为默认值
 3. 若设为默认值，是否同步更新：
    - 额定电流
    - 铜损
    - 效率
    - `required_voltage_v`
+4. BLDC `Ke` / `Kt` 是否进入后续独立阶段修正
 
 当前建议：
 
-- Phase 3B 结束后暂不启用 revised 默认值
-- 先保留比较结果和差异报告
+- Phase 3C 结束后暂不启用 revised 默认值
+- 先保留比较结果、功率一致性验证和差异报告
 
 ## 7. baseline 相关风险
 
 - `legacy_baseline.json` 只覆盖 3 组案例
 - 它能防止明显回归，但不能覆盖所有输入边界
-- Phase 3B 不得修改 baseline 文件
+- Phase 3C 也不得修改 baseline 文件
 - 如果未来启用 revised 默认值，应新增差异报告，而不是静默改写 baseline
 
 ## 8. 当前不应做的事
 
 - 不要把 revised 额定转矩直接传播到下游
-- 不要在未批准时修改 `Ke` / `Kt`
-- 不要在未批准时修改 BLDC 模型
+- 不要在未批准时把 revised `Ke` / `Kt` 传播到下游
+- 不要在 Phase 3C 中修改 BLDC 模型
 - 不要在未批准时修改 `required_voltage_v`
 - 不要为了让测试通过而重写 baseline
 - 不要把 Phase 3B 的单位严谨性提升夸大为“整个电机模型已得到实验验证”
