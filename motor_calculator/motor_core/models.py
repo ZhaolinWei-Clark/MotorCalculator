@@ -321,18 +321,36 @@ class ElectricalResult:
     back_emf_line_peak_v: float | None
     legacy_back_emf_constant_line_rms_v_per_krpm: float
     legacy_torque_constant_nm_per_phase_rms_a: float
+    legacy_bldc_back_emf_constant_line_rms_v_per_krpm: float | None
+    legacy_bldc_torque_constant_nm_per_phase_rms_a: float | None
     revised_back_emf_constant_phase_peak_v_per_rad_s: float | None
     revised_back_emf_constant_phase_rms_v_per_rad_s: float | None
     revised_back_emf_constant_line_rms_v_per_rad_s: float | None
     revised_back_emf_constant_line_rms_v_per_krpm: float | None
     revised_torque_constant_nm_per_phase_peak_a: float | None
     revised_torque_constant_nm_per_phase_rms_a: float | None
+    revised_bldc_phase_flat_top_back_emf_v: float | None
+    revised_bldc_phase_peak_back_emf_v: float | None
+    revised_bldc_phase_rms_back_emf_v: float | None
+    revised_bldc_line_to_line_peak_back_emf_v: float | None
+    revised_bldc_line_to_line_rms_back_emf_v: float | None
+    revised_bldc_back_emf_constant_phase_flat_top_v_per_rad_s: float | None
+    revised_bldc_back_emf_constant_phase_peak_v_per_rad_s: float | None
+    revised_bldc_back_emf_constant_phase_rms_v_per_rad_s: float | None
+    revised_bldc_back_emf_constant_line_rms_v_per_rad_s: float | None
+    revised_bldc_back_emf_constant_line_rms_v_per_krpm: float | None
+    revised_bldc_torque_constant_nm_per_conduction_a: float | None
+    revised_bldc_torque_constant_nm_per_phase_rms_a: float | None
     ke_legacy_revised_relative_difference: float | None
     kt_legacy_revised_relative_difference: float | None
     voltage_semantics_status: str
     ke_model_status: str
     kt_model_status: str
     pmsm_power_consistency_status: str
+    bldc_waveform_semantics_status: str
+    bldc_power_balance_status: str
+    bldc_ke_semantics_status: str
+    bldc_kt_semantics_status: str
     back_emf_constant_phase_peak_v_per_rad_s: float | None
     back_emf_constant_phase_rms_v_per_rad_s: float | None
     back_emf_constant_line_rms_v_per_rad_s: float | None
