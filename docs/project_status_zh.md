@@ -16,7 +16,7 @@
 - 未经批准直接替换 legacy 电磁经验公式
 - 重做 GUI 布局或视觉样式
 - 删除 `matplotlib`
-- EXE 打包
+- 打包 EXE
 - 在未批准前直接启用新的物理默认值
 
 ## 2. 项目对象
@@ -42,7 +42,6 @@
 - 初始化 Git 仓库
 - 保留原始单文件版本
 - 创建 baseline 提交
-- 建立 `refactor/core-validation` 分支
 - 保存 3 组 `legacy baseline`
 - 创建 `motor_core/` 纯计算内核
 - 创建 `gui/` GUI 包装层
@@ -58,32 +57,87 @@
 - 引入明确的速度、频率、电压、电流和控制模式语义
 - 隔离 PMSM 与 BLDC 的电气语义边界
 - 保留 legacy 输出字段并新增明确语义字段
-- 新增电气语义测试覆盖
 - 编写 `docs/electrical_quantity_definitions_zh.md`
 
-Phase 3A 分支与提交：
+Phase 3A 验收状态：
 
-- 当前开发分支：`feature/electrical-semantics`
-- `724c305` `test: enable standard pytest`
-- `98ba044` `refactor: clarify speed and electrical quantity semantics`
-- `47e086a` `refactor: separate PMSM and BLDC control mode semantics`
-- `db9749d` `test: add electrical semantics coverage`
-- `c0da91b` `docs: document electrical quantity definitions`
-
-Phase 3A 验证状态：
-
-- 完整测试结果：`25 passed`
+- 测试结果：`25 passed`
 - `legacy_baseline.json` 未修改
 - 3 组 legacy baseline、18 个输出字段均未发现数值漂移
-- PMSM 与 BLDC 的电气语义已经隔离
-- BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系尚未建立
-- legacy `Ke` / `Kt`、`required_voltage_v`、损耗、电感、槽满率等模型尚未修正
+
+### Phase 3B：legacy 与 strict SI 额定转矩并行比较
+
+已完成：
+
+- 新增 `legacy_rated_torque_nm` 与 `revised_rated_torque_nm` 并行输出
+- 新增额定转矩差异字段和状态字段
+- revised 额定转矩只用于比较、测试和报告
+- 下游仍继续使用 legacy 额定转矩
+- 生成 `docs/phase3_formula_change_report_zh.md`
+
+Phase 3B 验收状态：
+
+- 测试结果：`35 passed`
+- `legacy_baseline.json` 未修改
+- revised 额定转矩未传播到额定电流、损耗、效率或 `required_voltage_v`
+
+### Phase 3C：PMSM revised `Ke` / `Kt` 定义与隔离
+
+已完成：
+
+- 新增 revised PMSM `Ke` 四种显式定义
+- 新增 revised PMSM `Kt` 两种显式定义
+- 新增 `ke_model_status`、`kt_model_status`、`pmsm_power_consistency_status`
+- 保持 revised `Ke` / `Kt` 只进入输出、测试和报告
+- 保持 BLDC `Ke` / `Kt` 为 legacy / provisional
+
+Phase 3C 验收状态：
+
+- 测试结果：`63 passed`
+- `legacy_baseline.json` 未修改
+- 现有 3 组 legacy baseline 全部为 BLDC 路径
+- revised PMSM `Ke` / `Kt` 当时仅通过单位换算、三相功率平衡和下游隔离测试
+- 当时尚未通过独立 PMSM reference case 验证
+
+### Phase 3D：独立 PMSM analytical reference cases
+
+已完成：
+
+- 新增独立 fixture：`motor_calculator/tests/fixtures/pmsm_reference_cases.json`
+- fixture 与 `legacy_baseline.json` 分离保存
+- 当前 4 个案例全部明确标记为 `analytical_reference`
+- 新增独立 reference builder：`motor_calculator/tests/reference_case_builder.py`
+- builder 只使用 fixture 原始输入、`json`、`math`、`pathlib`
+- 新增测试：
+  - `motor_calculator/tests/test_pmsm_reference_cases.py`
+  - `motor_calculator/tests/test_pmsm_reference_power_balance.py`
+  - `motor_calculator/tests/test_pmsm_reference_independence.py`
+- 验证了以下关系在 4 个 PMSM 正弦案例中数值一致：
+  - `rpm -> mechanical_angular_speed_rad_s`
+  - `E_phase_peak -> E_phase_rms -> E_line_rms`
+  - `I_phase_peak -> I_phase_rms`
+  - 四种 revised `Ke`
+  - 两种 revised `Kt`
+  - `P_electromagnetic = (3/2) * E_phase_peak * I_phase_peak`
+  - `T = P_electromagnetic / omega_m`
+  - `T = Kt_phase_peak * I_phase_peak`
+  - `T = Kt_phase_rms * I_phase_rms`
+- 明确证明 reference expected 值不依赖 production calculation modules 生成
+- 明确保留 legacy 下游链路不变
+
+Phase 3D 验收状态：
+
+- 4 个 analytical PMSM reference cases 全部通过
+- revised PMSM `Ke` / `Kt` 已通过 analytical reference validation
+- `legacy_baseline.json` SHA-256 固定值未变
+- legacy regression 继续通过
+- revised `Ke` / `Kt` 仍未设为默认值
+- revised `Ke` / `Kt` 仍未传播到额定电流、损耗、效率、`required_voltage_v` 或 GUI 默认链路
 
 ## 4. 当前 Git 状态
 
-- 当前开发基线：`feature/pmsm-ke-kt-semantics`
-- Phase 3B 已完成并验收
-- Phase 3C 已完成并验收
+- Phase 3C 状态固化提交：`941551d` `docs: record phase 3C completion and phase 3D scope`
+- 当前 Phase 3D 工作分支：`test/pmsm-reference-cases`
 
 关键历史提交：
 
@@ -102,7 +156,7 @@ python -m pytest -v
 当前完整测试结果：
 
 ```text
-63 passed
+84 passed
 ```
 
 兼容测试入口仍保留：
@@ -113,153 +167,86 @@ python work/run_pytest_style.py
 
 但它只用于临时兼容环境，不再作为正式测试入口。
 
-## 6. legacy baseline 的作用
+## 6. baseline 与 reference fixture 的角色
 
 `motor_calculator/tests/fixtures/legacy_baseline.json` 的作用是：
 
 - 固化重构前程序行为
-- 作为回归测试对照
-- 防止结构重构无意改变计算结果
+- 作为 regression baseline
+- 防止结构重构无意改变 legacy 输出
 
 它不是：
 
 - 物理真值
-- 最终设计值
-- 电机模型实验验证结果
+- PMSM revised `Ke` / `Kt` 的数值参考
+- 实验验证结果
 
-## 7. 当前已知公式状态
+`motor_calculator/tests/fixtures/pmsm_reference_cases.json` 的作用是：
+
+- 为 PMSM 正弦模式提供独立、可追溯、可手算的 analytical reference cases
+- 验证 revised `Ke` / `Kt`、功率和转矩关系
+- 与 legacy baseline 分开保存和解释
+
+它当前不是：
+
+- FEA 验证
+- 台架实验验证
+- 公开论文 benchmark
+- 完整材料与几何驱动的电机样机验证
+
+## 7. 当前公式状态
+
+当前已经明确但仍保持并行、不切默认的内容包括：
+
+- strict SI 额定转矩
+- PMSM revised `Ke`
+- PMSM revised `Kt`
 
 当前仍保持 legacy 或未修正的内容包括：
 
-- `9.55 * P / n`
-- legacy `Ke` / `Kt`
+- `9.55 * P / n` 的下游默认链路
+- BLDC `Ke` / `Kt`
 - `required_voltage_v`
 - 铁损、机械损耗、涡流损耗模型
 - 电感模型
 - 槽满率代理模型
 
-所有会改变结果的公式修改都必须保留 legacy 与 revised 并行输出，不得直接覆盖旧字段。
+## 8. Phase 3D 结论
 
-## 8. Phase 3B 状态
+- PMSM revised `Ke` / `Kt` 已通过独立 analytical reference validation
+- 这意味着 revised 定义在当前三相、Y 接、正弦稳态假设下可独立手算、可独立复核、可由 production results 数值重现
+- 这不意味着 revised `Ke` / `Kt` 已获批准成为默认值
+- 这也不意味着整套电机模型已经获得实验验证
+- BLDC `Ke` / `Kt` 仍未进入本阶段
 
-Phase 3B 已完成。
+## 9. 下一阶段状态
 
-本阶段完成内容：
+当前 Phase 3D 已完成。
 
-- 新增 legacy 与 strict SI 额定转矩并行比较
-- 新增输出字段：
-  - `legacy_rated_torque_nm`
-  - `revised_rated_torque_nm`
-  - `rated_torque_absolute_difference_nm`
-  - `rated_torque_relative_difference`
-  - `rated_torque_model_status`
-- 当前下游仍继续使用 legacy 额定转矩
-- 生成 `docs/phase3_formula_change_report_zh.md`
+当前可考虑但必须单独审批的下一阶段候选是：
 
-Phase 3B 相关提交：
+- 独立 BLDC `Ke` / `Kt` 阶段
 
-- Phase 3A 状态固化提交：`d9e675f`
-- `1c74397` `feat: add strict SI rated torque comparison`
-- `28cc132` `test: cover legacy and strict SI torque models`
-- `0adbca7` `docs: document rated torque formula comparison`
-
-Phase 3B 完成后测试状态：
-
-```text
-35 passed
-```
-
-确认事项：
-
-- legacy regression 仍通过
-- `legacy_baseline.json` 未修改
-- `revised_rated_torque_nm` 尚未设为默认值
-- revised 结果未传播到额定电流、损耗、效率或电压需求
-- 未修改 `Ke` / `Kt`
-- 未修改 BLDC 模型
-- 未修改 `required_voltage_v`
-
-## 9. Phase 3C 范围
-
-Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义：
-
-- 必须保留 legacy `Ke` / `Kt` 输出
-- 必须与 legacy 并行输出 revised `Ke` / `Kt`
-- revised `Ke` / `Kt` 不得传播到额定电流、损耗、效率、GUI 默认链路或 `required_voltage_v`
-- BLDC 120°导通仍保持 legacy / provisional
-
-Phase 3C 已完成内容：
-
-- 新增 revised PMSM `Ke` 字段：
-  - `revised_back_emf_constant_phase_peak_v_per_rad_s`
-  - `revised_back_emf_constant_phase_rms_v_per_rad_s`
-  - `revised_back_emf_constant_line_rms_v_per_rad_s`
-  - `revised_back_emf_constant_line_rms_v_per_krpm`
-- 新增 revised PMSM `Kt` 字段：
-  - `revised_torque_constant_nm_per_phase_peak_a`
-  - `revised_torque_constant_nm_per_phase_rms_a`
-- 新增状态字段：
-  - `ke_model_status`
-  - `kt_model_status`
-  - `pmsm_power_consistency_status`
-- 新增 compatible comparison 字段：
-  - `ke_legacy_revised_relative_difference`
-  - `kt_legacy_revised_relative_difference`
-- revised `Ke` / `Kt` 仅进入输出模型、测试和报告
-- 额定电流、铜损、效率、`required_voltage_v` 和 GUI 默认链路仍保持 legacy
-
-Phase 3C 提交：
-
-- Phase 3B 状态固化提交：`f62abed`
-- `85bb881` `feat: add revised PMSM back emf constant definitions`
-- `55882de` `feat: derive PMSM torque constants from power balance`
-- `3d5ac40` `test: cover PMSM Ke Kt semantics and isolation`
-- `830e200` `docs: document PMSM Ke Kt formula semantics`
-
-Phase 3C 验收确认：
-
-- `legacy_baseline.json` 未修改
-- 现有 3 组 legacy baseline 全部为 BLDC 模式
-- 现有 baseline 不能作为 PMSM revised `Ke/Kt` 的数值验证案例
-- revised PMSM `Ke/Kt` 当前仅通过：
-  - 单位转换测试
-  - 三相功率平衡测试
-  - 下游隔离测试
-- revised PMSM `Ke/Kt` 尚未经过独立 PMSM reference case 验证
-- BLDC `Ke/Kt` 仍保持 legacy / provisional
-- revised `Ke/Kt`、revised rated torque 均不得自动传播到下游
-
-## 10. 下一阶段状态
-
-当前允许进入：
-
-- Phase 3D：建立独立 PMSM 验证案例
-
-当前不允许进入：
+当前仍不允许：
 
 - 未经批准把 revised PMSM `Ke` / `Kt` 切换为默认值
 - 未经批准把 revised rated torque 切换为默认值
-- BLDC `Ke` / `Kt` 修正与默认值切换混在同一阶段处理
-- `required_voltage_v` 修正
-- 未经批准把任何 revised 结果切换为生产默认值
+- 在 BLDC 阶段混入 `required_voltage_v` 修正
+- 在 BLDC 阶段混入损耗模型、电感模型或 GUI 重设计
 
-说明：
-
-- Phase 3C 已证明 PMSM 正弦模式下 revised `Ke` / `Kt` 可定义、可测试、可隔离
-- Phase 3D 的目标是建立独立 PMSM 验证案例，而不是继续修改公式
-- 所有 revised `Ke` / `Kt` 仍保持并行输出和下游隔离
-
-## 11. 当前未解决问题
+## 10. 当前未解决问题
 
 - BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系仍未建立
 - `9.55 * P / n` 是否应从 legacy 默认值切换为严格 SI 默认值，尚未批准
-- PMSM revised `Ke` / `Kt` 尚未成为默认值
-- baseline 的 3 组历史样例仍是 legacy BLDC 分支，不能直接拿来做 PMSM revised `Ke` / `Kt` 误差表
-- PMSM revised `Ke` / `Kt` 仍缺少独立 PMSM reference case 验证
-- 如果未来启用 revised 默认转矩，将影响额定电流、铜损、效率和所需电压等下游结果
+- PMSM revised `Ke` / `Kt` 仍未成为默认值
+- `required_voltage_v` 仍是 legacy 简化模型
+- 缺少 FEA reference cases
+- 缺少台架实验测量
+- 缺少公开论文 benchmark
+- 缺少材料、几何、磁路和绕组参数完整闭环的 PMSM reference cases
 
 当前建议：
 
 - 暂不将 revised 额定转矩设为默认值
 - 暂不将 revised `Ke` / `Kt` 设为默认值
-- 先保留并行输出与差异报告
+- 若继续推进，下一阶段应作为独立 BLDC `Ke` / `Kt` 工作包单独审批
