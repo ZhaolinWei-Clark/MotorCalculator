@@ -32,7 +32,6 @@ from .electrical_semantics import (
     MotorControlMode,
     control_mode_display_name_zh,
     legacy_control_model_name_for_mode,
-    line_rms_v_per_krpm_to_line_rms_v_per_rad_s,
     mechanical_angular_speed_rad_s_to_electrical_angular_speed_rad_s,
     mechanical_speed_rpm_to_electrical_frequency_hz,
     mechanical_speed_rpm_to_mechanical_angular_speed_rad_s,
@@ -53,6 +52,7 @@ from .models import (
     SlotGeometry,
     StatorGeometry,
 )
+from .pmsm_ke_kt_models import compare_legacy_and_revised_pmsm_ke_kt
 from .rated_torque_models import calculate_legacy_rated_torque_nm, compare_rated_torque_models
 from .units import control_mode_to_legacy_waveform, legacy_params_to_model_input
 from .validation import validate_finite_result, validate_motor_input, validate_result_object_finite
@@ -124,27 +124,44 @@ class MotorAnalysisEngine:
             voltage_semantics_status = "provisional_bldc_legacy_rms_values"
 
         legacy_back_emf_constant_line_rms_v_per_krpm = back_emf_line_rms_v / (i.mechanical_speed_rpm / 1000.0)
-        back_emf_constant_line_rms_v_per_rad_s = line_rms_v_per_krpm_to_line_rms_v_per_rad_s(
-            legacy_back_emf_constant_line_rms_v_per_krpm
-        )
         mechanical_angular_speed_rad_s = mechanical_speed_rpm_to_mechanical_angular_speed_rad_s(i.mechanical_speed_rpm)
-        back_emf_constant_phase_rms_v_per_rad_s = back_emf_phase_rms_v / mechanical_angular_speed_rad_s
 
         torque_constant_nm_per_phase_peak_a_legacy = (3.0 * back_emf_phase_rms_v) / (sqrt(2.0) * mechanical_angular_speed_rad_s)
         legacy_torque_constant_nm_per_phase_rms_a = torque_constant_nm_per_phase_peak_a_legacy * sqrt(2.0)
 
         if control_mode is MotorControlMode.PMSM_SINUSOIDAL:
-            back_emf_constant_phase_peak_v_per_rad_s = back_emf_phase_peak_v / mechanical_angular_speed_rad_s
-            torque_constant_nm_per_phase_peak_a = torque_constant_nm_per_phase_peak_a_legacy
-            torque_constant_nm_per_phase_rms_a = legacy_torque_constant_nm_per_phase_rms_a
-            ke_semantics_status = "sinusoidal_phase_line_units_explicit"
-            kt_semantics_status = "sinusoidal_phase_peak_and_rms_explicit"
+            revised_pmsm_ke_kt = compare_legacy_and_revised_pmsm_ke_kt(
+                control_mode=control_mode,
+                back_emf_phase_rms_v=back_emf_phase_rms_v,
+                mechanical_speed_rpm=i.mechanical_speed_rpm,
+                legacy_back_emf_constant_line_rms_v_per_krpm=legacy_back_emf_constant_line_rms_v_per_krpm,
+                legacy_torque_constant_nm_per_phase_rms_a=legacy_torque_constant_nm_per_phase_rms_a,
+            )
+            revised_back_emf_constant_phase_peak_v_per_rad_s = (
+                revised_pmsm_ke_kt.revised_back_emf_constant_phase_peak_v_per_rad_s
+            )
+            revised_back_emf_constant_phase_rms_v_per_rad_s = revised_pmsm_ke_kt.revised_back_emf_constant_phase_rms_v_per_rad_s
+            revised_back_emf_constant_line_rms_v_per_rad_s = revised_pmsm_ke_kt.revised_back_emf_constant_line_rms_v_per_rad_s
+            revised_back_emf_constant_line_rms_v_per_krpm = revised_pmsm_ke_kt.revised_back_emf_constant_line_rms_v_per_krpm
+            revised_torque_constant_nm_per_phase_peak_a = revised_pmsm_ke_kt.revised_torque_constant_nm_per_phase_peak_a
+            revised_torque_constant_nm_per_phase_rms_a = revised_pmsm_ke_kt.revised_torque_constant_nm_per_phase_rms_a
+            ke_legacy_revised_relative_difference = revised_pmsm_ke_kt.ke_legacy_revised_relative_difference
+            kt_legacy_revised_relative_difference = revised_pmsm_ke_kt.kt_legacy_revised_relative_difference
+            ke_model_status = revised_pmsm_ke_kt.ke_model_status
+            kt_model_status = revised_pmsm_ke_kt.kt_model_status
+            pmsm_power_consistency_status = revised_pmsm_ke_kt.pmsm_power_consistency_status
         else:
-            back_emf_constant_phase_peak_v_per_rad_s = None
-            torque_constant_nm_per_phase_peak_a = None
-            torque_constant_nm_per_phase_rms_a = None
-            ke_semantics_status = "provisional_bldc_waveform_dependent"
-            kt_semantics_status = "legacy_bldc_formula_preserved_provisional"
+            revised_back_emf_constant_phase_peak_v_per_rad_s = None
+            revised_back_emf_constant_phase_rms_v_per_rad_s = None
+            revised_back_emf_constant_line_rms_v_per_rad_s = None
+            revised_back_emf_constant_line_rms_v_per_krpm = None
+            revised_torque_constant_nm_per_phase_peak_a = None
+            revised_torque_constant_nm_per_phase_rms_a = None
+            ke_legacy_revised_relative_difference = None
+            kt_legacy_revised_relative_difference = None
+            ke_model_status = "legacy_only_bldc_waveform_dependent_provisional"
+            kt_model_status = "legacy_only_bldc_waveform_dependent_provisional"
+            pmsm_power_consistency_status = "not_applicable_bldc_legacy_provisional"
 
         average_diameter_m = (i.outer_diameter_m + i.inner_diameter_m) / 2.0
         effective_radial_length_m = (i.outer_diameter_m - i.inner_diameter_m) / 2.0
@@ -180,15 +197,24 @@ class MotorAnalysisEngine:
             back_emf_line_peak_v=back_emf_line_peak_v,
             legacy_back_emf_constant_line_rms_v_per_krpm=legacy_back_emf_constant_line_rms_v_per_krpm,
             legacy_torque_constant_nm_per_phase_rms_a=legacy_torque_constant_nm_per_phase_rms_a,
-            back_emf_constant_phase_peak_v_per_rad_s=back_emf_constant_phase_peak_v_per_rad_s,
-            back_emf_constant_phase_rms_v_per_rad_s=back_emf_constant_phase_rms_v_per_rad_s,
-            back_emf_constant_line_rms_v_per_rad_s=back_emf_constant_line_rms_v_per_rad_s,
-            back_emf_constant_line_rms_v_per_krpm=legacy_back_emf_constant_line_rms_v_per_krpm,
-            torque_constant_nm_per_phase_peak_a=torque_constant_nm_per_phase_peak_a,
-            torque_constant_nm_per_phase_rms_a=torque_constant_nm_per_phase_rms_a,
+            revised_back_emf_constant_phase_peak_v_per_rad_s=revised_back_emf_constant_phase_peak_v_per_rad_s,
+            revised_back_emf_constant_phase_rms_v_per_rad_s=revised_back_emf_constant_phase_rms_v_per_rad_s,
+            revised_back_emf_constant_line_rms_v_per_rad_s=revised_back_emf_constant_line_rms_v_per_rad_s,
+            revised_back_emf_constant_line_rms_v_per_krpm=revised_back_emf_constant_line_rms_v_per_krpm,
+            revised_torque_constant_nm_per_phase_peak_a=revised_torque_constant_nm_per_phase_peak_a,
+            revised_torque_constant_nm_per_phase_rms_a=revised_torque_constant_nm_per_phase_rms_a,
+            ke_legacy_revised_relative_difference=ke_legacy_revised_relative_difference,
+            kt_legacy_revised_relative_difference=kt_legacy_revised_relative_difference,
             voltage_semantics_status=voltage_semantics_status,
-            ke_semantics_status=ke_semantics_status,
-            kt_semantics_status=kt_semantics_status,
+            ke_model_status=ke_model_status,
+            kt_model_status=kt_model_status,
+            pmsm_power_consistency_status=pmsm_power_consistency_status,
+            back_emf_constant_phase_peak_v_per_rad_s=revised_back_emf_constant_phase_peak_v_per_rad_s,
+            back_emf_constant_phase_rms_v_per_rad_s=revised_back_emf_constant_phase_rms_v_per_rad_s,
+            back_emf_constant_line_rms_v_per_rad_s=revised_back_emf_constant_line_rms_v_per_rad_s,
+            back_emf_constant_line_rms_v_per_krpm=revised_back_emf_constant_line_rms_v_per_krpm,
+            torque_constant_nm_per_phase_peak_a=revised_torque_constant_nm_per_phase_peak_a,
+            torque_constant_nm_per_phase_rms_a=revised_torque_constant_nm_per_phase_rms_a,
         )
         validate_result_object_finite(result)
         return result

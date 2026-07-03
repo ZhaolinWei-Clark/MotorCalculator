@@ -321,15 +321,24 @@ class ElectricalResult:
     back_emf_line_peak_v: float | None
     legacy_back_emf_constant_line_rms_v_per_krpm: float
     legacy_torque_constant_nm_per_phase_rms_a: float
-    back_emf_constant_phase_peak_v_per_rad_s: float | None
-    back_emf_constant_phase_rms_v_per_rad_s: float
-    back_emf_constant_line_rms_v_per_rad_s: float
-    back_emf_constant_line_rms_v_per_krpm: float
-    torque_constant_nm_per_phase_peak_a: float
-    torque_constant_nm_per_phase_rms_a: float
+    revised_back_emf_constant_phase_peak_v_per_rad_s: float | None
+    revised_back_emf_constant_phase_rms_v_per_rad_s: float | None
+    revised_back_emf_constant_line_rms_v_per_rad_s: float | None
+    revised_back_emf_constant_line_rms_v_per_krpm: float | None
+    revised_torque_constant_nm_per_phase_peak_a: float | None
+    revised_torque_constant_nm_per_phase_rms_a: float | None
+    ke_legacy_revised_relative_difference: float | None
+    kt_legacy_revised_relative_difference: float | None
     voltage_semantics_status: str
-    ke_semantics_status: str
-    kt_semantics_status: str
+    ke_model_status: str
+    kt_model_status: str
+    pmsm_power_consistency_status: str
+    back_emf_constant_phase_peak_v_per_rad_s: float | None
+    back_emf_constant_phase_rms_v_per_rad_s: float | None
+    back_emf_constant_line_rms_v_per_rad_s: float | None
+    back_emf_constant_line_rms_v_per_krpm: float | None
+    torque_constant_nm_per_phase_peak_a: float | None
+    torque_constant_nm_per_phase_rms_a: float | None
 
     @property
     def R_phase(self) -> float:
@@ -366,6 +375,14 @@ class ElectricalResult:
     @property
     def Kt(self) -> float:
         return self.legacy_torque_constant_nm_per_phase_rms_a
+
+    @property
+    def ke_semantics_status(self) -> str:
+        return self.ke_model_status
+
+    @property
+    def kt_semantics_status(self) -> str:
+        return self.kt_model_status
 
 
 @dataclass
