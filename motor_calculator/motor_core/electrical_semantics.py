@@ -94,11 +94,25 @@ def sinusoidal_phase_voltage_rms_v_to_phase_voltage_peak_v(
     return math.sqrt(2.0) * phase_voltage_rms_v
 
 
+def sinusoidal_phase_voltage_peak_v_to_phase_voltage_rms_v(
+    phase_voltage_peak_v: float, control_mode: MotorControlMode | str
+) -> float:
+    require_sinusoidal_control_mode(control_mode)
+    return phase_voltage_peak_v / math.sqrt(2.0)
+
+
 def sinusoidal_phase_voltage_rms_v_to_line_voltage_rms_v(
     phase_voltage_rms_v: float, control_mode: MotorControlMode | str
 ) -> float:
     require_sinusoidal_control_mode(control_mode)
     return math.sqrt(3.0) * phase_voltage_rms_v
+
+
+def sinusoidal_line_voltage_rms_v_to_phase_voltage_rms_v(
+    line_voltage_rms_v: float, control_mode: MotorControlMode | str
+) -> float:
+    require_sinusoidal_control_mode(control_mode)
+    return line_voltage_rms_v / math.sqrt(3.0)
 
 
 def sinusoidal_line_voltage_rms_v_to_line_voltage_peak_v(
@@ -113,6 +127,13 @@ def sinusoidal_phase_current_rms_a_to_phase_current_peak_a(
 ) -> float:
     require_sinusoidal_control_mode(control_mode)
     return math.sqrt(2.0) * phase_current_rms_a
+
+
+def sinusoidal_phase_current_peak_a_to_phase_current_rms_a(
+    phase_current_peak_a: float, control_mode: MotorControlMode | str
+) -> float:
+    require_sinusoidal_control_mode(control_mode)
+    return phase_current_peak_a / math.sqrt(2.0)
 
 
 def line_rms_v_per_krpm_to_line_rms_v_per_rad_s(back_emf_constant_line_rms_v_per_krpm: float) -> float:
