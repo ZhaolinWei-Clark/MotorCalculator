@@ -207,3 +207,45 @@ Phase 3D 的目标是建立独立 PMSM 验证案例，而不是继续修改公�
   - `required_voltage_v`
   - GUI 默认链路
 - 不修改 `legacy_baseline.json`
+
+## 20. Phase 3D 已完成固化状态
+
+- 当前工作分支：`test/pmsm-reference-cases`
+- Phase 3C 状态固化提交：`941551d`
+- Phase 3D 提交：
+  - `a07e0b5` `test: add independent PMSM analytical reference cases`
+  - `47ab1ca` `test: validate PMSM Ke Kt and power consistency`
+  - `144458f` `docs: document PMSM analytical reference validation`
+- 修改前完整测试结果：`63 passed`
+- 修改后完整测试结果：`84 passed`
+- 正式测试入口：`.venv\Scripts\python.exe -m pytest -v`
+- `legacy_baseline.json` 未修改
+- `legacy_baseline.json` SHA-256：`15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
+- 已建立 4 个独立 PMSM `analytical_reference` cases
+- PMSM revised `Ke` / `Kt` 当前已通过：
+  - 单位语义测试
+  - 三相功率平衡测试
+  - 独立 analytical reference validation
+  - 下游隔离测试
+- 当前验证仍不是：
+  - FEA 验证
+  - 实验台架验证
+  - 公开论文 benchmark
+  - 完整样机验证
+- PMSM revised `Ke` / `Kt` 尚未设为默认值
+- revised rated torque 尚未设为默认值
+- BLDC 120°导通下严格 `Ke` / `Kt`、RMS、peak、电流和功率关系尚未建立
+
+## 21. Phase 3E 已批准边界
+
+Phase 3E 只允许建立 BLDC revised 语义、公式和独立 analytical reference cases。
+
+明确边界：
+
+- 不修改 `required_voltage_v`
+- 不修改损耗模型
+- 不修改电感模型
+- 不修改槽满率定义
+- 不切换任何默认链路
+- 不修改 PMSM revised 公式
+- 不修改 `legacy_baseline.json`

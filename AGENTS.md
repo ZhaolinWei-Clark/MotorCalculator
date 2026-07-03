@@ -42,8 +42,11 @@ Current priorities:
 - Revised rated torque must not propagate into downstream current, loss, efficiency, or voltage calculations without approval
 - Phase 3C is complete and keeps revised PMSM `Ke` / `Kt` in parallel with legacy outputs
 - Existing legacy baseline cases are all BLDC-path cases and are not valid numerical reference cases for revised PMSM `Ke` / `Kt`
-- Revised PMSM `Ke` / `Kt` are currently validated only by unit-conversion, three-phase power-balance, and downstream-isolation tests
-- Standard development test command is `python -m pytest -v`
+- Phase 3D is complete and adds 4 independent PMSM analytical reference cases
+- Revised PMSM `Ke` / `Kt` have passed unit-semantics, three-phase power-balance, independent analytical reference, and downstream-isolation validation
+- Revised PMSM `Ke` / `Kt` are still not production defaults
+- `legacy_baseline.json` remains unchanged with SHA-256 `15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
+- Standard development test command is `.venv\Scripts\python.exe -m pytest -v`
 
 ## Phase 3A Completion Snapshot
 
@@ -104,23 +107,46 @@ Validated state:
 - revised PMSM `Ke` / `Kt` are validated only by unit-conversion, three-phase power-balance, and downstream-isolation tests
 - revised PMSM `Ke` / `Kt`, revised rated torque, and revised defaults do not propagate into downstream calculations
 
-## Phase 3D Scope
+## Phase 3D Completion Snapshot
 
-Phase 3D is limited to building independent PMSM validation cases, not changing formulas again.
+Phase 3D is complete on branch `test/pmsm-reference-cases`.
+
+Recorded commits:
+
+- `a07e0b5` `test: add independent PMSM analytical reference cases`
+- `47ab1ca` `test: validate PMSM Ke Kt and power consistency`
+- `144458f` `docs: document PMSM analytical reference validation`
+
+Validated state:
+
+- pre-Phase-3D full test result: `63 passed`
+- post-Phase-3D full test result: `84 passed`
+- `legacy_baseline.json` unchanged
+- `legacy_baseline.json` SHA-256 remains `15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
+- 4 independent PMSM analytical reference cases exist in `motor_calculator/tests/fixtures/pmsm_reference_cases.json`
+- revised PMSM `Ke` / `Kt` have passed unit-semantics, three-phase power-balance, independent analytical reference, and downstream-isolation validation
+- revised PMSM `Ke` / `Kt`, revised rated torque, and revised defaults do not propagate into downstream calculations
+- current validation is still not FEA, bench-test, published-benchmark, or full prototype validation
+
+## Phase 3E Scope
+
+Phase 3E is limited to BLDC revised semantics, formulas, and independent analytical reference cases.
 
 Allowed:
 
-- add independent PMSM reference or validation cases
-- verify revised PMSM `Ke` / `Kt` against explicit PMSM numerical cases
-- keep legacy and revised values side by side
-- document what the new PMSM validation cases prove and what they still do not prove
+- define explicit BLDC revised `Ke` / `Kt` semantics
+- build BLDC revised formula comparisons in parallel with legacy outputs
+- add independent BLDC analytical reference cases
+- document what the BLDC analytical cases prove and what they do not prove
 
-Not allowed in Phase 3D:
+Not allowed in Phase 3E:
 
-- modify BLDC `Ke` / `Kt`
 - modify `required_voltage_v`
-- set revised PMSM `Ke` / `Kt` or revised rated torque as production defaults
-- propagate revised values into rated current, loss, efficiency, or GUI defaults
+- modify loss models
+- modify inductance models
+- modify fill-factor definitions
+- switch any revised value to a production default
+- modify PMSM revised formulas
 - modify `legacy_baseline.json`
 
 ## Hard Rules
@@ -167,24 +193,25 @@ Examples requiring prior approval:
 
 Formal test entry point:
 
-- `python -m pytest -v`
+- `.venv\Scripts\python.exe -m pytest -v`
 
 Temporary compatibility runner:
 
 - `work/run_pytest_style.py`
 
-Current expected result after Phase 3C freeze:
+Current expected result after Phase 3D freeze:
 
-- `63 passed`
+- `84 passed`
 
 ## Key Git State
 
 Current development baseline:
 
-- working branch: `feature/pmsm-ke-kt-semantics`
+- working branch: `test/pmsm-reference-cases`
 - baseline commit: `d2f9f67` `baseline: preserve original single-file motor calculator`
 - phase 2 refactor commit: `aaeb2d7` `refactor: split motor core and add validation baseline`
 - context documentation commit: `c2d0039` `docs: freeze project context and approved assumptions`
+- Phase 3C state-freeze commit: `941551d` `docs: record phase 3C completion and phase 3D scope`
 
 ## Main File Layout
 
@@ -208,13 +235,12 @@ work/
 
 ## Next Phase Intent
 
-Phase 3D should:
+Phase 3E should:
 
-- add independent PMSM validation cases for revised `Ke` / `Kt`
-- keep all legacy and revised formula outputs intact
+- establish BLDC revised semantics for `Ke`, `Kt`, RMS, peak, current, and power relationships
+- add independent BLDC analytical reference cases
+- keep all legacy and revised outputs side by side
 - avoid any default-value switch or downstream propagation
-
-BLDC `Ke` / `Kt` corrections remain out of scope until a later approved phase.
 
 ## Open Engineering Issues
 
@@ -222,7 +248,7 @@ BLDC `Ke` / `Kt` corrections remain out of scope until a later approved phase.
 - BLDC 120-degree conduction RMS/peak semantics are still provisional
 - `9.55 * P / n` remains the active downstream legacy implementation
 - revised PMSM `Ke` / `Kt` defaults must not be enabled without explicit approval
-- revised PMSM `Ke` / `Kt` still need independent PMSM reference-case validation
+- revised rated torque must not be enabled as a default without explicit approval
 - voltage requirement model is still simplified
 - fill factor is still a legacy proxy, not a true slot fill factor
 - several loss models remain empirical

@@ -133,6 +133,19 @@ Phase 3D 验收状态：
 - legacy regression 继续通过
 - revised `Ke` / `Kt` 仍未设为默认值
 - revised `Ke` / `Kt` 仍未传播到额定电流、损耗、效率、`required_voltage_v` 或 GUI 默认链路
+- Phase 3D 提交：
+  - `a07e0b5` `test: add independent PMSM analytical reference cases`
+  - `47ab1ca` `test: validate PMSM Ke Kt and power consistency`
+  - `144458f` `docs: document PMSM analytical reference validation`
+- 修改前测试结果：`63 passed`
+- 修改后测试结果：`84 passed`
+- 正式测试入口：`.venv\Scripts\python.exe -m pytest -v`
+- `legacy_baseline.json` SHA-256：`15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
+- 当前验证仍不是：
+  - FEA 验证
+  - 实验台架验证
+  - 公开论文 benchmark
+  - 完整样机验证
 
 ## 4. 当前 Git 状态
 
@@ -150,7 +163,7 @@ Phase 3D 验收状态：
 正式测试命令：
 
 ```text
-python -m pytest -v
+.venv\Scripts\python.exe -m pytest -v
 ```
 
 当前完整测试结果：
@@ -223,16 +236,21 @@ python work/run_pytest_style.py
 
 当前 Phase 3D 已完成。
 
-当前可考虑但必须单独审批的下一阶段候选是：
+当前允许进入且必须单独审批的下一阶段是：
 
-- 独立 BLDC `Ke` / `Kt` 阶段
+- Phase 3E：建立 BLDC revised 语义、公式和独立 analytical reference cases
 
 当前仍不允许：
 
 - 未经批准把 revised PMSM `Ke` / `Kt` 切换为默认值
 - 未经批准把 revised rated torque 切换为默认值
-- 在 BLDC 阶段混入 `required_voltage_v` 修正
-- 在 BLDC 阶段混入损耗模型、电感模型或 GUI 重设计
+- 在 Phase 3E 中修改 `required_voltage_v`
+- 在 Phase 3E 中修改损耗模型
+- 在 Phase 3E 中修改电感模型
+- 在 Phase 3E 中修改槽满率定义
+- 在 Phase 3E 中切换默认链路
+- 在 Phase 3E 中修改 PMSM revised 公式
+- 在 Phase 3E 中修改 `legacy_baseline.json`
 
 ## 10. 当前未解决问题
 
@@ -249,4 +267,4 @@ python work/run_pytest_style.py
 
 - 暂不将 revised 额定转矩设为默认值
 - 暂不将 revised `Ke` / `Kt` 设为默认值
-- 若继续推进，下一阶段应作为独立 BLDC `Ke` / `Kt` 工作包单独审批
+- 若继续推进，下一阶段应作为独立 Phase 3E 工作包单独审批

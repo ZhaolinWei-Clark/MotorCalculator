@@ -10,7 +10,7 @@
 - Phase 3B 已完成
 - Phase 3C 已完成：PMSM 正弦模式 revised `Ke` / `Kt` 定义
 - Phase 3D 已完成：独立 PMSM analytical reference validation
-- 当前不进入 BLDC `Ke` / `Kt` 修正，除非进入新的单独审批阶段
+- 当前下一阶段只允许进入 Phase 3E：BLDC revised 语义、公式和独立 analytical reference cases
 
 ## 2. Phase 3D 已确认结论
 
@@ -46,7 +46,7 @@
 
 待确认内容：
 
-- 是否批准启动单独的 BLDC `Ke` / `Kt` 阶段
+- 是否批准启动 Phase 3E
 - 是否接受该阶段必须继续保持 legacy baseline 不变
 - 是否接受 BLDC 阶段不得混入以下内容：
   - revised 默认值切换
@@ -57,7 +57,7 @@
 
 当前建议：
 
-- 技术上可以进入单独 BLDC `Ke` / `Kt` 阶段
+- 技术上可以进入 Phase 3E
 - 但必须单独审批，且不能和默认链路切换或其他模型修正混做
 
 ### 3.3 是否继续补充更高层级验证来源
@@ -84,7 +84,10 @@
 - 不要把 revised 额定转矩直接传播到下游
 - 不要把 revised `Ke` / `Kt` 在未审批时传播到下游
 - 不要在未审批时把 revised 结果设为默认值
-- 不要在 BLDC 阶段混入 `required_voltage_v` 修正
-- 不要在 BLDC 阶段混入损耗模型、电感模型或 GUI 重设计
+- 不要在 Phase 3E 中修改 `required_voltage_v`
+- 不要在 Phase 3E 中修改损耗模型、电感模型或槽满率
+- 不要在 Phase 3E 中切换默认链路
+- 不要在 Phase 3E 中修改 PMSM revised 公式
+- 不要在 Phase 3E 中修改 `legacy_baseline.json`
 - 不要为让测试通过而重写 `legacy_baseline.json`
 - 不要把 analytical validation 夸大为实验验证
