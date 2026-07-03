@@ -81,9 +81,9 @@ Phase 3A 验证状态：
 
 ## 4. 当前 Git 状态
 
-- 当前开发基线：`feature/strict-si-rated-torque`
+- 当前开发基线：`feature/pmsm-ke-kt-semantics`
 - Phase 3B 已完成并验收
-- 当前阶段文档固化后，将进入 Phase 3C
+- Phase 3C 已完成并验收
 
 关键历史提交：
 
@@ -102,7 +102,7 @@ python -m pytest -v
 当前完整测试结果：
 
 ```text
-35 passed
+63 passed
 ```
 
 兼容测试入口仍保留：
@@ -188,28 +188,57 @@ Phase 3C 只允许处理 PMSM 正弦模式下的 `Ke` / `Kt` revised 定义：
 - revised `Ke` / `Kt` 不得传播到额定电流、损耗、效率、GUI 默认链路或 `required_voltage_v`
 - BLDC 120°导通仍保持 legacy / provisional
 
+Phase 3C 已完成内容：
+
+- 新增 revised PMSM `Ke` 字段：
+  - `revised_back_emf_constant_phase_peak_v_per_rad_s`
+  - `revised_back_emf_constant_phase_rms_v_per_rad_s`
+  - `revised_back_emf_constant_line_rms_v_per_rad_s`
+  - `revised_back_emf_constant_line_rms_v_per_krpm`
+- 新增 revised PMSM `Kt` 字段：
+  - `revised_torque_constant_nm_per_phase_peak_a`
+  - `revised_torque_constant_nm_per_phase_rms_a`
+- 新增状态字段：
+  - `ke_model_status`
+  - `kt_model_status`
+  - `pmsm_power_consistency_status`
+- 新增 compatible comparison 字段：
+  - `ke_legacy_revised_relative_difference`
+  - `kt_legacy_revised_relative_difference`
+- revised `Ke` / `Kt` 仅进入输出模型、测试和报告
+- 额定电流、铜损、效率、`required_voltage_v` 和 GUI 默认链路仍保持 legacy
+
+Phase 3C 提交：
+
+- Phase 3B 状态固化提交：`f62abed`
+- `85bb881` `feat: add revised PMSM back emf constant definitions`
+- `55882de` `feat: derive PMSM torque constants from power balance`
+- `3d5ac40` `test: cover PMSM Ke Kt semantics and isolation`
+
 ## 10. 下一阶段状态
 
 当前允许进入：
 
-- Phase 3C：PMSM `Ke` / `Kt` 语义修正
+- 后续独立阶段：BLDC `Ke` / `Kt` 语义修正
 
 当前不允许进入：
 
-- BLDC `Ke` / `Kt` 修正
+- 未经批准把 revised PMSM `Ke` / `Kt` 切换为默认值
+- BLDC `Ke` / `Kt` 修正与默认值切换混在同一阶段处理
 - `required_voltage_v` 修正
 - 未经批准把任何 revised 结果切换为生产默认值
 
 说明：
 
-- Phase 3C 当前只处理 PMSM 正弦模式
-- 所有 revised `Ke` / `Kt` 都必须保持并行输出和下游隔离
+- Phase 3C 已证明 PMSM 正弦模式下 revised `Ke` / `Kt` 可定义、可测试、可隔离
+- 所有 revised `Ke` / `Kt` 仍保持并行输出和下游隔离
 
 ## 11. 当前未解决问题
 
 - BLDC 120°导通下的严格 RMS、peak、`Ke`、`Kt` 关系仍未建立
 - `9.55 * P / n` 是否应从 legacy 默认值切换为严格 SI 默认值，尚未批准
 - PMSM revised `Ke` / `Kt` 尚未成为默认值
+- baseline 的 3 组历史样例仍是 legacy BLDC 分支，不能直接拿来做 PMSM revised `Ke` / `Kt` 误差表
 - 如果未来启用 revised 默认转矩，将影响额定电流、铜损、效率和所需电压等下游结果
 
 当前建议：

@@ -8,7 +8,7 @@
 
 - Phase 3A 已完成
 - Phase 3B 已完成
-- 当前进入 Phase 3C：PMSM 正弦模式 `Ke` / `Kt` revised 定义
+- Phase 3C 已完成：PMSM 正弦模式 `Ke` / `Kt` revised 定义
 - 当前不进入 BLDC `Ke` / `Kt` 修正
 
 ## 2. Phase 3A 固化状态
@@ -177,12 +177,22 @@ Phase 3C 完成后仍需用户决策：
 - Phase 3C 结束后暂不启用 revised 默认值
 - 先保留比较结果、功率一致性验证和差异报告
 
+Phase 3C 当前完成确认：
+
+- revised PMSM `Ke` / `Kt` 已与 legacy 并行输出
+- 功率一致性测试已通过
+- revised `Ke` / `Kt` 未传播到额定电流、铜损、效率、`required_voltage_v` 或 GUI 默认链路
+- BLDC `Ke` / `Kt` 仍保持 legacy / provisional
+- `legacy_baseline.json` 未修改
+- 完整测试结果已提升为 `63 passed`
+
 ## 7. baseline 相关风险
 
 - `legacy_baseline.json` 只覆盖 3 组案例
 - 它能防止明显回归，但不能覆盖所有输入边界
 - Phase 3C 也不得修改 baseline 文件
 - 如果未来启用 revised 默认值，应新增差异报告，而不是静默改写 baseline
+- 当前 3 组 baseline 样例仍走 legacy BLDC 分支，因此不能直接当作 PMSM revised `Ke` / `Kt` 误差基准
 
 ## 8. 当前不应做的事
 
