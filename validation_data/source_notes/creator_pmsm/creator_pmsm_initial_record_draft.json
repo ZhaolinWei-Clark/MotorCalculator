@@ -1,0 +1,360 @@
+{
+  "draft_type": "creator_pmsm_initial_validation_record_draft",
+  "created_at": "2026-07-04",
+  "source_status": "metadata_verified_only",
+  "formal_record_ready": false,
+  "formal_record_path": "validation_data/imported/creator_pmsm_initial_record.json",
+  "record_creation_blocked": true,
+  "blockers": [
+    "未下载并审阅 CREATOR_Machine_Data_2024-11-04.pdf，因此缺少逐字段 table/page/section 引用。",
+    "未下载并审阅 PM_synchronous_motor.zip，因此缺少可追溯的数值字段抽取。",
+    "control_mode 尚未从原始文件核验，不能安全落为正式 record 的 pmsm_sinusoidal。",
+    "topology 尚未从原始文件核验，不能判断是否与项目默认 AFPM 拓扑兼容。",
+    "尚未确认 back-EMF 与 torque-related 字段的 phase/line、RMS/peak 和 current_basis 语义。",
+    "当前没有可直接比较的 numeric expected output 可用于运行正式 comparison engine。"
+  ],
+  "source_metadata": {
+    "source_title": "CREATOR Case: Permanent Magnet Synchronous Motor Data",
+    "motor_type": "PMSM",
+    "authors": [
+      "Pawan Kumar Dhakal",
+      "Kourosh Heidarikani",
+      "Annette Muetze",
+      "Roland Seebacher"
+    ],
+    "organization": [
+      "Graz University of Technology",
+      "Electric Drives and Power Electronic Systems Institute (EALS), TU Graz"
+    ],
+    "repository_url": "https://repository.tugraz.at/records/sns1d-77m43",
+    "doi": "10.3217/sns1d-77m43",
+    "publication_year": 2024,
+    "data_release_year": 2024,
+    "license_or_usage_note": "Verified from the TU Graz repository page and README preview as CC BY-NC 4.0; non-commercial reuse only unless further rights review says otherwise.",
+    "citation_status": "metadata_based_draft",
+    "citation": "Dhakal, Pawan Kumar; Heidarikani, Kourosh; Muetze, Annette; Seebacher, Roland. CREATOR Case: Permanent Magnet Synchronous Motor Data. Graz University of Technology, published 2024-11-04. DOI: 10.3217/sns1d-77m43.",
+    "access_date": "2026-07-04",
+    "companion_paper": {
+      "title": "CREATOR Case: PMSM and IM Electric Machine Data for Validation and Benchmarking of Simulation and Modeling Approaches",
+      "authors": [
+        "Annette Mütze",
+        "Kourosh Heidarikani",
+        "Pawan Kumar Dhakal",
+        "Roland Seebacher",
+        "Sebastian Schöps"
+      ],
+      "arxiv_id": "2501.15921",
+      "related_doi": "10.1108/COMPEL-11-2024-0462",
+      "publication_year": 2025
+    },
+    "source_files_available": [
+      {
+        "name": "README.md",
+        "size": "892 B",
+        "format": "md",
+        "purpose": "Short dataset description and license pointer",
+        "downloaded_this_phase": false
+      },
+      {
+        "name": "CREATOR_Machine_Data_2024-11-04.pdf",
+        "size": "2.1 MB",
+        "format": "pdf",
+        "purpose": "User manual / field navigation document",
+        "downloaded_this_phase": false
+      },
+      {
+        "name": "PM_synchronous_motor.zip",
+        "size": "12.6 MB",
+        "format": "zip",
+        "purpose": "Primary PMSM design and measurement package",
+        "downloaded_this_phase": false
+      }
+    ],
+    "content_claims_verified": {
+      "includes_design_parameters": true,
+      "includes_experimental_results": true,
+      "includes_material_data": true,
+      "includes_winding_data": true,
+      "includes_geometry": true,
+      "includes_low_frequency_equivalent_parameters": true,
+      "includes_drive_cycle_measurement_results": true
+    }
+  },
+  "candidate_record": {
+    "validation_id": "creator_pmsm_initial_record",
+    "source_type_candidate": "published_benchmark",
+    "source_type_notes": "The repository is a published PMSM dataset with experimental results. It is not being represented as a raw bench log file in this draft.",
+    "evidence_level_candidate": "LEVEL_2_PUBLISHED_OR_FEA",
+    "motor_type": "PMSM",
+    "control_mode": "needs_semantics_check",
+    "topology": "needs_manual_extraction",
+    "license_or_usage_note": "CC BY-NC 4.0 verified on repository page and README preview.",
+    "created_at": "2026-07-04"
+  },
+  "input_parameters": {
+    "pole_pairs": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": null,
+      "source_reference": "PM_synchronous_motor.zip or CREATOR_Machine_Data_2024-11-04.pdf PMSM general parameters",
+      "notes": "Not extracted this phase."
+    },
+    "rated_speed_rpm": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "rpm",
+      "source_reference": "PMSM general parameters table",
+      "notes": "Not extracted this phase."
+    },
+    "rated_power_w": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "W",
+      "source_reference": "PMSM general parameters table",
+      "notes": "Not extracted this phase."
+    },
+    "dc_bus_voltage_v": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "V",
+      "source_reference": "PMSM electrical parameters",
+      "notes": "Cannot infer from IM section."
+    },
+    "phase_current_a": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": "A",
+      "source_reference": "PMSM electrical parameters or measurement results",
+      "notes": "Current basis and RMS/peak semantics not yet confirmed."
+    },
+    "line_current_a": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": "A",
+      "source_reference": "PMSM electrical parameters or measurement results",
+      "notes": "Must not be merged with phase_current_a."
+    },
+    "winding_connection": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": null,
+      "source_reference": "PMSM electrical parameters or winding section",
+      "notes": "Cannot assume Y without extraction."
+    },
+    "back_emf_waveform": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": null,
+      "source_reference": "Companion paper plus PMSM measurement package",
+      "notes": "PMSM label alone is not enough to force pmsm_sinusoidal in a formal record."
+    },
+    "stator_outer_diameter_m": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "m",
+      "source_reference": "PMSM geometry",
+      "notes": "Likely present but not extracted."
+    },
+    "stator_inner_diameter_m": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "m",
+      "source_reference": "PMSM geometry",
+      "notes": "Likely present but not extracted."
+    },
+    "rotor_outer_diameter_m": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "m",
+      "source_reference": "PMSM geometry",
+      "notes": "Draft-only mapping field; not part of current formal loader inputs."
+    },
+    "rotor_inner_diameter_m": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "m",
+      "source_reference": "PMSM geometry",
+      "notes": "Draft-only mapping field; not part of current formal loader inputs."
+    },
+    "air_gap_m": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "m",
+      "source_reference": "PMSM geometry",
+      "notes": "If extracted as mm later, conversion must be explicit."
+    },
+    "magnet_thickness_m": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "m",
+      "source_reference": "PMSM geometry or material section",
+      "notes": "Not extracted this phase."
+    },
+    "magnet_width_m": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "m",
+      "source_reference": "PMSM geometry",
+      "notes": "Draft-only mapping field; not part of current formal loader inputs."
+    },
+    "magnet_grade": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": null,
+      "source_reference": "PMSM material section",
+      "notes": "Do not infer from magnet_remanence."
+    },
+    "magnet_remanence_t": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "T",
+      "source_reference": "PMSM material section",
+      "notes": "Do not fabricate from grade alone."
+    },
+    "turns_per_phase": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "turn",
+      "source_reference": "PMSM winding scheme",
+      "notes": "Per-phase definition must be confirmed."
+    },
+    "winding_factor": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "-",
+      "source_reference": "PMSM winding scheme",
+      "notes": "If not explicitly given, keep unavailable."
+    },
+    "phase_resistance_ohm": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "ohm",
+      "source_reference": "Measured low-frequency equivalent parameters",
+      "notes": "Temperature reference must be tracked."
+    },
+    "phase_inductance_h": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": "H",
+      "source_reference": "Measured low-frequency equivalent parameters",
+      "notes": "Need to verify whether the source definition matches this project field."
+    }
+  },
+  "expected_outputs": {
+    "back_emf_phase_peak_v": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": "V",
+      "source_reference": "No-load or back-EMF measurement results",
+      "notes": "Phase and peak semantics not yet confirmed."
+    },
+    "back_emf_phase_rms_v": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": "V",
+      "source_reference": "No-load or back-EMF measurement results",
+      "notes": "Phase and RMS semantics not yet confirmed."
+    },
+    "back_emf_line_rms_v": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": "V",
+      "source_reference": "No-load or back-EMF measurement results",
+      "notes": "Line and RMS semantics not yet confirmed."
+    },
+    "back_emf_constant_line_rms_v_per_krpm": {
+      "status": "needs_unit_conversion",
+      "value": null,
+      "unit": "V/krpm",
+      "source_reference": "Back-EMF related tests or derived fields",
+      "notes": "Cannot convert until the original quantity and unit are extracted."
+    },
+    "torque_nm": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "Nm",
+      "source_reference": "Steady-state or drive-cycle measurement results",
+      "notes": "Must be tied to a specific operating point."
+    },
+    "torque_constant_nm_per_a": {
+      "status": "needs_semantics_check",
+      "value": null,
+      "unit": "Nm/A",
+      "source_reference": "Direct source field or derived from traceable measurements",
+      "notes": "Current basis must be explicit before comparison."
+    },
+    "copper_loss_w": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "W",
+      "source_reference": "Measured losses in steady-state or drive-cycle results",
+      "notes": "Need to confirm whether the source separates copper loss."
+    },
+    "iron_loss_w": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "W",
+      "source_reference": "Measured losses in steady-state or drive-cycle results",
+      "notes": "Need to confirm whether the source separates iron loss."
+    },
+    "mechanical_loss_w": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "W",
+      "source_reference": "Measured losses in steady-state or drive-cycle results",
+      "notes": "Need to confirm whether the source separates mechanical loss."
+    },
+    "efficiency": {
+      "status": "needs_manual_extraction",
+      "value": null,
+      "unit": "%",
+      "source_reference": "Reported efficiency or derivable from input/output power",
+      "notes": "Must not be inferred without explicit traceability."
+    },
+    "required_voltage_v": {
+      "status": "unavailable",
+      "value": null,
+      "unit": "V",
+      "source_reference": "No verified source field found in this phase",
+      "notes": "Do not back-fill from this project's legacy required_voltage_v model."
+    },
+    "temperature": {
+      "status": "unavailable",
+      "value": null,
+      "unit": "C",
+      "source_reference": "Not verified from repository description or README in this phase",
+      "notes": "Keep unavailable until directly confirmed."
+    }
+  },
+  "comparability_precheck": {
+    "directly_comparable_fields": [],
+    "blocked_fields": {
+      "motor_type_boundary": "This source is PMSM-only and must not be compared directly against BLDC revised metrics.",
+      "topology_boundary": "Topology is not yet extracted, so AFPM vs radial PMSM comparability cannot be resolved.",
+      "phase_line_boundary": "Phase vs line semantics are not yet extracted for back-EMF and current-related fields.",
+      "rms_peak_boundary": "RMS vs peak semantics are not yet extracted for back-EMF and current-related fields.",
+      "current_basis_boundary": "Current basis for torque_constant_nm_per_a is not yet confirmed.",
+      "field_traceability_boundary": "No numeric field has a completed file/table/page citation yet."
+    },
+    "excluded_comparisons": {
+      "back_emf_phase_peak_v": "Blocked until phase/line and RMS/peak semantics are confirmed from source files.",
+      "back_emf_phase_rms_v": "Blocked until phase/line and RMS/peak semantics are confirmed from source files.",
+      "back_emf_line_rms_v": "Blocked until phase/line and RMS/peak semantics are confirmed from source files.",
+      "back_emf_constant_line_rms_v_per_krpm": "Blocked until the original back-EMF quantity and unit are extracted and any conversion is logged.",
+      "torque_nm": "Blocked until a traceable operating point and source citation are extracted.",
+      "torque_constant_nm_per_a": "Blocked until current_basis and control semantics are confirmed.",
+      "phase_inductance_h": "Blocked until source inductance semantics are matched to the project field definition.",
+      "required_voltage_v": "required_voltage_v is not comparable in this phase because the source field is unverified and the project metric remains legacy/provisional.",
+      "temperature": "Not comparable in this phase because temperature data has not been verified from the source."
+    }
+  },
+  "no_overclaim_assertions": {
+    "does_not_validate_entire_project": true,
+    "does_not_validate_bldc": true,
+    "does_not_validate_afpm_by_default": true,
+    "not_ready_for_accuracy_claims": true,
+    "does_not_change_formulas": true,
+    "does_not_change_defaults": true,
+    "does_not_modify_legacy_baseline": true
+  }
+}
