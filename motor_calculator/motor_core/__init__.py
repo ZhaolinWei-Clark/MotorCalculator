@@ -33,6 +33,25 @@ from .pmsm_ke_kt_models import (
 from .rated_torque_models import calculate_legacy_rated_torque_nm, calculate_revised_rated_torque_nm, compare_rated_torque_models
 from .units import legacy_params_to_model_input
 from .validation import MotorCalculationError, MotorCalculatorError, MotorValidationError, parse_legacy_gui_params
+from .validation_comparison import ValidationMetricResult, ValidationReport, compare_validation_record
+from .validation_loader import ValidationLoaderError, convert_value_between_units, load_validation_record, load_validation_record_from_dict
+from .validation_records import (
+    PHASE4A_VALIDATION_SCOPE,
+    SUPPORTED_INPUT_PARAMETER_NAMES,
+    SUPPORTED_VALIDATION_METRICS,
+    ValidationComparabilityStatus,
+    ValidationEvidenceLevel,
+    ValidationField,
+    ValidationFieldStatus,
+    ValidationFrameworkError,
+    ValidationMetricExpectation,
+    ValidationMetricMaturity,
+    ValidationRecord,
+    ValidationRecordError,
+    ValidationSourceType,
+    ValidationTolerance,
+    ValidationUncertainty,
+)
 
 __all__ = [
     "AnalysisResult",
@@ -60,10 +79,14 @@ __all__ = [
     "compare_legacy_and_revised_bldc_ke_kt",
     "calculate_revised_pmsm_back_emf_constants_from_phase_rms_and_angular_speed",
     "calculate_revised_pmsm_back_emf_constants_from_phase_rms_and_speed",
+    "compare_validation_record",
     "compare_rated_torque_models",
     "compare_legacy_and_revised_pmsm_ke_kt",
+    "convert_value_between_units",
     "derive_revised_pmsm_torque_constants_from_power_balance",
     "legacy_params_to_model_input",
+    "load_validation_record",
+    "load_validation_record_from_dict",
     "normalized_bldc_average_electromagnetic_power",
     "normalized_bldc_line_to_line_back_emf",
     "normalized_bldc_line_to_line_back_emf_rms",
@@ -74,4 +97,22 @@ __all__ = [
     "normalize_motor_control_mode",
     "parse_legacy_gui_params",
     "require_bldc_control_mode",
+    "PHASE4A_VALIDATION_SCOPE",
+    "SUPPORTED_INPUT_PARAMETER_NAMES",
+    "SUPPORTED_VALIDATION_METRICS",
+    "ValidationComparabilityStatus",
+    "ValidationEvidenceLevel",
+    "ValidationField",
+    "ValidationFieldStatus",
+    "ValidationFrameworkError",
+    "ValidationLoaderError",
+    "ValidationMetricExpectation",
+    "ValidationMetricMaturity",
+    "ValidationMetricResult",
+    "ValidationRecord",
+    "ValidationRecordError",
+    "ValidationReport",
+    "ValidationSourceType",
+    "ValidationTolerance",
+    "ValidationUncertainty",
 ]
