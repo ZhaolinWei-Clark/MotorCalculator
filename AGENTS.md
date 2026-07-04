@@ -1,4 +1,4 @@
-# Repository Context Guide
+﻿# Repository Context Guide
 
 ## Scope
 
@@ -41,27 +41,18 @@ Current priorities:
 - Phase 3B is complete and keeps strict-SI rated torque in parallel with legacy rated torque
 - Phase 3C is complete and keeps revised PMSM `Ke` / `Kt` in parallel with legacy outputs
 - Phase 3D is complete and adds 4 independent PMSM analytical reference cases
-- Phase 3E is complete and adds ideal BLDC revised waveform semantics, revised `Ke` / `Kt`, and 4 independent BLDC analytical reference cases
+- Phase 3E is complete and has passed acceptance
 - Revised PMSM `Ke` / `Kt` have passed unit-semantics, three-phase power-balance, independent analytical reference, and downstream-isolation validation
-- Revised BLDC `Ke` / `Kt` have passed piecewise waveform derivation, high-resolution numeric integration, independent analytical reference, and downstream-isolation validation
+- Revised BLDC `Ke` / `Kt` have passed piecewise derivation, independent numeric integration, independent analytical reference, production/reference cross-validation, and downstream isolation
 - Existing 3 legacy baseline cases are all BLDC-path cases
+- Revised PMSM and BLDC outputs are still not production defaults
 - `legacy_baseline.json` remains unchanged with SHA-256 `15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
 - Standard development test command is `.venv\Scripts\python.exe -m pytest -v`
 
-## Phase 3A To 3D Summary
+## Phase 3D Freeze Reference
 
-- Phase 3A branch: `feature/electrical-semantics`
-- Phase 3B branch: `feature/strict-si-rated-torque`
-- Phase 3C branch: `feature/pmsm-ke-kt-semantics`
-- Phase 3D branch: `test/pmsm-reference-cases`
-- Phase 3D state-freeze commit before Phase 3E: `958dc23` `docs: record phase 3D completion and phase 3E scope`
-
-Validated state before Phase 3E:
-
-- full pytest result: `84 passed`
-- `legacy_baseline.json` unchanged
-- 4 independent PMSM analytical reference cases exist in `motor_calculator/tests/fixtures/pmsm_reference_cases.json`
-- revised PMSM `Ke` / `Kt` were still not production defaults
+- Phase 3D state-freeze commit before final Phase 3E closeout: `958dc23` `docs: record phase 3D completion and phase 3E scope`
+- full pytest result before Phase 3E: `84 passed`
 
 ## Phase 3E Completion Snapshot
 
@@ -73,10 +64,11 @@ Recorded commits:
 - `3168ad2` `feat: derive BLDC Ke Kt from 120 degree power balance`
 - `2d28905` `test: add independent BLDC analytical reference cases`
 - `9716cb0` `test: validate BLDC Ke Kt semantics and isolation`
+- `3bba27d` `docs: document BLDC Ke Kt analytical validation`
 
 Validated state:
 
-- full pytest result: `117 passed`
+- full pytest result after Phase 3E: `117 passed`
 - `legacy_baseline.json` unchanged
 - `legacy_baseline.json` SHA-256 remains `15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
 - revised BLDC waveform helpers are GUI-independent and live in `motor_core/bldc_ke_kt_models.py`
@@ -85,32 +77,29 @@ Validated state:
 - rated current, loss, efficiency, `required_voltage_v`, torque waveform, and GUI default paths still use legacy chains
 - existing 3 legacy baseline cases remain BLDC-path regression anchors
 - new independent BLDC analytical cases exist in `motor_calculator/tests/fixtures/bldc_reference_cases.json`
+- revised BLDC line RMS `Ke` differs from legacy by about `2.4695%`
+- legacy BLDC `Kt` semantics remain incomplete and should not be forced into a direct error calculation against revised BLDC `Kt`
 
-## Phase 3E Scope Boundary That Was Enforced
+## Phase 4A Approved Scope
 
-Allowed and completed:
+Phase 4A is approved as the next stage, but has not started yet.
 
-- define explicit ideal BLDC revised `Ke` / `Kt` semantics
-- define explicit ideal BLDC phase/line, flat-top/peak/RMS waveform quantities
-- derive BLDC revised `Kt` from average electromagnetic power balance
-- add independent BLDC analytical reference cases
-- document what BLDC analytical validation proves and does not prove
+Allowed in Phase 4A:
 
-Not changed in Phase 3E:
+- establish an external validation data framework
+- establish validation-source provenance tracking
+- classify validation sources such as analytical, FEA, published benchmark, and measurement data
+- add data-structure and documentation support for future external validation inputs
 
-- PMSM revised formulas
-- PMSM reference cases
-- `required_voltage_v`
-- rated-current default chain
-- loss models
-- efficiency model
-- inductance models
-- fill-factor definition
-- demagnetization or thermal-rise models
-- production defaults
-- `legacy_baseline.json`
-- GUI design
-- EXE packaging
+Not allowed in Phase 4A:
+
+- switch any revised value to a default path
+- modify calculation formulas
+- modify `required_voltage_v`
+- modify rated-current default chains
+- modify loss, efficiency, inductance, fill-factor, demagnetization, or thermal-rise formulas
+- modify GUI default chains
+- modify `legacy_baseline.json`
 
 ## Hard Rules
 
@@ -162,7 +151,7 @@ Temporary compatibility runner:
 
 - `work/run_pytest_style.py`
 
-Current expected result after Phase 3E:
+Current expected result after Phase 3E freeze:
 
 - `117 passed`
 
@@ -189,7 +178,6 @@ motor_calculator/
   motor_core/
   gui/
   tests/
-  docs/
 docs/
   project_status_zh.md
   approved_model_assumptions_zh.md
@@ -213,11 +201,14 @@ work/
 
 ## Next Phase Intent
 
-No next phase is approved yet.
+The next approved phase is Phase 4A.
 
-Likely future candidates, each requiring separate approval:
+Phase 4A should only build:
 
-- higher-order BLDC / PMSM validation sources such as FEA, published references, or measurements
-- explicit default-switch decision for revised PMSM `Ke` / `Kt`
-- explicit default-switch decision for revised BLDC `Ke` / `Kt`
-- a separate `required_voltage_v` semantics phase
+- external validation data framework
+- validation-source provenance tracking
+
+Phase 4A must not:
+
+- switch any default path
+- modify any calculation formula

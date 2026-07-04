@@ -1,8 +1,8 @@
-# 已批准的模型假设
+﻿# 已批准的模型假设
 
 本文档用于记录当前已经明确批准、后续不得在未获批准前擅自更改的模型假设。
 
-更新时间：2026-07-03
+更新时间：2026-07-04
 
 ## 1. 项目目标定义
 
@@ -77,48 +77,18 @@
 - 铁损、机械损耗、涡流损耗经验公式
 - 双转子 / 双气隙相关系数
 
-## 11. Phase 3A 到 Phase 3D 固化结论
+## 11. Phase 3A 到 Phase 3E 固化结论
 
 - revised 额定转矩只允许并行比较，不得传播到额定电流、损耗、效率或 `required_voltage_v`
 - revised PMSM `Ke` / `Kt` 只允许并行输出，不得传播到额定电流、损耗、效率、`required_voltage_v` 或 GUI 默认链路
+- revised BLDC `Ke` / `Kt` 只允许并行输出，不得传播到额定电流、损耗、效率、`required_voltage_v` 或 GUI 默认链路
 - revised PMSM `Ke` / `Kt` 已通过独立 analytical validation
-- 现有 3 组 `legacy_baseline` 全部为 BLDC 路径，不是 PMSM revised `Ke` / `Kt` 的数值参考
+- revised BLDC `Ke` / `Kt` 已通过分段解析、独立数值积分、独立 analytical reference、production/reference 交叉验证与 downstream isolation
+- 现有 3 组 `legacy_baseline` 全部为 BLDC 路径
+- revised BLDC line RMS `Ke` 与 legacy 相差约 `2.4695%`
+- legacy BLDC `Kt` 语义仍不完整，不应强制计算误差
 
-## 12. Phase 3E 已批准且已完成的边界
-
-Phase 3E 只允许建立 BLDC revised 语义、公式和独立 analytical reference cases，并已完成以下内容：
-
-- 建立 ideal BLDC 三相、Y 接、梯形反电势、120°导通的 revised 波形语义
-- 建立 `phase_flat_top`、`phase_peak`、`phase_rms`、`line_to_line_peak`、`line_to_line_rms` 的显式定义
-- 建立 BLDC revised `Ke` 字段：
-  - `revised_bldc_back_emf_constant_phase_flat_top_v_per_rad_s`
-  - `revised_bldc_back_emf_constant_phase_peak_v_per_rad_s`
-  - `revised_bldc_back_emf_constant_phase_rms_v_per_rad_s`
-  - `revised_bldc_back_emf_constant_line_rms_v_per_rad_s`
-  - `revised_bldc_back_emf_constant_line_rms_v_per_krpm`
-- 建立 BLDC revised `Kt` 字段：
-  - `revised_bldc_torque_constant_nm_per_conduction_a`
-  - `revised_bldc_torque_constant_nm_per_phase_rms_a`
-- 建立 4 个独立 BLDC analytical reference cases
-- 建立 piecewise formula 与高分辨率 numeric integration 的交叉验证
-
-## 13. Phase 3E 明确不允许且实际未修改的内容
-
-- 不修改 PMSM revised 公式
-- 不修改 PMSM reference cases
-- 不修改 `required_voltage_v`
-- 不修改额定电流默认链路
-- 不修改损耗
-- 不修改效率
-- 不修改电感
-- 不修改槽满率
-- 不修改退磁或温升
-- 不切换 revised 为默认
-- 不修改 `legacy_baseline.json`
-- 不重新设计 GUI
-- 不打包 EXE
-
-## 14. 当前 revised 默认值策略
+## 12. 当前默认值策略
 
 - revised PMSM `Ke` / `Kt` 不是默认值
 - revised BLDC `Ke` / `Kt` 不是默认值
@@ -128,6 +98,29 @@ Phase 3E 只允许建立 BLDC revised 语义、公式和独立 analytical refere
   - 报告
   - 测试
   - 实验性输出
+
+## 13. 当前保持不变的下游链路
+
+以下内容当前明确保持 legacy 链路不变：
+
+- `required_voltage_v`
+- 额定电流默认链路
+- 铜损与其他损耗链路
+- 效率链路
+- GUI 默认链路
+
+## 14. Phase 4A 已批准边界
+
+Phase 4A 只允许建立外部验证数据框架和数据来源追踪。
+
+明确边界：
+
+- 不切换任何默认链路
+- 不修改任何计算公式
+- 不修改 `required_voltage_v`
+- 不修改额定电流默认链路
+- 不修改损耗、效率、电感、槽满率、退磁或温升公式
+- 不修改 `legacy_baseline.json`
 
 ## 15. 计算层与 GUI 分层规则
 
@@ -142,7 +135,7 @@ Phase 3E 只允许建立 BLDC revised 语义、公式和独立 analytical refere
 当前已验证：
 
 - PMSM revised `Ke` / `Kt` 的 analytical validation
-- BLDC revised `Ke` / `Kt` 的 piecewise waveform + numeric integration + independent analytical reference validation
+- BLDC revised `Ke` / `Kt` 的分段解析、独立数值积分、独立 analytical reference、production/reference 交叉验证与 downstream isolation
 - revised 字段未传播到下游默认链路
 
 当前仍未验证：
