@@ -1,0 +1,78 @@
+{
+  "validation_id": "bench_measurement_template",
+  "source_type": "bench_measurement",
+  "evidence_level": "LEVEL_3_CONTROLLED_MEASUREMENT",
+  "motor_type": "AFPM PMSM/BLDC",
+  "control_mode": "pmsm_sinusoidal",
+  "topology": "双转子、单定子、双气隙",
+  "source_title": "待填写台架测试名称",
+  "source_author_or_organization": "待填写实验室或团队",
+  "source_year": null,
+  "source_identifier": "实验编号/数据包编号",
+  "source_file": "validation_data/imported/待导入实验数据文件",
+  "source_page_or_section": "待填写工况编号、记录表或报告章节",
+  "license_or_usage_note": "待填写实验数据授权、保密和使用说明",
+  "data_quality_notes": "必须记录仪器型号、采样方式、校准状态、环境条件与异常点处理规则。",
+  "model_assumptions": [
+    "台架数据不自动允许公式回写或参数校准。",
+    "实测不确定度必须独立记录。"
+  ],
+  "input_parameters": {
+    "pole_pairs": {"status": "unavailable", "value": null, "unit": null, "notes": "待填写。"},
+    "rated_speed_rpm": {"status": "unavailable", "value": null, "unit": "rpm", "notes": "待填写。"},
+    "rated_power_w": {"status": "unavailable", "value": null, "unit": "W", "notes": "待填写。"},
+    "dc_bus_voltage_v": {"status": "unavailable", "value": null, "unit": "V", "notes": "待填写。"},
+    "phase_current_a": {"status": "unavailable", "value": null, "unit": "A", "notes": "注明 phase_rms / phase_peak / conduction。"},
+    "winding_connection": {"status": "unavailable", "value": null, "unit": null, "notes": "Y 或 Delta。"},
+    "back_emf_waveform": {"status": "unavailable", "value": null, "unit": null, "notes": "sinusoidal / trapezoidal / legacy_provisional。"},
+    "stator_outer_diameter_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "待填写。"},
+    "stator_inner_diameter_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "待填写。"},
+    "air_gap_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "待填写。"},
+    "magnet_thickness_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "待填写。"},
+    "turns_per_phase": {"status": "unavailable", "value": null, "unit": "turn", "notes": "待填写。"},
+    "winding_factor": {"status": "unavailable", "value": null, "unit": "-", "notes": "待填写。"},
+    "magnet_remanence_t": {"status": "unavailable", "value": null, "unit": "T", "notes": "待填写。"}
+  },
+  "expected_outputs": {
+    "rated_torque_nm": {
+      "metric_name": "rated_torque_nm",
+      "status": "unavailable",
+      "value": null,
+      "unit": "Nm",
+      "quantity_scope": "shaft",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "由转矩传感器或负载测量获得。"
+    },
+    "rated_current_a": {
+      "metric_name": "rated_current_a",
+      "status": "unavailable",
+      "value": null,
+      "unit": "A",
+      "quantity_scope": "phase",
+      "value_kind": "rms",
+      "current_basis": "phase_rms",
+      "notes": "必须注明采样方式。"
+    },
+    "required_voltage_v": {
+      "metric_name": "required_voltage_v",
+      "status": "unavailable",
+      "value": null,
+      "unit": "V",
+      "quantity_scope": "line",
+      "value_kind": "rms",
+      "current_basis": null,
+      "notes": "当前程序仍是 legacy requirement model。"
+    }
+  },
+  "uncertainty": {
+    "rated_torque_nm": {"absolute": null, "relative": null, "coverage_factor": null, "notes": "记录传感器不确定度。"},
+    "rated_current_a": {"absolute": null, "relative": null, "coverage_factor": null, "notes": "记录电流测量不确定度。"}
+  },
+  "tolerances": {},
+  "excluded_comparisons": {},
+  "created_at": "2026-07-04T00:00:00",
+  "synthetic": false,
+  "not_for_accuracy_claims": false,
+  "conversion_log": []
+}

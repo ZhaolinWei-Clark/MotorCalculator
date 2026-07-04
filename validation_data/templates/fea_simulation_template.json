@@ -1,0 +1,75 @@
+{
+  "validation_id": "fea_simulation_template",
+  "source_type": "fea_simulation",
+  "evidence_level": "LEVEL_2_PUBLISHED_OR_FEA",
+  "motor_type": "AFPM PMSM/BLDC",
+  "control_mode": "pmsm_sinusoidal",
+  "topology": "双转子、单定子、双气隙",
+  "source_title": "待填写 FEA 工况名称",
+  "source_author_or_organization": "待填写仿真机构或工程师",
+  "source_year": null,
+  "source_identifier": "仿真项目编号/报告编号",
+  "source_file": "validation_data/imported/待导入仿真文件或报告",
+  "source_page_or_section": "待填写模型页码、算例编号或章节",
+  "license_or_usage_note": "待填写仿真文件授权与使用限制",
+  "data_quality_notes": "必须注明网格、边界条件、材料参数、求解器与任何简化假设。",
+  "model_assumptions": [
+    "FEA 结果不自动等于实测。",
+    "若波形、连接或拓扑与当前模型不一致，则只能记录不可比较。"
+  ],
+  "input_parameters": {
+    "pole_pairs": {"status": "unavailable", "value": null, "unit": null, "notes": "仿真极对数。"},
+    "rated_speed_rpm": {"status": "unavailable", "value": null, "unit": "rpm", "notes": "工况转速。"},
+    "rated_power_w": {"status": "unavailable", "value": null, "unit": "W", "notes": "工况功率。"},
+    "dc_bus_voltage_v": {"status": "unavailable", "value": null, "unit": "V", "notes": "电压边界。"},
+    "phase_current_a": {"status": "unavailable", "value": null, "unit": "A", "notes": "注明 RMS/peak/conduction。"},
+    "winding_connection": {"status": "unavailable", "value": null, "unit": null, "notes": "Y 或 Delta。"},
+    "back_emf_waveform": {"status": "unavailable", "value": null, "unit": null, "notes": "sinusoidal / trapezoidal / legacy_provisional。"},
+    "stator_outer_diameter_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "几何参数。"},
+    "stator_inner_diameter_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "几何参数。"},
+    "air_gap_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "几何参数。"},
+    "magnet_thickness_m": {"status": "unavailable", "value": null, "unit": "m", "notes": "几何参数。"},
+    "turns_per_phase": {"status": "unavailable", "value": null, "unit": "turn", "notes": "绕组参数。"},
+    "winding_factor": {"status": "unavailable", "value": null, "unit": "-", "notes": "绕组参数。"},
+    "magnet_remanence_t": {"status": "unavailable", "value": null, "unit": "T", "notes": "材料参数。"}
+  },
+  "expected_outputs": {
+    "back_emf_phase_rms_v": {
+      "metric_name": "back_emf_phase_rms_v",
+      "status": "unavailable",
+      "value": null,
+      "unit": "V",
+      "quantity_scope": "phase",
+      "value_kind": "rms",
+      "current_basis": null,
+      "notes": "适用于明确 phase RMS 的仿真结果。"
+    },
+    "torque_constant_nm_per_a": {
+      "metric_name": "torque_constant_nm_per_a",
+      "status": "unavailable",
+      "value": null,
+      "unit": "Nm/A",
+      "quantity_scope": "phase",
+      "value_kind": "rms",
+      "current_basis": "phase_rms",
+      "notes": "必须注明 current_basis。"
+    },
+    "phase_inductance_h": {
+      "metric_name": "phase_inductance_h",
+      "status": "unavailable",
+      "value": null,
+      "unit": "H",
+      "quantity_scope": "phase",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "当前程序仍属 legacy/provisional。"
+    }
+  },
+  "uncertainty": {},
+  "tolerances": {},
+  "excluded_comparisons": {},
+  "created_at": "2026-07-04T00:00:00",
+  "synthetic": false,
+  "not_for_accuracy_claims": false,
+  "conversion_log": []
+}
