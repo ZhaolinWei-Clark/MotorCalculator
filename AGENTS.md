@@ -1,4 +1,4 @@
-﻿# Repository Context Guide
+# Repository Context Guide
 
 ## Scope
 
@@ -11,22 +11,24 @@ The root documents in `docs/` are the canonical high-level project memory for fu
 1. `docs/project_status_zh.md`
 2. `docs/approved_model_assumptions_zh.md`
 3. `docs/pending_decisions_zh.md`
-4. `motor_calculator/docs/model_assumptions_zh.md`
-5. `motor_calculator/docs/formula_inventory_zh.md`
-6. `docs/electrical_quantity_definitions_zh.md`
-7. `docs/phase3_formula_change_report_zh.md`
-8. `docs/bldc_ke_kt_validation_zh.md`
+4. `docs/external_validation_framework_zh.md`
+5. `motor_calculator/docs/model_assumptions_zh.md`
+6. `motor_calculator/docs/formula_inventory_zh.md`
+7. `docs/electrical_quantity_definitions_zh.md`
+8. `docs/phase3_formula_change_report_zh.md`
+9. `docs/bldc_ke_kt_validation_zh.md`
 
 ## Current Project Goal
 
-The project is still a controlled refactor and semantics-clarification effort, not a broad electromagnetic physics upgrade.
+The project is still a controlled refactor, semantics-clarification, and validation-framework effort, not a broad electromagnetic physics upgrade.
 
 Current priorities:
 
 - preserve legacy calculator behavior
 - keep the legacy regression baseline stable
 - centralize units, constants, assumptions, and validation
-- make all result-changing formula work explicit, reviewable, and parallelized
+- keep all result-changing formula work explicit, reviewable, and parallelized
+- keep external validation traceable and isolated from the production default path
 
 ## Current Approved State
 
@@ -42,10 +44,12 @@ Current priorities:
 - Phase 3C is complete and keeps revised PMSM `Ke` / `Kt` in parallel with legacy outputs
 - Phase 3D is complete and adds 4 independent PMSM analytical reference cases
 - Phase 3E is complete and has passed acceptance
+- Phase 4A is complete and adds an external-validation schema, provenance tracking, comparability checks, unit-conversion logging, and validation templates
 - Revised PMSM `Ke` / `Kt` have passed unit-semantics, three-phase power-balance, independent analytical reference, and downstream-isolation validation
 - Revised BLDC `Ke` / `Kt` have passed piecewise derivation, independent numeric integration, independent analytical reference, production/reference cross-validation, and downstream isolation
 - Existing 3 legacy baseline cases are all BLDC-path cases
 - Revised PMSM and BLDC outputs are still not production defaults
+- No real published benchmark, FEA, or bench-measurement dataset has been imported yet
 - `legacy_baseline.json` remains unchanged with SHA-256 `15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
 - Standard development test command is `.venv\Scripts\python.exe -m pytest -v`
 
@@ -56,7 +60,7 @@ Current priorities:
 
 ## Phase 3E Completion Snapshot
 
-Phase 3E is complete on branch `feature/bldc-ke-kt-semantics`.
+Phase 3E was completed on branch `feature/bldc-ke-kt-semantics`.
 
 Recorded commits:
 
@@ -80,18 +84,47 @@ Validated state:
 - revised BLDC line RMS `Ke` differs from legacy by about `2.4695%`
 - legacy BLDC `Kt` semantics remain incomplete and should not be forced into a direct error calculation against revised BLDC `Kt`
 
-## Phase 4A Approved Scope
+## Phase 4A Completion Snapshot
 
-Phase 4A is approved as the next stage, but has not started yet.
+Phase 4A is complete on branch `feature/external-validation-framework`.
 
-Allowed in Phase 4A:
+Recorded commits:
 
-- establish an external validation data framework
-- establish validation-source provenance tracking
-- classify validation sources such as analytical, FEA, published benchmark, and measurement data
-- add data-structure and documentation support for future external validation inputs
+- `87240a5` `feat: add external validation record schema`
+- `531e342` `feat: add validation loader and comparability engine`
+- `84f88d1` `test: cover validation provenance and error metrics`
 
-Not allowed in Phase 4A:
+Validated state:
+
+- full pytest result after Phase 4A code and tests: `138 passed`
+- new framework files live in:
+  - `motor_core/validation_records.py`
+  - `motor_core/validation_loader.py`
+  - `motor_core/validation_comparison.py`
+- validation templates live in `validation_data/templates/`
+- `validation_data/imported/` intentionally contains no fabricated benchmark data
+- `validation_data/templates/example_synthetic_record.json` is explicitly synthetic, analytical-only, and not for accuracy claims
+- external validation data cannot enter the production calculation default path
+- the framework does not auto-calibrate formulas or empirical coefficients
+- `legacy_baseline.json`, `pmsm_reference_cases.json`, and `bldc_reference_cases.json` remain unchanged
+
+## Current Validation Framework Rules
+
+- Every validation record must track `source_type` and `evidence_level`
+- Every validation record must remain traceable to a file, paper, experiment, or user input
+- `analytical_reference` cannot be treated as experimental validation
+- `manufacturer_data` cannot be treated as controlled bench measurement
+- Unknown values must use explicit field status:
+  - `provided`
+  - `inferred`
+  - `unavailable`
+  - `not_applicable`
+- Unknown data must never be represented by `0`
+- Only `directly_comparable` metrics may compute model error
+- Unit conversion may be explicit, but it must be recorded
+- External validation results must stay separate from uncertainty metadata
+
+## Not Allowed In Current Scope
 
 - switch any revised value to a default path
 - modify calculation formulas
@@ -100,6 +133,8 @@ Not allowed in Phase 4A:
 - modify loss, efficiency, inductance, fill-factor, demagnetization, or thermal-rise formulas
 - modify GUI default chains
 - modify `legacy_baseline.json`
+- fabricate external validation data or citations
+- claim real-world accuracy without explicit evidence and approval
 
 ## Hard Rules
 
@@ -107,9 +142,10 @@ Not allowed in Phase 4A:
 - Do not delete the legacy calculation implementation.
 - Do not silently change legacy baseline data to make tests pass.
 - Do not claim improved physical accuracy without explicit evidence and approval.
+- Do not fabricate published benchmark, FEA, bench, or manufacturer validation sources.
 - GUI must not contain electromagnetic formulas.
 - `motor_core/calculations.py` must remain GUI-independent.
-- Unit conversions must stay centralized in `motor_core/units.py`.
+- Unit conversions must stay centralized in `motor_core/units.py` unless the conversion is validation-record-specific and explicitly logged by the validation framework.
 - Constants and legacy factors must stay centralized in `motor_core/constants.py`.
 
 ## Formula Change Approval Rule
@@ -151,15 +187,15 @@ Temporary compatibility runner:
 
 - `work/run_pytest_style.py`
 
-Current expected result after Phase 3E freeze:
+Current expected result after Phase 4A:
 
-- `117 passed`
+- `138 passed`
 
 ## Key Git State
 
 Current development branch:
 
-- `feature/bldc-ke-kt-semantics`
+- `feature/external-validation-framework`
 
 Historical anchor commits:
 
@@ -182,9 +218,15 @@ docs/
   project_status_zh.md
   approved_model_assumptions_zh.md
   pending_decisions_zh.md
+  external_validation_framework_zh.md
   electrical_quantity_definitions_zh.md
   phase3_formula_change_report_zh.md
   bldc_ke_kt_validation_zh.md
+validation_data/
+  README_zh.md
+  templates/
+  imported/
+  reports/
 work/
   run_pytest_style.py
 ```
@@ -197,18 +239,20 @@ work/
 - `required_voltage_v` is still a simplified legacy model
 - several loss models remain empirical
 - inductance and fill-factor models remain legacy approximations
+- the external validation framework exists, but real external datasets are still absent
 - current validation is still not FEA, bench-test, published-benchmark, or full prototype validation
 
 ## Next Phase Intent
 
-The next approved phase is Phase 4A.
+No result-changing formula phase is currently approved beyond Phase 4A.
 
-Phase 4A should only build:
+If work continues, the likely next safe step is to import real external datasets through the Phase 4A framework:
 
-- external validation data framework
-- validation-source provenance tracking
+- published benchmark data
+- FEA reference data
+- controlled bench measurement data
 
-Phase 4A must not:
+Any future phase must still not:
 
-- switch any default path
-- modify any calculation formula
+- switch any default path without approval
+- modify any calculation formula without approval
