@@ -12,11 +12,16 @@ The root documents in `docs/` are the canonical high-level project memory for fu
 2. `docs/approved_model_assumptions_zh.md`
 3. `docs/pending_decisions_zh.md`
 4. `docs/external_validation_framework_zh.md`
-5. `motor_calculator/docs/model_assumptions_zh.md`
-6. `motor_calculator/docs/formula_inventory_zh.md`
-7. `docs/electrical_quantity_definitions_zh.md`
-8. `docs/phase3_formula_change_report_zh.md`
-9. `docs/bldc_ke_kt_validation_zh.md`
+5. `docs/external_data_source_candidates_zh.md`
+6. `docs/external_data_field_mapping_matrix_zh.md`
+7. `docs/validation_data_import_plan_zh.md`
+8. `docs/textbook_reference_candidates_zh.md`
+9. `validation_data/README_data_scouting_zh.md`
+10. `motor_calculator/docs/model_assumptions_zh.md`
+11. `motor_calculator/docs/formula_inventory_zh.md`
+12. `docs/electrical_quantity_definitions_zh.md`
+13. `docs/phase3_formula_change_report_zh.md`
+14. `docs/bldc_ke_kt_validation_zh.md`
 
 ## Current Project Goal
 
@@ -29,6 +34,7 @@ Current priorities:
 - centralize units, constants, assumptions, and validation
 - keep all result-changing formula work explicit, reviewable, and parallelized
 - keep external validation traceable and isolated from the production default path
+- scout reliable external validation sources before importing any real dataset
 
 ## Current Approved State
 
@@ -50,6 +56,10 @@ Current priorities:
 - Existing 3 legacy baseline cases are all BLDC-path cases
 - Revised PMSM and BLDC outputs are still not production defaults
 - No real published benchmark, FEA, or bench-measurement dataset has been imported yet
+- Phase 4B scouting has started on branch `research/external-data-source-scouting`
+- Phase 4B has produced candidate-source, field-mapping, import-planning, and textbook-reference docs only
+- Phase 4B still has not imported any real external dataset into `validation_data/imported/`
+- GUI smoke test is complete, but the runtime environment still lacks `matplotlib` and a usable Tk `init.tcl`
 - `legacy_baseline.json` remains unchanged with SHA-256 `15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
 - Standard development test command is `.venv\Scripts\python.exe -m pytest -v`
 
@@ -191,11 +201,15 @@ Current expected result after Phase 4A:
 
 - `138 passed`
 
+Current expected result after Phase 4B docs-only work:
+
+- `138 passed`
+
 ## Key Git State
 
 Current development branch:
 
-- `feature/external-validation-framework`
+- `research/external-data-source-scouting`
 
 Historical anchor commits:
 
@@ -219,11 +233,16 @@ docs/
   approved_model_assumptions_zh.md
   pending_decisions_zh.md
   external_validation_framework_zh.md
+  external_data_source_candidates_zh.md
+  external_data_field_mapping_matrix_zh.md
+  validation_data_import_plan_zh.md
+  textbook_reference_candidates_zh.md
   electrical_quantity_definitions_zh.md
   phase3_formula_change_report_zh.md
   bldc_ke_kt_validation_zh.md
 validation_data/
   README_zh.md
+  README_data_scouting_zh.md
   templates/
   imported/
   reports/
@@ -240,17 +259,22 @@ work/
 - several loss models remain empirical
 - inductance and fill-factor models remain legacy approximations
 - the external validation framework exists, but real external datasets are still absent
+- Phase 4B source scouting is complete, but no real record has been imported yet
+- the best current Phase 4C candidate is `CREATOR PMSM Data`
+- several AFPM-aligned literature candidates still need user-supplied PDFs or exact citations before extraction
+- GUI runtime dependencies remain unresolved despite the smoke test
 - current validation is still not FEA, bench-test, published-benchmark, or full prototype validation
 
 ## Next Phase Intent
 
 No result-changing formula phase is currently approved beyond Phase 4A.
 
-If work continues, the likely next safe step is to import real external datasets through the Phase 4A framework:
+If work continues, the likely next safe step is one of:
 
-- published benchmark data
-- FEA reference data
-- controlled bench measurement data
+- import a first real external validation record through the Phase 4A framework, preferably `CREATOR PMSM Data`
+- import a first FEA-only reference record if explicitly approved
+- repair GUI runtime dependencies in a separate non-formula phase
+- extract worked examples from user-supplied AFPM papers or textbooks
 
 Any future phase must still not:
 

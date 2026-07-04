@@ -16,8 +16,8 @@
 - 未经批准直接替换 legacy 电磁经验公式
 - 切换任何 revised 默认值
 - 自动校准经验系数
-- 重做 GUI 布局或视觉样式
-- 在没有真实外部证据的前提下宣称物理准确度已经得到实验验证
+- 进入 GUI 优化阶段
+- 在没有真实外部证据前宣称物理准确度已被实验验证
 
 ## 2. 项目对象
 
@@ -62,65 +62,58 @@ Phase 3D 验收状态：
 
 已完成并通过验收。
 
-Phase 3E 提交：
-
-- `52373c6` `feat: define ideal BLDC waveform semantics`
-- `3168ad2` `feat: derive BLDC Ke Kt from 120 degree power balance`
-- `2d28905` `test: add independent BLDC analytical reference cases`
-- `9716cb0` `test: validate BLDC Ke Kt semantics and isolation`
-- `3bba27d` `docs: document BLDC Ke Kt analytical validation`
-
 Phase 3E 验收状态：
 
-- 修改前完整测试结果：`84 passed`
-- 修改后完整测试结果：`117 passed`
+- 完整测试结果：`117 passed`
 - `legacy_baseline.json` 未修改
-- `legacy_baseline.json` SHA-256：`15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9`
-- 当前 3 组 legacy baseline 全部为 BLDC 路径
 - revised BLDC `Ke` / `Kt` 已通过分段解析、独立数值积分、独立 analytical reference、production/reference 交叉验证与 downstream isolation
 - revised PMSM 与 revised BLDC 均未设为默认值
 
-### Phase 4A：外部验证数据框架与 provenance 跟踪
+### Phase 4A：外部验证框架与 provenance 跟踪
 
 已完成。
-
-Phase 4A 分支：
-
-- `feature/external-validation-framework`
-
-Phase 4A 已记录提交：
-
-- `87240a5` `feat: add external validation record schema`
-- `531e342` `feat: add validation loader and comparability engine`
-- `84f88d1` `test: cover validation provenance and error metrics`
 
 Phase 4A 完成内容：
 
 - 建立 `ValidationSourceType` 六类来源枚举
 - 建立 `ValidationEvidenceLevel` 五级证据等级
 - 建立字段状态 `provided / inferred / unavailable / not_applicable`
-- 建立独立验证记录 schema：`motor_calculator/motor_core/validation_records.py`
-- 建立 JSON 加载与单位检查：`motor_calculator/motor_core/validation_loader.py`
-- 建立 comparability / error / uncertainty 比较引擎：`motor_calculator/motor_core/validation_comparison.py`
-- 建立 `validation_data/` 模板目录、`imported/` 与 `reports/` 结构
-- 建立 synthetic example 仅用于测试导入器和比较引擎
-- 建立新增验证测试，且不修改 production 公式链
+- 建立 validation record schema、loader、comparability engine
+- 建立 `validation_data/templates/`、`imported/`、`reports/` 结构
+- 建立 synthetic example，仅用于测试导入器和比较引擎
 
 Phase 4A 明确未做：
 
 - 未修改任何电磁公式
 - 未切换任何默认链路
-- 未修改 `required_voltage_v`
-- 未修改额定电流默认链路
-- 未修改损耗、效率、电感、槽满率、热限制或退磁限制公式
-- 未导入任何真实公开 benchmark、真实 FEA 或真实台架数据
-- 未伪造任何外部来源
+- 未导入任何真实 published benchmark、真实 FEA 或真实台架数据
+- 未修改 `legacy_baseline.json`
+
+### Phase 4B：外部数据源侦察与候选 benchmark 清单
+
+已进入侦察阶段。
+
+Phase 4B 当前完成内容：
+
+- 已创建候选来源清单：`docs/external_data_source_candidates_zh.md`
+- 已创建字段匹配矩阵：`docs/external_data_field_mapping_matrix_zh.md`
+- 已创建导入优先级计划：`docs/validation_data_import_plan_zh.md`
+- 已创建教材候选清单：`docs/textbook_reference_candidates_zh.md`
+- 已创建数据侦察说明：`validation_data/README_data_scouting_zh.md`
+
+Phase 4B 当前明确未做：
+
+- 未导入任何真实外部数据到 `validation_data/imported/`
+- 未修改任何公式
+- 未切换任何 revised 默认值
+- 未修改 production calculation chain
+- 未进入 GUI 优化
 
 ## 4. 当前 Git 状态
 
-- 当前分支：`feature/external-validation-framework`
-- Phase 3D 状态固化提交：`958dc23` `docs: record phase 3D completion and phase 3E scope`
-- Phase 4A 在 Phase 3E 冻结状态之上并行建立验证框架，未触碰 production 公式
+- 侦察起始主开发分支：`feature/external-validation-framework`
+- 当前 Phase 4B 研究分支：`research/external-data-source-scouting`
+- Phase 4A 冻结后的完整测试结果：`138 passed`
 
 ## 5. 当前测试体系
 
@@ -130,17 +123,11 @@ Phase 4A 明确未做：
 .venv\Scripts\python.exe -m pytest -v
 ```
 
-Phase 4A 完成后的完整测试结果：
+Phase 4A 与 Phase 4B 进入前完整测试结果：
 
 ```text
 138 passed
 ```
-
-说明：
-
-- 原有 `117` 个测试继续通过
-- 新增 `21` 个验证框架测试全部通过
-- `legacy_baseline`、PMSM analytical reference、BLDC analytical reference 相关测试继续通过
 
 ## 6. baseline 与 reference fixture 的角色
 
@@ -153,8 +140,8 @@ Phase 4A 完成后的完整测试结果：
 它不是：
 
 - 物理真值
-- PMSM revised `Ke` / `Kt` 的数值参考
-- BLDC revised `Ke` / `Kt` 的数值参考
+- PMSM revised `Ke` / `Kt` 的 benchmark
+- BLDC revised `Ke` / `Kt` 的 benchmark
 - 公开 benchmark
 - FEA 结果
 - 实验验证结果
@@ -185,13 +172,12 @@ Phase 4A 完成后的完整测试结果：
 
 - 来源类型分类
 - 证据等级分类
-- provenance 字段追踪
+- provenance 字段跟踪
 - 缺失值状态管理
-- 结构化 expected / uncertainty / tolerances
+- expected / uncertainty / tolerances 结构
 - phase / line、RMS / peak、control mode、topology、Y/Delta comparability 检查
-- 单位显式转换并记录转换步骤
+- 显式单位转换并记录转换步骤
 - legacy / revised 并行误差输出
-- synthetic 数据隔离
 
 当前验证框架尚未包含：
 
@@ -200,7 +186,35 @@ Phase 4A 完成后的完整测试结果：
 - 真实台架测量数据
 - 多来源交叉验证结论
 
-## 9. 当前不能做出的声明
+## 9. GUI 运行状态
+
+GUI smoke test 已完成，但当前环境下 GUI 运行时仍待修复：
+
+- 当前虚拟环境缺少 `matplotlib`
+- Tk runtime 缺少可用 `init.tcl`
+- 真实 GUI 未能成功打开
+- headless 默认计算成功
+- JSON、CSV、文本报告保存可用
+- 图表保存存在“提示成功但未生成图像”的问题
+
+当前建议：
+
+- 暂不进入 GUI 优化
+- 若后续单独批准，可进入 `Phase 4C-alt: GUI runtime dependency repair`
+
+## 10. 当前未解决问题
+
+- revised PMSM `Ke` / `Kt` 仍未成为默认值
+- revised BLDC `Ke` / `Kt` 仍未成为默认值
+- `required_voltage_v` 仍是 legacy 简化模型
+- 损耗、电感、槽满率、退磁、温升仍是 legacy/provisional
+- 缺少真实公开 benchmark 导入
+- 缺少真实 FEA 导入
+- 缺少真实台架实验测量导入
+- 缺少多来源交叉验证与不确定度归档
+- GUI runtime dependency 仍未修复
+
+## 11. 当前不能做出的声明
 
 当前不能宣称：
 
@@ -210,12 +224,10 @@ Phase 4A 完成后的完整测试结果：
 - revised PMSM 或 revised BLDC 已经获批成为默认值
 - synthetic example、legacy baseline 或 analytical reference 足以证明真实准确度
 
-## 10. 当前未解决问题
+## 12. 当前最安全的下一步
 
-- revised PMSM `Ke` / `Kt` 仍未成为默认值
-- revised BLDC `Ke` / `Kt` 仍未成为默认值
-- `required_voltage_v` 仍是 legacy 简化模型
-- 缺少真实公开 benchmark 导入
-- 缺少真实 FEA 导入
-- 缺少真实台架实验测量导入
-- 缺少多来源交叉验证与不确定度归档
+当前最安全的下一步候选有三条：
+
+1. `Phase 4C`：导入第一个真实 validation record，首选 `CREATOR PMSM Data`
+2. `Phase 4C-alt`：修复 GUI runtime dependency
+3. 用户先提供 AFPM 论文 / 教材全文，再做人工字段抽取
