@@ -109,10 +109,53 @@ Phase 4B 当前明确未做：
 - 未修改 production calculation chain
 - 未进入 GUI 优化
 
+### Phase 4C：CREATOR PMSM 首条真实 validation record 导入准备
+
+已启动，当前处于“来源级核验 + draft/blockers”状态。
+
+Phase 4C 当前已完成内容：
+
+- 已核验 `CREATOR Case: Permanent Magnet Synchronous Motor Data` 的来源级元数据
+- 已核验：
+  - 数据集 DOI
+  - 仓库 URL
+  - 发布机构
+  - 创建者
+  - 发布时间
+  - 许可类型 `CC BY-NC 4.0`
+  - 文件清单与大小
+- 已核验该来源说明中存在：
+  - 设计参数
+  - 实验结果
+  - 材料数据
+  - 绕组数据
+  - 几何数据
+  - 低频等效参数
+  - drive-cycle 测量结果
+- 已创建：
+  - `validation_data/source_notes/creator_pmsm/source_summary_zh.md`
+  - `validation_data/source_notes/creator_pmsm/field_mapping_draft_zh.md`
+  - `validation_data/source_notes/creator_pmsm/source_acquisition_checklist_zh.md`
+  - `validation_data/source_notes/creator_pmsm/creator_pmsm_initial_record_draft.json`
+  - `validation_data/reports/creator_pmsm_import_blockers_zh.md`
+  - `docs/creator_pmsm_import_report_zh.md`
+
+Phase 4C 当前明确未做：
+
+- 未下载 `PM_synchronous_motor.zip`
+- 未下载 `CREATOR_Machine_Data_2024-11-04.pdf`
+- 未创建正式 `validation_data/imported/creator_pmsm_initial_record.json`
+- 未运行正式 comparison engine
+- 未修改任何公式
+- 未切换任何默认值
+- 未修改 production calculation chain
+- 未修改 `legacy_baseline.json`
+
 ## 4. 当前 Git 状态
 
 - 侦察起始主开发分支：`feature/external-validation-framework`
 - 当前 Phase 4B 研究分支：`research/external-data-source-scouting`
+- 当前 Phase 4C 工作分支：`data/creator-pmsm-validation-record`
 - Phase 4A 冻结后的完整测试结果：`138 passed`
 
 ## 5. 当前测试体系
@@ -127,6 +170,12 @@ Phase 4A 与 Phase 4B 进入前完整测试结果：
 
 ```text
 138 passed
+```
+
+当前 Phase 4C 完成后预期完整测试结果：
+
+```text
+147 passed
 ```
 
 ## 6. baseline 与 reference fixture 的角色
@@ -209,6 +258,7 @@ GUI smoke test 已完成，但当前环境下 GUI 运行时仍待修复：
 - `required_voltage_v` 仍是 legacy 简化模型
 - 损耗、电感、槽满率、退磁、温升仍是 legacy/provisional
 - 缺少真实公开 benchmark 导入
+- 已完成 CREATOR PMSM 来源级核验，但仍缺少正式 imported validation record
 - 缺少真实 FEA 导入
 - 缺少真实台架实验测量导入
 - 缺少多来源交叉验证与不确定度归档
@@ -228,6 +278,6 @@ GUI smoke test 已完成，但当前环境下 GUI 运行时仍待修复：
 
 当前最安全的下一步候选有三条：
 
-1. `Phase 4C`：导入第一个真实 validation record，首选 `CREATOR PMSM Data`
+1. 继续 `Phase 4C`：批准并抽取 `CREATOR_Machine_Data_2024-11-04.pdf` 与 `PM_synchronous_motor.zip`，把 draft 升级为正式 record
 2. `Phase 4C-alt`：修复 GUI runtime dependency
 3. 用户先提供 AFPM 论文 / 教材全文，再做人工字段抽取
