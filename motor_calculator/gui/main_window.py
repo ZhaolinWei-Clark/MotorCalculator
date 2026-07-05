@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import importlib.util
+import tkinter as tk
 from pathlib import Path
 from typing import Any, Dict
+from tkinter import messagebox, ttk
 
 from motor_core import LegacyGuiMotorModelBridge, MotorCalculationError, MotorValidationError, parse_legacy_gui_params
 
@@ -20,13 +22,30 @@ def _load_legacy_module():
     return module
 
 
-_LEGACY_MODULE = _load_legacy_module()
-tk = _LEGACY_MODULE.tk
-ttk = _LEGACY_MODULE.ttk
-messagebox = _LEGACY_MODULE.messagebox
+_LEGACY_MODULE = None
+_REAL_APP_CLASS = None
 
 
-class MotorCalculatorApp(_LEGACY_MODULE.MotorCalculatorApp):
+def _get_legacy_module():
+    global _LEGACY_MODULE
+    if _LEGACY_MODULE is None:
+        _LEGACY_MODULE = _load_legacy_module()
+    return _LEGACY_MODULE
+
+
+def _get_real_app_class():
+    global _REAL_APP_CLASS
+    if _REAL_APP_CLASS is None:
+        legacy_module = _get_legacy_module()
+
+        class _RealMotorCalculatorApp(MotorCalculatorAppMixin, legacy_module.MotorCalculatorApp):
+            """Runtime subclass that keeps legacy GUI behavior with refactored parsing."""
+
+        _REAL_APP_CLASS = _RealMotorCalculatorApp
+    return _REAL_APP_CLASS
+
+
+class MotorCalculatorAppMixin:
     """GUI subclass with strict input parsing and non-crashing error handling."""
 
     def _collect_raw_params(self) -> Dict[str, Any]:
@@ -62,7 +81,7 @@ class MotorCalculatorApp(_LEGACY_MODULE.MotorCalculatorApp):
             self.calc_results = model.run_full_analysis()
             self.calculation_history.append(
                 {
-                    "timestamp": _LEGACY_MODULE.datetime.now().isoformat(),
+                    "timestamp": _get_legacy_module().datetime.now().isoformat(),
                     "params": params,
                     "results": self.calc_results.to_dict(),
                 }
@@ -82,8 +101,22 @@ class MotorCalculatorApp(_LEGACY_MODULE.MotorCalculatorApp):
             messagebox.showerror("分析错误", f"计算失败:\n{exc}")
 
 
+class MotorCalculatorApp:
+    """Lazy wrapper so GUI modules can import without loading optional chart dependencies."""
+
+    def __new__(cls, *args, **kwargs):
+        real_app_class = _get_real_app_class()
+        return real_app_class(*args, **kwargs)
+
+
 def main():
-    root = tk.Tk()
+    try:
+        root = tk.Tk()
+    except tk.TclError as exc:
+        raise SystemExit(
+            "GUI 启动失败：当前 Python 环境的 Tcl/Tk 运行时不可用，"
+            "请参考 README 中的 GUI 启动说明修复 Python/Tcl/Tk 安装。"
+        ) from exc
     try:
         root.iconbitmap("motor_icon.ico")
     except Exception:

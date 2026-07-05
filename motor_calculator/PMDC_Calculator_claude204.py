@@ -23,22 +23,38 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext, filedialog
 import numpy as np
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
-from matplotlib.figure import Figure
-import matplotlib.patches as patches
-from matplotlib.gridspec import GridSpec
 import math
 import json
 import csv
 from datetime import datetime
 from dataclasses import dataclass, field, asdict
+from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import warnings
 
+MATPLOTLIB_AVAILABLE = False
+MATPLOTLIB_IMPORT_ERROR = None
+
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2Tk
+    from matplotlib.figure import Figure
+    import matplotlib.patches as patches
+    from matplotlib.gridspec import GridSpec
+    MATPLOTLIB_AVAILABLE = True
+except Exception as exc:  # pragma: no cover - exercised via import smoke tests
+    plt = None
+    FigureCanvasTkAgg = None
+    NavigationToolbar2Tk = None
+    Figure = None
+    patches = None
+    GridSpec = None
+    MATPLOTLIB_IMPORT_ERROR = exc
+
 # 设置中文字体
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
-plt.rcParams['axes.unicode_minus'] = False
+if MATPLOTLIB_AVAILABLE:
+    plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
+    plt.rcParams['axes.unicode_minus'] = False
 
 # ==========================================
 # 工程常数
@@ -974,6 +990,7 @@ class MotorCalculatorApp:
         # 存储计算结果
         self.calc_results: Optional[CalculationResults] = None
         self.calculation_history = []
+        self.generated_figures = {}
         
     def _setup_styles(self):
         """配置ttk样式"""
@@ -995,6 +1012,29 @@ class MotorCalculatorApp:
         style.configure("Action.TButton",
                        font=("微软雅黑", 10, "bold"))
         
+    def _clear_tab(self, tab):
+        for widget in tab.winfo_children():
+            widget.destroy()
+
+    def _set_chart_placeholder(self, tab, title: str, message: str):
+        self._clear_tab(tab)
+        container = ttk.Frame(tab, padding=24)
+        container.pack(fill=tk.BOTH, expand=True)
+        ttk.Label(container, text=title, style="Header.TLabel").pack(anchor="w", pady=(0, 12))
+        ttk.Label(
+            container,
+            text=message,
+            style="Warning.TLabel",
+            justify=tk.LEFT,
+            wraplength=760,
+        ).pack(anchor="w")
+
+    def _register_figure(self, key: str, figure):
+        self.generated_figures[key] = figure
+
+    def _clear_figure(self, key: str):
+        self.generated_figures.pop(key, None)
+
     def _create_report_tab(self):
         """创建详细报告选项卡"""
         self.report_tab = ttk.Frame(self.notebook)
@@ -1454,10 +1494,18 @@ class MotorCalculatorApp:
     
     def _plot_performance_curves(self):
         """绘制转速-转矩和效率曲线"""
-        for widget in self.curves_tab.winfo_children():
-            widget.destroy()
+        self._clear_tab(self.curves_tab)
+        self._clear_figure("performance_curves")
             
         if not self.calc_results:
+            return
+
+        if not MATPLOTLIB_AVAILABLE:
+            self._set_chart_placeholder(
+                self.curves_tab,
+                "性能曲线不可用",
+                "当前环境未安装 matplotlib，仍可进行默认计算和导出 JSON/CSV/TXT，但图表显示与图表保存功能已禁用。",
+            )
             return
             
         r = self.calc_results
@@ -1552,6 +1600,7 @@ class MotorCalculatorApp:
         
         fig.suptitle('电机性能特性曲线', fontsize=12, fontweight='bold')
         
+        self._register_figure("performance_curves", fig)
         canvas = FigureCanvasTkAgg(fig, master=self.curves_tab)
         canvas.draw()
         
@@ -1562,10 +1611,18 @@ class MotorCalculatorApp:
         
     def _plot_back_emf(self):
         """绘制反电动势波形"""
-        for widget in self.emf_tab.winfo_children():
-            widget.destroy()
+        self._clear_tab(self.emf_tab)
+        self._clear_figure("back_emf")
             
         if not self.calc_results:
+            return
+
+        if not MATPLOTLIB_AVAILABLE:
+            self._set_chart_placeholder(
+                self.emf_tab,
+                "反电动势图表不可用",
+                "当前环境未安装 matplotlib，反电动势波形和 FFT 图表已禁用。",
+            )
             return
             
         emf_data = self.calc_results.waveforms.get("back_emf", {})
@@ -1653,6 +1710,7 @@ class MotorCalculatorApp:
         
         fig.suptitle('反电动势分析', fontsize=12, fontweight='bold')
         
+        self._register_figure("back_emf", fig)
         canvas = FigureCanvasTkAgg(fig, master=self.emf_tab)
         canvas.draw()
         
@@ -1663,10 +1721,18 @@ class MotorCalculatorApp:
         
     def _plot_torque(self):
         """绘制转矩分析"""
-        for widget in self.torque_tab.winfo_children():
-            widget.destroy()
+        self._clear_tab(self.torque_tab)
+        self._clear_figure("torque")
             
         if not self.calc_results:
+            return
+
+        if not MATPLOTLIB_AVAILABLE:
+            self._set_chart_placeholder(
+                self.torque_tab,
+                "转矩图表不可用",
+                "当前环境未安装 matplotlib，转矩波形、齿槽转矩和脉动分布图已禁用。",
+            )
             return
             
         torque_data = self.calc_results.waveforms.get("torque", {})
@@ -1729,6 +1795,7 @@ class MotorCalculatorApp:
         
         fig.suptitle('转矩分析', fontsize=12, fontweight='bold')
         
+        self._register_figure("torque", fig)
         canvas = FigureCanvasTkAgg(fig, master=self.torque_tab)
         canvas.draw()
         
@@ -1739,10 +1806,18 @@ class MotorCalculatorApp:
         
     def _plot_flux_distribution(self):
         """绘制气隙磁密分布"""
-        for widget in self.flux_tab.winfo_children():
-            widget.destroy()
+        self._clear_tab(self.flux_tab)
+        self._clear_figure("flux_distribution")
             
         if not self.calc_results:
+            return
+
+        if not MATPLOTLIB_AVAILABLE:
+            self._set_chart_placeholder(
+                self.flux_tab,
+                "磁密图表不可用",
+                "当前环境未安装 matplotlib，磁密分布与谐波图表已禁用。",
+            )
             return
             
         flux_data = self.calc_results.waveforms.get("flux", {})
@@ -1799,6 +1874,7 @@ class MotorCalculatorApp:
         
         fig.suptitle('磁场分析', fontsize=12, fontweight='bold')
         
+        self._register_figure("flux_distribution", fig)
         canvas = FigureCanvasTkAgg(fig, master=self.flux_tab)
         canvas.draw()
         
@@ -1809,8 +1885,16 @@ class MotorCalculatorApp:
         
     def _draw_geometry(self):
         """绘制电机截面几何结构"""
-        for widget in self.geo_tab.winfo_children():
-            widget.destroy()
+        self._clear_tab(self.geo_tab)
+        self._clear_figure("geometry")
+
+        if not MATPLOTLIB_AVAILABLE:
+            self._set_chart_placeholder(
+                self.geo_tab,
+                "几何图不可用",
+                "当前环境未安装 matplotlib，几何结构可视化与图表保存功能已禁用。",
+            )
+            return
             
         p = self._get_params()
         
@@ -1901,6 +1985,7 @@ class MotorCalculatorApp:
         
         fig.suptitle('电机几何结构可视化', fontsize=12, fontweight='bold')
         
+        self._register_figure("geometry", fig)
         canvas = FigureCanvasTkAgg(fig, master=self.geo_tab)
         canvas.draw()
         
@@ -2304,11 +2389,62 @@ class MotorCalculatorApp:
         if not self.calc_results:
             messagebox.showwarning("无数据", "请先运行分析。")
             return
-            
+
+        if not MATPLOTLIB_AVAILABLE:
+            messagebox.showerror(
+                "图表功能不可用",
+                "当前环境未安装 matplotlib，无法保存图表。请先安装可选依赖后再重试。",
+            )
+            return
+
+        if not getattr(self, "generated_figures", {}):
+            messagebox.showwarning("无图表", "当前没有可保存的图表，请先运行分析并生成图表。")
+            return
+
         folder = filedialog.askdirectory(title="选择图表保存文件夹")
-        
+
         if folder:
-            messagebox.showinfo("保存完成", f"图表已保存至:\n{folder}")
+            output_dir = Path(folder)
+            figure_specs = [
+                ("performance_curves", "performance_curves.png", "性能曲线"),
+                ("back_emf", "back_emf.png", "反电动势"),
+                ("torque", "torque.png", "转矩分析"),
+                ("flux_distribution", "flux_distribution.png", "磁密分布"),
+                ("geometry", "geometry.png", "几何结构"),
+            ]
+            saved_files = []
+            failed_items = []
+
+            for key, filename, label in figure_specs:
+                figure = self.generated_figures.get(key)
+                if figure is None:
+                    failed_items.append(f"{label}: 未生成")
+                    continue
+
+                output_path = output_dir / filename
+                try:
+                    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+                except Exception as exc:
+                    failed_items.append(f"{label}: {exc}")
+                    continue
+
+                if output_path.exists() and output_path.stat().st_size > 0:
+                    saved_files.append(str(output_path))
+                else:
+                    failed_items.append(f"{label}: 文件未生成")
+
+            if saved_files and not failed_items:
+                messagebox.showinfo("保存完成", "图表已成功保存:\n" + "\n".join(saved_files))
+            elif saved_files:
+                messagebox.showwarning(
+                    "部分保存成功",
+                    "以下图表已保存:\n"
+                    + "\n".join(saved_files)
+                    + "\n\n以下图表未保存:\n"
+                    + "\n".join(failed_items),
+                )
+            else:
+                messagebox.showerror("保存失败", "未生成任何图表文件。\n" + "\n".join(failed_items))
     
     def reset_defaults(self):
         """重置所有输入为默认值"""
