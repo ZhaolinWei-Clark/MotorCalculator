@@ -1,0 +1,288 @@
+{
+  "validation_id": "creator_pmsm_initial_record",
+  "source_type": "published_benchmark",
+  "evidence_level": "LEVEL_2_PUBLISHED_OR_FEA",
+  "motor_type": "PMSM",
+  "control_mode": "pmsm_sinusoidal",
+  "topology": "PMSM; air-gap length (radial direction); 4 poles; 6 stator slots",
+  "source_title": "CREATOR Case: Permanent Magnet Synchronous Motor Data",
+  "source_author_or_organization": "Pawan Kumar Dhakal; Kourosh Heidarikani; Annette Muetze; Roland Seebacher; Graz University of Technology",
+  "source_year": 2024,
+  "source_identifier": "DOI: 10.3217/sns1d-77m43",
+  "source_file": "CREATOR_Machine_Data_2024-11-04.pdf; PM_synchronous_motor/PMSM_general_specification.csv; PM_synchronous_motor/Design_parameters/Electrical_parameters/Electrical_properties_of_PMSM.csv; PM_synchronous_motor/Design_parameters/Motor_geometry/Geometry_parameters_PMSM.csv; PM_synchronous_motor/Design_parameters/Material_properties/Motor_parts_material.csv; PM_synchronous_motor/Design_parameters/Material_properties/Ferrite/Ferrite_properties.csv; PM_synchronous_motor/Measurement_results/Equivalent_circuit_parameters/Equivalent_circuit_parameters_PMSM.csv",
+  "source_page_or_section": "PDF Table 6, Table 7, Table 8, Table 10, Table 12, Section 6.2.2, Appendix B",
+  "license_or_usage_note": "Repository page and README identify the dataset as CC BY-NC 4.0. Non-commercial reuse only unless a later manual rights review documents broader permission.",
+  "data_quality_notes": "This initial record imports only traceable design and steady-state equivalent-parameter fields from the published CREATOR PMSM package. The source machine is a radial PMSM record, not the project's default dual-rotor single-stator dual-air-gap AFPM topology, so direct model-error comparison is blocked by comparability rules. The published package mixes experimental measurements with some FEA-derived equivalent parameters such as Ld and Lq; fields that cannot be mapped safely to the current schema remain unavailable. This record does not validate the full project, does not validate BLDC, does not validate AFPM default topology, and does not authorize any formula change or default-path switch.",
+  "model_assumptions": [
+    "This record is a published external PMSM benchmark candidate and must not be extrapolated to BLDC or AFPM default-topology accuracy claims.",
+    "Only directly comparable metrics may enter formal error calculation; topology, waveform, phase-line, RMS-peak, and current-basis boundaries remain active.",
+    "Unknown or semantically unsafe fields stay unavailable with null values instead of placeholder zeros or guessed conversions.",
+    "Importing this record does not modify production calculation code, electromagnetic formulas, revised-default switches, or legacy regression fixtures."
+  ],
+  "input_parameters": {
+    "pole_pairs": {
+      "status": "inferred",
+      "value": 2,
+      "unit": null,
+      "notes": "Inferred from 'No. of poles = 4' in PDF Table 12 / Appendix B and the geometry CSV."
+    },
+    "rated_speed_rpm": {
+      "status": "provided",
+      "value": 2000,
+      "unit": "rpm",
+      "notes": "Rated speed from PMSM_general_specification.csv and PDF Table 6."
+    },
+    "rated_power_w": {
+      "status": "unavailable",
+      "value": null,
+      "unit": "W",
+      "notes": "The source provides maximum power 70 W and optimum power 7 W, but no field explicitly named rated power."
+    },
+    "dc_bus_voltage_v": {
+      "status": "provided",
+      "value": 326,
+      "unit": "V",
+      "notes": "Maximum dc-link voltage from Electrical_properties_of_PMSM.csv and PDF Table 8."
+    },
+    "phase_current_a": {
+      "status": "provided",
+      "value": 0.21,
+      "unit": "A",
+      "notes": "Nominal current from Electrical_properties_of_PMSM.csv and PDF Table 8; source unit is A rms and is treated here as phase_rms."
+    },
+    "winding_connection": {
+      "status": "provided",
+      "value": "Y",
+      "unit": null,
+      "notes": "Supply connection Y from Electrical_properties_of_PMSM.csv and PDF Table 8."
+    },
+    "back_emf_waveform": {
+      "status": "provided",
+      "value": "sinusoidal",
+      "unit": null,
+      "notes": "The record is imported under PMSM sinusoidal semantics based on the PMSM control description, the Appendix B PMSM equivalent-circuit description, and the per-phase fundamental back-EMF reporting at 2000 rpm."
+    },
+    "stator_outer_diameter_m": {
+      "status": "provided",
+      "value": 0.113,
+      "unit": "m",
+      "notes": "Converted explicitly from 113 mm in Geometry_parameters_PMSM.csv and PDF Table 12."
+    },
+    "stator_inner_diameter_m": {
+      "status": "provided",
+      "value": 0.0478,
+      "unit": "m",
+      "notes": "Converted explicitly from 47.8 mm in Geometry_parameters_PMSM.csv and PDF Table 12."
+    },
+    "air_gap_m": {
+      "status": "provided",
+      "value": 0.0004,
+      "unit": "m",
+      "notes": "Converted explicitly from 0.4 mm 'Air-gap length (radial direction)' in Geometry_parameters_PMSM.csv and PDF Table 12."
+    },
+    "magnet_thickness_m": {
+      "status": "provided",
+      "value": 0.00435,
+      "unit": "m",
+      "notes": "Converted explicitly from 4.35 mm 'Magnet length (radial direction)' in Geometry_parameters_PMSM.csv and PDF Table 12; imported to the schema's magnet_thickness field with source-direction wording preserved in notes."
+    },
+    "turns_per_phase": {
+      "status": "unavailable",
+      "value": null,
+      "unit": "turn",
+      "notes": "The source gives 328 turns per slot, not a directly declared turns-per-phase field."
+    },
+    "winding_factor": {
+      "status": "unavailable",
+      "value": null,
+      "unit": "-",
+      "notes": "No winding factor field was identified in the reviewed PDF or CSV files."
+    },
+    "magnet_remanence_t": {
+      "status": "provided",
+      "value": 0.41,
+      "unit": "T",
+      "notes": "Ferrite_properties.csv gives remanence at 20 deg C = 0.41 T, and Motor_parts_material.csv identifies the PMSM magnet material as sintered ferrite."
+    }
+  },
+  "expected_outputs": {
+    "rated_torque_nm": {
+      "metric_name": "rated_torque_nm",
+      "status": "provided",
+      "value": 0.1,
+      "unit": "Nm",
+      "quantity_scope": "shaft",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "Rated torque from PMSM_general_specification.csv and PDF Table 6."
+    },
+    "back_emf_phase_peak_v": {
+      "metric_name": "back_emf_phase_peak_v",
+      "status": "provided",
+      "value": 47.37,
+      "unit": "V",
+      "quantity_scope": "phase",
+      "value_kind": "peak",
+      "current_basis": null,
+      "notes": "Fundamental back emf at 2000 rpm (E0) from Equivalent_circuit_parameters_PMSM.csv and PDF Table 10; Fig. 14 text describes the identified fundamental phase component."
+    },
+    "phase_resistance_ohm": {
+      "metric_name": "phase_resistance_ohm",
+      "status": "provided",
+      "value": 8.9462,
+      "unit": "ohm",
+      "quantity_scope": "phase",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "Stator phase resistance Rs from Equivalent_circuit_parameters_PMSM.csv and PDF Table 10."
+    },
+    "rated_current_a": {
+      "metric_name": "rated_current_a",
+      "status": "provided",
+      "value": 0.21,
+      "unit": "A",
+      "quantity_scope": "phase",
+      "value_kind": "rms",
+      "current_basis": "phase_rms",
+      "notes": "Nominal current from Electrical_properties_of_PMSM.csv and PDF Table 8."
+    },
+    "phase_inductance_h": {
+      "metric_name": "phase_inductance_h",
+      "status": "unavailable",
+      "value": null,
+      "unit": "H",
+      "quantity_scope": "phase",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "The source reports Ld = 0.2055 H and Lq = 0.332 H, but this initial record does not collapse those d-q values into a single schema phase_inductance field."
+    },
+    "back_emf_line_rms_v": {
+      "metric_name": "back_emf_line_rms_v",
+      "status": "unavailable",
+      "value": null,
+      "unit": "V",
+      "quantity_scope": "line",
+      "value_kind": "rms",
+      "current_basis": null,
+      "notes": "No line-to-line RMS back-EMF value was quoted directly in the reviewed source files for this initial record."
+    },
+    "back_emf_constant_line_rms_v_per_krpm": {
+      "metric_name": "back_emf_constant_line_rms_v_per_krpm",
+      "status": "unavailable",
+      "value": null,
+      "unit": "V/krpm",
+      "quantity_scope": "line",
+      "value_kind": "rms",
+      "current_basis": null,
+      "notes": "This initial record keeps the line-RMS back-EMF constant unavailable rather than deriving it from the phase-peak quantity."
+    },
+    "torque_constant_nm_per_a": {
+      "metric_name": "torque_constant_nm_per_a",
+      "status": "unavailable",
+      "value": null,
+      "unit": "Nm/A",
+      "quantity_scope": "phase",
+      "value_kind": "rms",
+      "current_basis": null,
+      "notes": "No directly traceable torque-constant field with project-compatible current basis was imported in this initial record."
+    },
+    "copper_loss_w": {
+      "metric_name": "copper_loss_w",
+      "status": "unavailable",
+      "value": null,
+      "unit": "W",
+      "quantity_scope": "phase",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "Drive-cycle and no-load loss files exist, but this initial record does not import a traceable copper-loss operating point."
+    },
+    "iron_loss_w": {
+      "metric_name": "iron_loss_w",
+      "status": "unavailable",
+      "value": null,
+      "unit": "W",
+      "quantity_scope": "core",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "No single imported field was designated as a directly comparable iron-loss operating point in this initial record."
+    },
+    "mechanical_loss_w": {
+      "metric_name": "mechanical_loss_w",
+      "status": "unavailable",
+      "value": null,
+      "unit": "W",
+      "quantity_scope": "mechanical",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "Mechanical-loss separation was not imported as a standalone comparable field in this first record."
+    },
+    "efficiency": {
+      "metric_name": "efficiency",
+      "status": "unavailable",
+      "value": null,
+      "unit": "%",
+      "quantity_scope": "system",
+      "value_kind": "average",
+      "current_basis": null,
+      "notes": "The source package contains drive-cycle power results, but this initial record does not import a formal efficiency operating point."
+    },
+    "required_voltage_v": {
+      "metric_name": "required_voltage_v",
+      "status": "unavailable",
+      "value": null,
+      "unit": "V",
+      "quantity_scope": "line",
+      "value_kind": "rms",
+      "current_basis": null,
+      "notes": "The project's required_voltage_v chain remains legacy/provisional and no directly matching source field was imported."
+    }
+  },
+  "uncertainty": {
+    "rated_torque_nm": {
+      "absolute": null,
+      "relative": null,
+      "coverage_factor": null,
+      "notes": "unavailable in the reviewed source files for this initial record"
+    },
+    "back_emf_phase_peak_v": {
+      "absolute": null,
+      "relative": null,
+      "coverage_factor": null,
+      "notes": "unavailable in the reviewed source files for this initial record"
+    },
+    "phase_resistance_ohm": {
+      "absolute": null,
+      "relative": null,
+      "coverage_factor": null,
+      "notes": "unavailable in the reviewed source files for this initial record"
+    },
+    "rated_current_a": {
+      "absolute": null,
+      "relative": null,
+      "coverage_factor": null,
+      "notes": "unavailable in the reviewed source files for this initial record"
+    }
+  },
+  "tolerances": {},
+  "excluded_comparisons": {
+    "phase_inductance_h": "The source provides Ld and Lq only; this initial record does not map them to a single project phase_inductance_h quantity.",
+    "back_emf_line_rms_v": "No directly quoted line-to-line RMS back-EMF value was imported in this initial record.",
+    "back_emf_constant_line_rms_v_per_krpm": "No directly quoted line-RMS back-EMF constant was imported; this phase does not auto-derive it.",
+    "torque_constant_nm_per_a": "No directly quoted torque-constant field with project-compatible current basis was imported in this initial record.",
+    "copper_loss_w": "No single traceable copper-loss operating point was imported in this initial record.",
+    "iron_loss_w": "No single traceable iron-loss operating point was imported in this initial record.",
+    "mechanical_loss_w": "No single traceable mechanical-loss operating point was imported in this initial record.",
+    "efficiency": "No single traceable efficiency operating point was imported in this initial record.",
+    "required_voltage_v": "required_voltage_v remains a project legacy/provisional metric and no directly matched source field was imported."
+  },
+  "created_at": "2026-07-04T00:00:00",
+  "synthetic": false,
+  "not_for_accuracy_claims": true,
+  "conversion_log": [
+    "pole_pairs inferred explicitly from source pole count: 4 poles -> 2 pole pairs.",
+    "Geometry converted explicitly from mm to m: stator_outer_diameter 113 mm -> 0.113 m.",
+    "Geometry converted explicitly from mm to m: stator_inner_diameter 47.8 mm -> 0.0478 m.",
+    "Geometry converted explicitly from mm to m: air_gap 0.4 mm -> 0.0004 m.",
+    "Geometry converted explicitly from mm to m: magnet radial length 4.35 mm -> 0.00435 m for schema field magnet_thickness_m."
+  ]
+}

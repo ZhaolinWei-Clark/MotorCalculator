@@ -1,5 +1,7 @@
 # CREATOR PMSM 导入阻塞报告
 
+说明：本文件保留为 Phase 4C 初始 draft 阶段的历史记录。当前正式状态请以 `validation_data/imported/creator_pmsm_initial_record.json` 和 `validation_data/reports/creator_pmsm_initial_comparison_zh.md` 为准。
+
 更新时间：2026-07-04
 
 ## 1. 结论
