@@ -7,45 +7,52 @@
 本轮已完成：
 
 - 仓库页核验
-- README 预览核验
-- 配套论文元数据核验
+- README 下载与审阅
+- `CREATOR_Machine_Data_2024-11-04.pdf` 下载与审阅
+- `PM_synchronous_motor.zip` 下载、解包与字段级人工抽取
 
-本轮未完成：
+本轮未做：
 
-- 下载并审阅 `PM_synchronous_motor.zip`
-- 下载并审阅 `CREATOR_Machine_Data_2024-11-04.pdf`
-- 字段级手工抽取
+- 未把原始 PDF / ZIP 写入 Git 仓库
+- 未把 drive-cycle 大量时序数据整体导入为正式 record
 
-## 2. 为创建正式 record 仍需的文件
+## 2. 已下载文件
 
-优先级从高到低：
+下载位置：
 
-1. `CREATOR_Machine_Data_2024-11-04.pdf`
-   - 仓库页标示大小：`2.1 MB`
-   - 用途：表/页/节导航，定位 geometry、material、electrical、winding、equivalent parameters、measurement sections
-2. `PM_synchronous_motor.zip`
-   - 仓库页标示大小：`12.6 MB`
-   - 用途：原始 PMSM 数据包，预计包含字段级数据文件
+- 临时目录，仅用于本轮人工抽取与核验
 
-## 3. 下一步人工动作
+文件列表：
 
-1. 批准是否允许下载并本地保存 `2.1 MB` 的 PDF。
-2. 批准是否允许下载并本地保存 `12.6 MB` 的 ZIP。
-3. 若不批准下载，请手动提供以下任一项：
-   - `CREATOR_Machine_Data_2024-11-04.pdf`
-   - `PM_synchronous_motor.zip`
-   - 或 PDF 中包含 PMSM 参数表/测量表的关键页截图
-4. 在拿到原始文件后，逐项抽取：
-   - `topology`
-   - `winding_connection`
-   - `control_mode` 相关语义
-   - 额定参数表
-   - 低频等效参数表
-   - 至少一个可直接比较的 torque / back-EMF / loss / efficiency 指标
+1. `README.md`
+   - 大小：`892 B`
+   - 用途：数据集简介、许可说明、ZIP 内容概览
+2. `CREATOR_Machine_Data_2024-11-04.pdf`
+   - 大小：`2,088,845 B`
+   - 用途：字段导航、表格页码、PMSM 控制/等效参数说明
+3. `PM_synchronous_motor.zip`
+   - 大小：`12,555,471 B`
+   - 用途：PMSM 设计参数、材料、绕组、等效参数、反电势、drive-cycle 数据
 
-## 4. 当前不能做的事
+## 3. 已用于正式 record 的关键文件
 
-- 不能伪造数值字段
-- 不能用 `0` 代替未知值
-- 不能在未确认 `topology` 前把该来源写成 AFPM benchmark
-- 不能在未确认 `control_mode` / `back_emf_waveform` 前强行创建正式 PMSM comparison record
+- `PMSM_general_specification.csv`
+- `Design_parameters/Electrical_parameters/Electrical_properties_of_PMSM.csv`
+- `Design_parameters/Motor_geometry/Geometry_parameters_PMSM.csv`
+- `Design_parameters/Material_properties/Motor_parts_material.csv`
+- `Design_parameters/Material_properties/Ferrite/Ferrite_properties.csv`
+- `Measurement_results/Equivalent_circuit_parameters/Equivalent_circuit_parameters_PMSM.csv`
+- `CREATOR_Machine_Data_2024-11-04.pdf`
+
+## 4. 后续若继续深挖仍需人工动作
+
+1. 若要导入损耗或效率字段，需要从 drive-cycle / no-load 文件中选定具体工况点并建立单独可追溯引用。
+2. 若要导入 `phase_inductance_h`，需要先确认 `Ld/Lq` 到单一 schema 字段的允许语义。
+3. 若要导入 `turns_per_phase`，需要先确认 `turns per slot` 是否能安全映射。
+
+## 5. 当前不应做的事
+
+- 不伪造缺失字段
+- 不用 `0` 代替未知值
+- 不把 raw PDF / ZIP 提交进 Git
+- 不把该径向 PMSM record 夸大成 AFPM 或 BLDC 的准确度验证
