@@ -1,6 +1,6 @@
 # 待决策事项
 
-本文档记录 Phase 4C 初始导入准备之后，仍需用户明确批准或补充外部来源的信息。
+本文档记录在 Phase 4C 完成首条真实 CREATOR PMSM record 导入之后，仍需用户明确批准或补充的信息。
 
 更新时间：2026-07-04
 
@@ -13,17 +13,17 @@
 - Phase 3E 已完成并通过验收：BLDC revised `Ke` / `Kt`
 - Phase 4A 已完成：外部验证框架、provenance、comparability、误差/不确定度结构
 - Phase 4B 已完成：外部数据源侦察、候选 benchmark 清单、字段匹配矩阵与导入优先级排序
-- Phase 4C 已启动：CREATOR PMSM 来源级核验、source note、字段映射草案、draft record 与 blockers report
+- Phase 4C 已完成首条真实 CREATOR PMSM imported record、loader 校验与 comparison engine 运行
 
 ## 2. Phase 4B / Phase 4C 已确认结论
 
 - 当前最适合 Phase 4C 首个真实 validation record 的候选是 `CREATOR PMSM Data`
-- `validation_data/imported/` 当前仍为空，未导入任何真实外部数据
-- 已创建 `creator_pmsm_initial_record_draft.json`，但尚未创建正式 imported record
-- 当前阻塞正式 record 的关键原因是：
-  - 尚未审阅 `PM_synchronous_motor.zip`
-  - 尚未审阅 `CREATOR_Machine_Data_2024-11-04.pdf`
-  - `topology`、`control_mode`、`phase/line`、`RMS/peak`、`current_basis` 尚未字段级核验
+- 已创建正式 imported record：`validation_data/imported/creator_pmsm_initial_record.json`
+- 已审阅 `PM_synchronous_motor.zip` 与 `CREATOR_Machine_Data_2024-11-04.pdf`
+- 当前已确认：
+  - 来源是 `PMSM`
+  - 来源 record 代表径向 PMSM，而不是项目默认 `AFPM`
+  - comparison engine 已按预期拦截直接数值比较，主因是 `topology_mismatch`
 - 当前候选中有一批来源只适合：
   - 方法参考
   - FEA-only 参考
@@ -36,15 +36,15 @@
 
 ## 3. 当前仍待用户确认的关键问题
 
-### 3.1 是否批准继续推进 Phase 4C：从 draft 升级到正式 record
+### 3.1 是否继续深挖同一 CREATOR PMSM 来源
 
 待确认内容：
 
-- 是否允许下载并审阅：
-  - `CREATOR_Machine_Data_2024-11-04.pdf`（仓库页标示 `2.1 MB`）
-  - `PM_synchronous_motor.zip`（仓库页标示 `12.6 MB`）
-- 若不允许下载，是否由用户手动提供上述文件或关键页截图
-- 是否允许我们在下阶段手工抽取 ZIP/PDF 中的字段并填写正式 schema
+- 是否继续从同一 ZIP 中选定一个具体稳态点或 drive-cycle 点，导入损耗/效率类字段
+- 是否接受后续仍然严格保持：
+  - 不改公式
+  - 不切默认值
+  - 不把径向 PMSM record 外推为 AFPM 准确度声明
 
 ### 3.2 是否优先导入 FEA-only record 作为流程演练
 
@@ -101,8 +101,8 @@
 
 ## 5. 当前不应做的事
 
-- 不要在未审批时导入真实数据到 `validation_data/imported/`
-- 不要把 draft 误写成正式 imported record
+- 不要把单条径向 PMSM imported record 夸大成项目整体准确度验证
+- 不要把该 record 的存在误写成 BLDC 或 AFPM 默认拓扑已获验证
 - 不要把工具输出、synthetic example 或 analytical reference 写成真实实验记录
 - 不要把厂家规格页写成 controlled measurement
 - 不要在未审批时切换任何默认链路

@@ -109,47 +109,50 @@ Phase 4B 当前明确未做：
 - 未修改 production calculation chain
 - 未进入 GUI 优化
 
-### Phase 4C：CREATOR PMSM 首条真实 validation record 导入准备
+### Phase 4C：CREATOR PMSM 首条真实 validation record 导入
 
-已启动，当前处于“来源级核验 + draft/blockers”状态。
+已完成首条真实 record 的正式导入、loader 校验与 comparison engine 运行。
 
 Phase 4C 当前已完成内容：
 
 - 已核验 `CREATOR Case: Permanent Magnet Synchronous Motor Data` 的来源级元数据
-- 已核验：
-  - 数据集 DOI
-  - 仓库 URL
-  - 发布机构
-  - 创建者
-  - 发布时间
-  - 许可类型 `CC BY-NC 4.0`
-  - 文件清单与大小
-- 已核验该来源说明中存在：
-  - 设计参数
-  - 实验结果
-  - 材料数据
-  - 绕组数据
-  - 几何数据
-  - 低频等效参数
-  - drive-cycle 测量结果
-- 已创建：
+- 已下载并审阅：
+  - `README.md`
+  - `CREATOR_Machine_Data_2024-11-04.pdf`
+  - `PM_synchronous_motor.zip`
+- 已完成字段级人工抽取并创建正式 imported record：
+  - `validation_data/imported/creator_pmsm_initial_record.json`
+- 已更新/创建：
   - `validation_data/source_notes/creator_pmsm/source_summary_zh.md`
   - `validation_data/source_notes/creator_pmsm/field_mapping_draft_zh.md`
   - `validation_data/source_notes/creator_pmsm/source_acquisition_checklist_zh.md`
-  - `validation_data/source_notes/creator_pmsm/creator_pmsm_initial_record_draft.json`
-  - `validation_data/reports/creator_pmsm_import_blockers_zh.md`
+  - `validation_data/reports/creator_pmsm_initial_comparison_zh.md`
   - `docs/creator_pmsm_import_report_zh.md`
+- 已确认正式 record 的关键来源字段：
+  - `rated_speed_rpm`
+  - `dc_bus_voltage_v`
+  - `phase_current_a`
+  - `winding_connection`
+  - `stator_outer_diameter_m`
+  - `stator_inner_diameter_m`
+  - `air_gap_m`
+  - `magnet_thickness_m`
+  - `magnet_remanence_t`
+  - `rated_torque_nm`
+  - `back_emf_phase_peak_v`
+  - `phase_resistance_ohm`
+- 已运行正式 comparison engine，结果为：
+  - 可导入且可进入 gate 的字段被判定为 `topology_mismatch`
+  - 其余未安全映射字段保持 `unavailable` 或 `not_available`
 
 Phase 4C 当前明确未做：
 
-- 未下载 `PM_synchronous_motor.zip`
-- 未下载 `CREATOR_Machine_Data_2024-11-04.pdf`
-- 未创建正式 `validation_data/imported/creator_pmsm_initial_record.json`
-- 未运行正式 comparison engine
 - 未修改任何公式
 - 未切换任何默认值
 - 未修改 production calculation chain
 - 未修改 `legacy_baseline.json`
+- 未修改既有 PMSM / BLDC analytical fixtures
+- 未把该 record 外推为 `BLDC` 或 `AFPM` 的准确度声明
 
 ## 4. 当前 Git 状态
 
@@ -172,10 +175,16 @@ Phase 4A 与 Phase 4B 进入前完整测试结果：
 138 passed
 ```
 
-当前 Phase 4C 完成后预期完整测试结果：
+进入本轮 Phase 4C 前的完整测试结果：
 
 ```text
 147 passed
+```
+
+本轮 Phase 4C 完成后的完整测试结果：
+
+```text
+149 passed
 ```
 
 ## 6. baseline 与 reference fixture 的角色
@@ -257,8 +266,8 @@ GUI smoke test 已完成，但当前环境下 GUI 运行时仍待修复：
 - revised BLDC `Ke` / `Kt` 仍未成为默认值
 - `required_voltage_v` 仍是 legacy 简化模型
 - 损耗、电感、槽满率、退磁、温升仍是 legacy/provisional
-- 缺少真实公开 benchmark 导入
-- 已完成 CREATOR PMSM 来源级核验，但仍缺少正式 imported validation record
+- 已导入第一条真实外部 PMSM validation record，但其来源拓扑与项目默认 AFPM 拓扑不一致
+- 仍缺少与默认 AFPM 拓扑直接可比的真实公开 benchmark
 - 缺少真实 FEA 导入
 - 缺少真实台架实验测量导入
 - 缺少多来源交叉验证与不确定度归档

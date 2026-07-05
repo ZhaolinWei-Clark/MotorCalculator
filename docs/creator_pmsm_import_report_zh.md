@@ -7,120 +7,109 @@
 - 数据集：`CREATOR Case: Permanent Magnet Synchronous Motor Data`
 - DOI：`10.3217/sns1d-77m43`
 - 仓库页：`https://repository.tugraz.at/records/sns1d-77m43`
-- 发布机构：`Graz University of Technology`
-- 创建者：
-  - `Pawan Kumar Dhakal`
-  - `Kourosh Heidarikani`
-  - `Annette Muetze`
-  - `Roland Seebacher`
-- 发布日期：`2024-11-04`
-- 当前访问日期：`2026-07-04`
-- 已核验许可：`CC BY-NC 4.0`
+- 机构：`Graz University of Technology`
+- 作者：`Pawan Kumar Dhakal`、`Kourosh Heidarikani`、`Annette Muetze`、`Roland Seebacher`
+- 数据发布日期：`2024-11-04`
+- 访问日期：`2026-07-04`
+- 许可：`CC BY-NC 4.0`
 
-配套论文：
+本轮已下载并人工审阅：
 
-- `CREATOR Case: PMSM and IM Electric Machine Data for Validation and Benchmarking of Simulation and Modeling Approaches`
-- arXiv：`2501.15921`
-- 相关 DOI：`10.1108/COMPEL-11-2024-0462`
-- 论文年份：`2025`
+- `README.md`，`892 B`
+- `CREATOR_Machine_Data_2024-11-04.pdf`，`2,088,845 B`
+- `PM_synchronous_motor.zip`，`12,555,471 B`
+
+原始文件保留在临时目录中，没有提交进 Git。
 
 ## 2. 为什么它适合作为首条 validation source
 
-- 它是当前 Phase 4B 侦察结果中最强的公开 PMSM 候选之一。
-- 数据集同时具备设计参数和实验测量结果。
-- 来源级元数据完整，含 DOI、发布机构、创建者、许可和文件清单。
-- 配套论文可作为字段导航和验证边界说明。
+- 元数据完整，可追溯到 DOI、仓库、作者、机构和许可。
+- 既有设计参数，也有实验结果和等效参数。
+- 能够验证 Phase 4A 的 imported record、loader、comparability gate 和 no-overclaim 约束是否能在真实外部来源上工作。
 
 ## 3. 它的数据类型
 
-从当前可追溯信息看，它属于：
+本轮按以下方式记录：
 
-- `PMSM` 数据源
-- 公开发布的数据集
-- 含实验测量结果的 published benchmark 候选
+- `source_type = published_benchmark`
+- `evidence_level = LEVEL_2_PUBLISHED_OR_FEA`
+- `motor_type = PMSM`
 
-本轮没有把它直接定格为正式 `bench_measurement` record，原因是仓库是“成套发布的数据包”，而不是一条孤立的原始 bench log 文件。
+之所以不把它直接写成 `bench_measurement`，是因为这次导入的是“公开发布的数据包中的首条结构化记录”，而不是单一原始 bench log 文件。
 
 ## 4. 字段完整度
 
-来源级完整度已经确认较高：
+本轮正式导入了足够创建真实 imported record 的字段，但没有强行覆盖所有 schema 字段。
 
-- 设计参数：已确认存在
-- 实验结果：已确认存在
-- 材料数据：已确认存在
-- 绕组数据：已确认存在
-- 几何数据：已确认存在
-- 低频等效参数：已确认存在
-- drive-cycle 测量结果：已确认存在
-
-字段级完整度当前仍不足：
-
-- 本轮没有逐字段抽取数值
-- 本轮没有为数值字段建立 table/page/section 级引用
-- 本轮没有确认 topology、control semantics、phase/line、RMS/peak、current_basis
-
-## 5. 与本项目 schema 的映射
-
-本轮已经建立：
-
-- `validation_data/source_notes/creator_pmsm/field_mapping_draft_zh.md`
-
-映射状态分为：
-
-- `needs_manual_extraction`
-- `needs_semantics_check`
-- `needs_unit_conversion`
-- `unavailable`
-
-这些扩展状态只用于 draft 和 source note，不直接写入正式 Phase 4A loader schema。
-
-## 6. 已成功导入的字段
-
-本轮“已成功导入”的含义仅限于来源元数据，不包括正式 validation numeric record。
-
-已核验并落盘的来源元数据包括：
-
-- 标题
-- DOI
-- 仓库 URL
-- 发布机构
-- 创建者
-- 发布日期
-- 访问日期
-- 许可类型
-- 文件清单与文件大小
-- 数据类别存在性说明
-
-## 7. 未导入字段
-
-本轮没有导入正式 numeric expected fields，因此以下字段仍未正式导入：
+已正式导入的输入字段：
 
 - `pole_pairs`
 - `rated_speed_rpm`
-- `rated_power_w`
 - `dc_bus_voltage_v`
 - `phase_current_a`
-- `line_current_a`
 - `winding_connection`
 - `back_emf_waveform`
 - `stator_outer_diameter_m`
 - `stator_inner_diameter_m`
-- `rotor_outer_diameter_m`
-- `rotor_inner_diameter_m`
 - `air_gap_m`
 - `magnet_thickness_m`
-- `magnet_width_m`
-- `magnet_grade`
 - `magnet_remanence_t`
+
+已正式导入的输出字段：
+
+- `rated_torque_nm`
+- `back_emf_phase_peak_v`
+- `phase_resistance_ohm`
+- `rated_current_a`
+
+## 5. 与本项目 schema 的映射
+
+正式 record：
+
+- `validation_data/imported/creator_pmsm_initial_record.json`
+
+字段映射草案：
+
+- `validation_data/source_notes/creator_pmsm/field_mapping_draft_zh.md`
+
+本轮采用的策略是：
+
+- 能直接引用的字段写成 `provided`
+- 可由同一来源内明确字段安全推出的写成 `inferred`
+- 不能安全映射的保持 `unavailable`
+- 不把 `0` 用作未知值
+
+## 6. 已成功导入字段
+
+关键已导入值包括：
+
+- `pole_pairs = 2`，由 `No. of poles = 4` 推得
+- `rated_speed_rpm = 2000`
+- `dc_bus_voltage_v = 326`
+- `phase_current_a = 0.21 A rms`
+- `winding_connection = Y`
+- `back_emf_waveform = sinusoidal`
+- `stator_outer_diameter_m = 0.113`
+- `stator_inner_diameter_m = 0.0478`
+- `air_gap_m = 0.0004`
+- `magnet_thickness_m = 0.00435`
+- `magnet_remanence_t = 0.41`
+- `rated_torque_nm = 0.1`
+- `back_emf_phase_peak_v = 47.37`
+- `phase_resistance_ohm = 8.9462`
+- `rated_current_a = 0.21`
+
+## 7. 未导入字段
+
+本轮明确未导入为正式值的字段包括：
+
+- `rated_power_w`
 - `turns_per_phase`
 - `winding_factor`
-- `phase_resistance_ohm`
 - `phase_inductance_h`
-- `back_emf_phase_peak_v`
 - `back_emf_phase_rms_v`
 - `back_emf_line_rms_v`
 - `back_emf_constant_line_rms_v_per_krpm`
-- `torque_nm`
 - `torque_constant_nm_per_a`
 - `copper_loss_w`
 - `iron_loss_w`
@@ -131,82 +120,77 @@
 
 ## 8. 需要人工核验字段
 
-优先需要人工核验：
+后续仍需要继续人工核验：
 
-1. `topology`
-2. `control_mode`
-3. `winding_connection`
-4. `phase/line` 语义
-5. `RMS/peak` 语义
-6. `current_basis`
-7. 至少一个数值输出字段的表/页/节定位
+- `rated_power_w` 与源中的 `maximum power` / `optimum power` 是否存在严格等义字段
+- `turns_per_phase` 是否能从 `turns per slot` 安全映射
+- `phase_inductance_h` 是否允许由 `Ld/Lq` 收敛
+- drive-cycle / no-load 结果中应选哪个工况点作为损耗或效率记录
 
 ## 9. 可比较指标
 
-本轮结论是：
+本轮成功进入 comparison engine 的正式字段有：
 
-- `直接可比较字段：暂无`
+- `rated_torque_nm`
+- `back_emf_phase_peak_v`
+- `phase_resistance_ohm`
+- `rated_current_a`
 
-原因不是数据源无效，而是当前没有完成字段级抽取与语义核验。
+但它们没有进入误差计算，而是在 comparability gate 下统一得到：
+
+- `topology_mismatch`
 
 ## 10. 不可比较指标
 
-当前必须禁止直接比较的类别包括：
+本轮被明确排除或保持 unavailable 的字段包括：
 
-- `PMSM` vs `BLDC`
-- 未确认拓扑时的 `AFPM` vs 非 AFPM
-- `phase` vs `line`
-- `RMS` vs `peak`
-- 不同 `current_basis`
-- 未确认字段定义的等效参数
+- `phase_inductance_h`
+- `back_emf_line_rms_v`
+- `back_emf_constant_line_rms_v_per_krpm`
+- `torque_constant_nm_per_a`
+- `copper_loss_w`
+- `iron_loss_w`
+- `mechanical_loss_w`
+- `efficiency`
 - `required_voltage_v`
-- 未核验到的 `temperature`
 
-## 11. 初步结果
+## 11. 初步 comparison 结果
 
-本轮没有生成正式 comparison report。
+比较报告：
 
-已生成：
-
-- `validation_data/reports/creator_pmsm_import_blockers_zh.md`
+- `validation_data/reports/creator_pmsm_initial_comparison_zh.md`
 
 结论：
 
-- 当前仅适合创建 draft
-- 当前不适合创建正式 imported validation record
+- formal record 已创建成功
+- loader 已通过
+- comparison engine 已运行成功
+- 没有生成任何准确度误差数字
+- 原因是 record 所描述的是径向 PMSM 来源，而当前项目默认模型拓扑仍是 `AFPM`
 
 ## 12. 是否可用于准确度声明
 
-当前不能。
+当前不可用于整体准确度声明。
 
-可以声明的是：
+本轮最多只能说明：
 
-- 已找到一个高价值、真实、可追溯的 PMSM 外部数据源
-- 已完成来源级核验和首轮映射准备
-
-不能声明的是：
-
-- 本项目已获得真实准确度验证
-- revised PMSM 已经被这条来源正式验证
-- BLDC 已被该来源验证
-- AFPM 默认拓扑已被该来源验证
+- 项目已经成功导入第一条真实外部 PMSM validation record
+- Phase 4A 的 loader / comparability / no-overclaim 机制可以在真实来源上工作
+- 当前 comparability gate 正在阻止不安全的 AFPM 直接误差声明
 
 ## 13. 为什么不能外推到 BLDC / AFPM
 
-- 数据源机型是 `PMSM`，不是 `BLDC`。
-- 当前未核验其拓扑是否与本项目默认 `AFPM` 一致。
-- 即使该来源后续能够形成正式 PMSM record，也只能说明“在特定 PMSM 语义和特定来源条件下”的有限 comparability，不能外推到 `BLDC` 或 `AFPM`。
+- 来源机型是 `PMSM`，不是 `BLDC`
+- 来源机器是径向 PMSM，不是当前项目默认 `AFPM`
+- 因此不能把这条 record 的存在解释成：
+  - `BLDC revised` 已获验证
+  - `AFPM default topology` 已获验证
+  - 整个 production chain 已被真实 benchmark 证实
 
-## 14. 下一步需要用户提供什么
+## 14. 下一步需要用户提供什么文件或确认什么字段
 
-若要继续从 draft 升级到正式 record，至少需要你批准或手动提供：
+如果还要继续深挖同一来源，下一步建议用户批准的不是“再导入一条空泛记录”，而是对以下方向做取舍：
 
-1. `CREATOR_Machine_Data_2024-11-04.pdf`（仓库页标示 `2.1 MB`）
-2. `PM_synchronous_motor.zip`（仓库页标示 `12.6 MB`）
-
-拿到后我会继续：
-
-1. 提取 topology / control semantics / winding_connection
-2. 提取至少一个可直接比较的数值指标
-3. 建立正式 `validation_data/imported/creator_pmsm_initial_record.json`
-4. 再运行 loader 和 comparison engine
+1. 是否继续从同一 ZIP 中选取一个具体工况点，导入损耗或效率字段
+2. 是否接受 `Ld/Lq` 保持为 source note 层面的 d-q 参数，而不强压为单一 `phase_inductance_h`
+3. 是否优先寻找与项目默认 `AFPM` 拓扑更接近的真实 benchmark，以便后续形成真正的直接误差比较
