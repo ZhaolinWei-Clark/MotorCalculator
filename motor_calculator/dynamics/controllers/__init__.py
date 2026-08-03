@@ -9,6 +9,12 @@ from .dq_decoupling import (
     DQDecouplingFeedforward,
     compute_pmsm_dq_decoupling_feedforward,
 )
+from .field_weakening import (
+    FieldWeakeningController,
+    FieldWeakeningResult,
+    FieldWeakeningVoltageEstimate,
+)
+from .mtpa import MTPAController, MTPACurrentReference
 from .pi_controller import PIController
 from .speed_controller import (
     SpeedController,
@@ -22,6 +28,11 @@ __all__ = [
     "DQDecouplingFeedforward",
     "DQSaturationFeedback",
     "DQVoltageCommand",
+    "FieldWeakeningController",
+    "FieldWeakeningResult",
+    "FieldWeakeningVoltageEstimate",
+    "MTPAController",
+    "MTPACurrentReference",
     "PIController",
     "SpeedController",
     "SpeedControllerConfig",

@@ -9,6 +9,10 @@ import math
 from .controllers import (
     DQCurrentController,
     DQVoltageCommand,
+    FieldWeakeningController,
+    FieldWeakeningResult,
+    MTPAController,
+    MTPACurrentReference,
     compute_pmsm_dq_decoupling_feedforward,
 )
 from .integrators import EulerIntegrator, RK4Integrator
@@ -37,10 +41,13 @@ class FOCReference:
 
     id_ref_a: float
     iq_ref_a: float
+    torque_reference_nm: float | None = None
 
     def __post_init__(self) -> None:
         _require_finite("id_ref_a", self.id_ref_a)
         _require_finite("iq_ref_a", self.iq_ref_a)
+        if self.torque_reference_nm is not None:
+            _require_finite("torque_reference_nm", self.torque_reference_nm)
 
 
 @dataclass(frozen=True)
@@ -80,6 +87,11 @@ class FOCStepOutput:
     torque_nm: float
     omega_m_rad_s: float
     warning_messages: tuple[str, ...] = ()
+    id_reference_a: float | None = None
+    iq_reference_a: float | None = None
+    mtpa_method: str | None = None
+    field_weakening_active: bool = False
+    field_weakening_voltage_margin_v: float | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -95,6 +107,15 @@ class FOCStepOutput:
             _require_finite(name, value)
         if not isinstance(self.voltage_limited, bool):
             raise ValueError("voltage_limited must be a bool")
+        for name, value in (
+            ("id_reference_a", self.id_reference_a),
+            ("iq_reference_a", self.iq_reference_a),
+            ("field_weakening_voltage_margin_v", self.field_weakening_voltage_margin_v),
+        ):
+            if value is not None:
+                _require_finite(name, value)
+        if not isinstance(self.field_weakening_active, bool):
+            raise TypeError("field_weakening_active must be a bool")
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
 
     @property
@@ -125,6 +146,8 @@ class FOCRunnerConfig:
     control_time_step_s: float
     use_inverter_limit: bool
     use_decoupling_feedforward: bool = False
+    enable_mtpa: bool = False
+    enable_field_weakening: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.pole_pairs, bool) or not isinstance(self.pole_pairs, int):
@@ -138,6 +161,10 @@ class FOCRunnerConfig:
             raise ValueError("use_inverter_limit must be a bool")
         if not isinstance(self.use_decoupling_feedforward, bool):
             raise ValueError("use_decoupling_feedforward must be a bool")
+        if not isinstance(self.enable_mtpa, bool):
+            raise ValueError("enable_mtpa must be a bool")
+        if not isinstance(self.enable_field_weakening, bool):
+            raise ValueError("enable_field_weakening must be a bool")
 
 
 @dataclass(frozen=True)
@@ -155,15 +182,18 @@ class FOCSimulationResult:
     speed: tuple[float, ...]
     voltage_saturation_count: int
     warning_messages: tuple[str, ...] = ()
+    mtpa_active_count: int = 0
+    field_weakening_active_count: int = 0
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
-        if (
-            isinstance(self.voltage_saturation_count, bool)
-            or not isinstance(self.voltage_saturation_count, int)
-            or self.voltage_saturation_count < 0
+        for name, value in (
+            ("voltage_saturation_count", self.voltage_saturation_count),
+            ("mtpa_active_count", self.mtpa_active_count),
+            ("field_weakening_active_count", self.field_weakening_active_count),
         ):
-            raise ValueError("voltage_saturation_count must be a non-negative integer")
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise ValueError(f"{name} must be a non-negative integer")
         expected_length = len(self.time)
         if expected_length == 0 or any(
             len(series) != expected_length for series in self.series
@@ -198,17 +228,32 @@ class FOCRunner:
         inverter_config: DCBusConfig | None = None,
         model: PMSMDynamicModel | None = None,
         integrator: EulerIntegrator | RK4Integrator | None = None,
+        mtpa_controller: MTPAController | None = None,
+        field_weakening_controller: FieldWeakeningController | None = None,
     ) -> None:
         if config.pole_pairs != motor_parameters.pole_pairs:
             raise ValueError("FOC and PMSM pole_pairs must match")
         if config.use_inverter_limit and inverter_config is None:
             raise ValueError("inverter_config is required when use_inverter_limit is true")
+        if config.enable_mtpa and mtpa_controller is None:
+            raise ValueError("mtpa_controller is required when enable_mtpa is true")
+        if config.enable_field_weakening:
+            if field_weakening_controller is None:
+                raise ValueError(
+                    "field_weakening_controller is required when enable_field_weakening is true"
+                )
+            if not config.use_inverter_limit or inverter_config is None:
+                raise ValueError(
+                    "field weakening requires an enabled inverter voltage limit"
+                )
         self._controller = controller
         self._motor_parameters = motor_parameters
         self._config = config
         self._inverter_config = inverter_config
         self._model = model or PMSMDynamicModel()
         self._integrator = integrator or RK4Integrator()
+        self._mtpa_controller = mtpa_controller
+        self._field_weakening_controller = field_weakening_controller
 
     def step(
         self,
@@ -243,9 +288,16 @@ class FOCRunner:
         theta_e_rad = electrical_angle(step_input.theta_m_rad, self._config.pole_pairs)
         dq_current = park_transform(alpha_beta_current, theta_e_rad)
 
+        (
+            effective_reference,
+            mtpa_result,
+            field_weakening_result,
+            optimization_warnings,
+        ) = self._resolve_effective_reference(reference, step_input)
+
         pi_voltage_command = self._controller.compute_voltage_command(
-            id_ref=reference.id_ref_a,
-            iq_ref=reference.iq_ref_a,
+            id_ref=effective_reference.id_ref_a,
+            iq_ref=effective_reference.iq_ref_a,
             id_actual=dq_current.d,
             iq_actual=dq_current.q,
             dt=time_step_s,
@@ -270,12 +322,12 @@ class FOCRunner:
             vd_actual_v = limit_result.vd_actual_v
             vq_actual_v = limit_result.vq_actual_v
             voltage_limited = limit_result.was_limited
-            warning_messages = limit_result.warning_messages
+            warning_messages = optimization_warnings + limit_result.warning_messages
         else:
             vd_actual_v = voltage_command.vd_command_v
             vq_actual_v = voltage_command.vq_command_v
             voltage_limited = False
-            warning_messages = ()
+            warning_messages = optimization_warnings
 
         self._controller.track_applied_voltage(
             voltage_command,
@@ -322,9 +374,105 @@ class FOCRunner:
                 voltage_limited=voltage_limited,
                 torque_nm=torque_nm,
                 omega_m_rad_s=next_state.omega_m,
-                warning_messages=warning_messages,
+                warning_messages=tuple(dict.fromkeys(warning_messages)),
+                id_reference_a=effective_reference.id_ref_a,
+                iq_reference_a=effective_reference.iq_ref_a,
+                mtpa_method=mtpa_result.method if mtpa_result is not None else None,
+                field_weakening_active=(
+                    field_weakening_result.weakening_active
+                    if field_weakening_result is not None
+                    else False
+                ),
+                field_weakening_voltage_margin_v=(
+                    field_weakening_result.voltage_margin
+                    if field_weakening_result is not None
+                    else None
+                ),
             ),
             next_state,
+        )
+
+    def _resolve_effective_reference(
+        self,
+        reference: FOCReference,
+        step_input: FOCStepInput,
+    ) -> tuple[
+        FOCReference,
+        MTPACurrentReference | None,
+        FieldWeakeningResult | None,
+        tuple[str, ...],
+    ]:
+        id_reference = reference.id_ref_a
+        iq_reference = reference.iq_ref_a
+        mtpa_result = None
+        weakening_result = None
+        warnings: list[str] = []
+
+        if self._config.enable_mtpa:
+            torque_reference_nm = reference.torque_reference_nm
+            if torque_reference_nm is None:
+                torque_reference_nm = self._torque_from_current_reference(
+                    id_reference,
+                    iq_reference,
+                )
+            mtpa_result = self._mtpa_controller.compute_current_reference(
+                torque_reference_nm,
+                self._motor_parameters,
+            )
+            id_reference = mtpa_result.id_reference
+            iq_reference = mtpa_result.iq_reference
+            if mtpa_result.current_limited:
+                warnings.append(
+                    "MTPA current reference reached the configured current magnitude limit."
+                )
+
+        if self._config.enable_field_weakening:
+            voltage_estimate = self._field_weakening_controller.estimate_steady_state_voltage(
+                speed_rad_s=step_input.omega_m_rad_s,
+                id_reference_a=id_reference,
+                iq_reference_a=iq_reference,
+                motor_parameters=self._motor_parameters,
+            )
+            weakening_result = self._field_weakening_controller.compute_weakening_command(
+                speed_rad_s=step_input.omega_m_rad_s,
+                vd_command_v=voltage_estimate.vd_v,
+                vq_command_v=voltage_estimate.vq_v,
+                dc_bus_voltage_v=self._inverter_config.nominal_voltage_v,
+                motor_parameters=self._motor_parameters,
+            )
+            if weakening_result.weakening_active:
+                id_reference = min(
+                    id_reference,
+                    weakening_result.id_weakening_command,
+                )
+                id_reference, iq_reference, was_limited = _limit_current_magnitude(
+                    id_reference,
+                    iq_reference,
+                    self._field_weakening_controller.current_limit_a,
+                )
+                if was_limited:
+                    warnings.append(
+                        "Field-weakening current reference was projected onto the current limit."
+                    )
+            if weakening_result.warning:
+                warnings.append(weakening_result.warning)
+
+        return (
+            FOCReference(
+                id_ref_a=id_reference,
+                iq_ref_a=iq_reference,
+                torque_reference_nm=reference.torque_reference_nm,
+            ),
+            mtpa_result,
+            weakening_result,
+            tuple(warnings),
+        )
+
+    def _torque_from_current_reference(self, id_a: float, iq_a: float) -> float:
+        parameters = self._motor_parameters
+        return 1.5 * parameters.pole_pairs * (
+            parameters.psi_f * iq_a
+            + (parameters.Ld - parameters.Lq) * id_a * iq_a
         )
 
 
@@ -344,6 +492,11 @@ def run_foc_current_control_simulation(
     inverter_config: DCBusConfig | None = None,
     anti_windup_gain: float = 0.0,
     use_decoupling_feedforward: bool = False,
+    enable_mtpa: bool = False,
+    enable_field_weakening: bool = False,
+    torque_reference_profile: ScalarProfile | None = None,
+    mtpa_current_limit_a: float | None = None,
+    field_weakening_current_limit_a: float | None = None,
 ) -> FOCSimulationResult:
     """Run minimal ideal-feedback dq current tracking through the FOC chain."""
 
@@ -357,6 +510,31 @@ def run_foc_current_control_simulation(
         ki=controller_ki,
         anti_windup_gain=anti_windup_gain,
     )
+    shared_current_limit = (
+        inverter_config.current_limit_a if inverter_config is not None else None
+    )
+    mtpa_limit = (
+        mtpa_current_limit_a
+        if mtpa_current_limit_a is not None
+        else shared_current_limit
+    )
+    weakening_limit = (
+        field_weakening_current_limit_a
+        if field_weakening_current_limit_a is not None
+        else shared_current_limit
+    )
+    if enable_mtpa and mtpa_limit is None:
+        raise ValueError("an explicit current limit is required when MTPA is enabled")
+    if enable_field_weakening and weakening_limit is None:
+        raise ValueError(
+            "an explicit current limit is required when field weakening is enabled"
+        )
+    mtpa_controller = MTPAController(mtpa_limit) if enable_mtpa else None
+    field_weakening_controller = (
+        FieldWeakeningController(weakening_limit)
+        if enable_field_weakening
+        else None
+    )
     runner = FOCRunner(
         controller=controller,
         motor_parameters=motor_parameters,
@@ -365,9 +543,13 @@ def run_foc_current_control_simulation(
             control_time_step_s=control_time_step_s,
             use_inverter_limit=inverter_config is not None,
             use_decoupling_feedforward=use_decoupling_feedforward,
+            enable_mtpa=enable_mtpa,
+            enable_field_weakening=enable_field_weakening,
         ),
         inverter_config=inverter_config,
         model=model,
+        mtpa_controller=mtpa_controller,
+        field_weakening_controller=field_weakening_controller,
     )
 
     state = initial_state
@@ -382,6 +564,8 @@ def run_foc_current_control_simulation(
     torque_values = [initial_torque]
     speed_values = [state.omega_m]
     saturation_count = 0
+    mtpa_active_count = 0
+    field_weakening_active_count = 0
     warning_messages: list[str] = []
 
     current_time = 0.0
@@ -396,6 +580,15 @@ def run_foc_current_control_simulation(
         reference = FOCReference(
             id_ref_a=_resolve_profile(id_ref_profile, current_time, "id_ref_profile"),
             iq_ref_a=_resolve_profile(iq_ref_profile, current_time, "iq_ref_profile"),
+            torque_reference_nm=(
+                _resolve_profile(
+                    torque_reference_profile,
+                    current_time,
+                    "torque_reference_profile",
+                )
+                if torque_reference_profile is not None
+                else None
+            ),
         )
         step_input = FOCStepInput(
             phase_current_a=abc_current.a,
@@ -422,6 +615,8 @@ def run_foc_current_control_simulation(
         torque_values.append(output.torque_nm)
         speed_values.append(output.omega_m_rad_s)
         saturation_count += int(output.voltage_limited)
+        mtpa_active_count += int(output.mtpa_method is not None)
+        field_weakening_active_count += int(output.field_weakening_active)
         warning_messages.extend(output.warning_messages)
 
     return FOCSimulationResult(
@@ -436,6 +631,8 @@ def run_foc_current_control_simulation(
         speed=tuple(speed_values),
         voltage_saturation_count=saturation_count,
         warning_messages=tuple(dict.fromkeys(warning_messages)),
+        mtpa_active_count=mtpa_active_count,
+        field_weakening_active_count=field_weakening_active_count,
     )
 
 
@@ -443,3 +640,15 @@ def _resolve_profile(profile: ScalarProfile, time_s: float, name: str) -> float:
     value = profile(time_s) if callable(profile) else profile
     _require_finite(name, value)
     return value
+
+
+def _limit_current_magnitude(
+    id_reference_a: float,
+    iq_reference_a: float,
+    current_limit_a: float,
+) -> tuple[float, float, bool]:
+    magnitude = math.hypot(id_reference_a, iq_reference_a)
+    if magnitude <= current_limit_a:
+        return id_reference_a, iq_reference_a, False
+    scale = current_limit_a / magnitude
+    return id_reference_a * scale, iq_reference_a * scale, True
