@@ -10,6 +10,12 @@ from .dq_decoupling import (
     compute_pmsm_dq_decoupling_feedforward,
 )
 from .pi_controller import PIController
+from .speed_controller import (
+    SpeedController,
+    SpeedControllerConfig,
+    SpeedControllerOutput,
+    SpeedControllerState,
+)
 
 __all__ = [
     "DQCurrentController",
@@ -17,5 +23,9 @@ __all__ = [
     "DQSaturationFeedback",
     "DQVoltageCommand",
     "PIController",
+    "SpeedController",
+    "SpeedControllerConfig",
+    "SpeedControllerOutput",
+    "SpeedControllerState",
     "compute_pmsm_dq_decoupling_feedforward",
 ]

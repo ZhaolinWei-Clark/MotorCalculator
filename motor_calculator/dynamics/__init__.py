@@ -14,6 +14,10 @@ from .controllers import (
     DQSaturationFeedback,
     DQVoltageCommand,
     PIController,
+    SpeedController,
+    SpeedControllerConfig,
+    SpeedControllerOutput,
+    SpeedControllerState,
     compute_pmsm_dq_decoupling_feedforward,
 )
 from .current_control_runner import (
@@ -37,6 +41,14 @@ from .pmsm_model import PMSMDynamicModel, PMSMDynamicParameters
 from .simulation_results import SimulationConfidence, SimulationResult, SimulationStatus
 from .simulation_runner import InputProfile, SimulationRunner
 from .state import DQElectricalDerivatives, InputState, MotorState, StateDerivatives
+from .speed_control_runner import (
+    SpeedControlRunnerConfig,
+    SpeedControlSimulationResult,
+    SpeedControlSimulationRunner,
+    run_speed_load_step_example,
+    run_speed_startup_example,
+    run_unreachable_speed_example,
+)
 from .transforms import (
     ABCPhaseValues,
     AlphaBetaValues,
@@ -87,6 +99,13 @@ __all__ = [
     "SimulationStatus",
     "ScalarProfile",
     "SolverPreference",
+    "SpeedController",
+    "SpeedControllerConfig",
+    "SpeedControllerOutput",
+    "SpeedControllerState",
+    "SpeedControlRunnerConfig",
+    "SpeedControlSimulationResult",
+    "SpeedControlSimulationRunner",
     "StaticFallbackProvider",
     "StateDerivatives",
     "UserSimulationRunner",
@@ -101,6 +120,9 @@ __all__ = [
     "park_transform",
     "run_user_simulation",
     "run_foc_current_control_simulation",
+    "run_speed_load_step_example",
+    "run_speed_startup_example",
+    "run_unreachable_speed_example",
     "select_simulation_settings",
     "wrap_electrical_angle",
 ]
