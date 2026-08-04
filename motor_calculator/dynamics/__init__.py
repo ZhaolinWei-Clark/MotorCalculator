@@ -42,6 +42,18 @@ from .foc_runner import (
 )
 from .integrators import DerivativeEvaluator, EulerIntegrator, RK4Integrator
 from .inverter import DCBusConfig, InverterVoltageLimiter, VoltageLimitResult
+from .losses import (
+    CopperLossModel,
+    DynamicLossModel,
+    IronLossEstimate,
+    IronLossModel,
+    LossBreakdown,
+    LossModelConfig,
+    MechanicalLossModel,
+    ProvisionalIronLossModel,
+    ResistanceTemperatureConfig,
+    UnavailableIronLossModel,
+)
 from .modulation import (
     SVPWMConfig,
     SVPWMModulator,
@@ -96,6 +108,23 @@ from .transforms import (
     inverse_park_transform,
     park_transform,
     wrap_electrical_angle,
+)
+from .thermal import (
+    LumpedThermalModel,
+    ThermalConfig,
+    ThermalDerivative,
+    ThermalElectricalCouplingConfig,
+    ThermalIntegrationMethod,
+    ThermalState,
+)
+from .thermal_simulation_runner import (
+    ThermalElectricalSimulationRunner,
+    ThermalSimulationResult,
+)
+from .thermal_experiments import (
+    PrescribedCurrentThermalResult,
+    ThermalExperimentSuite,
+    run_thermal_foundation_experiments,
 )
 from .user_interface import StaticFallbackProvider, UserSimulationRunner, run_user_simulation
 
@@ -191,4 +220,25 @@ __all__ = [
     "run_unreachable_speed_example",
     "select_simulation_settings",
     "wrap_electrical_angle",
+    "CopperLossModel",
+    "DynamicLossModel",
+    "IronLossEstimate",
+    "IronLossModel",
+    "LossBreakdown",
+    "LossModelConfig",
+    "LumpedThermalModel",
+    "MechanicalLossModel",
+    "ProvisionalIronLossModel",
+    "ResistanceTemperatureConfig",
+    "ThermalConfig",
+    "ThermalDerivative",
+    "ThermalElectricalCouplingConfig",
+    "ThermalElectricalSimulationRunner",
+    "ThermalIntegrationMethod",
+    "ThermalSimulationResult",
+    "ThermalState",
+    "UnavailableIronLossModel",
+    "PrescribedCurrentThermalResult",
+    "ThermalExperimentSuite",
+    "run_thermal_foundation_experiments",
 ]
