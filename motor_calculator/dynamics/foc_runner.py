@@ -17,6 +17,12 @@ from .controllers import (
 )
 from .integrators import EulerIntegrator, RK4Integrator
 from .inverter import DCBusConfig, InverterVoltageLimiter
+from .modulation import (
+    SVPWMConfig,
+    SVPWMModulator,
+    SVPWMResult,
+    VoltageApplicationMode,
+)
 from .pmsm_model import PMSMDynamicModel, PMSMDynamicParameters
 from .sensors import SensorSuite, SensorSuiteMeasurement
 from .state import InputState, MotorState, StateDerivatives
@@ -98,6 +104,7 @@ class FOCStepOutput:
     theta_m_measured_rad: float | None = None
     omega_m_measured_rad_s: float | None = None
     sensor_measurements: SensorSuiteMeasurement | None = None
+    svpwm_result: SVPWMResult | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -130,6 +137,10 @@ class FOCStepOutput:
             self.sensor_measurements, SensorSuiteMeasurement
         ):
             raise TypeError("sensor_measurements must be None or SensorSuiteMeasurement")
+        if self.svpwm_result is not None and not isinstance(
+            self.svpwm_result, SVPWMResult
+        ):
+            raise TypeError("svpwm_result must be None or SVPWMResult")
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
 
     @property
@@ -163,6 +174,9 @@ class FOCRunnerConfig:
     enable_mtpa: bool = False
     enable_field_weakening: bool = False
     enable_sensor_nonidealities: bool = False
+    voltage_application_mode: VoltageApplicationMode = (
+        VoltageApplicationMode.SIMPLE_DQ_LIMIT
+    )
 
     def __post_init__(self) -> None:
         if isinstance(self.pole_pairs, bool) or not isinstance(self.pole_pairs, int):
@@ -182,6 +196,8 @@ class FOCRunnerConfig:
             raise ValueError("enable_field_weakening must be a bool")
         if not isinstance(self.enable_sensor_nonidealities, bool):
             raise ValueError("enable_sensor_nonidealities must be a bool")
+        if not isinstance(self.voltage_application_mode, VoltageApplicationMode):
+            raise TypeError("voltage_application_mode must be a VoltageApplicationMode")
 
 
 @dataclass(frozen=True)
@@ -204,6 +220,12 @@ class FOCSimulationResult:
     id_measured: tuple[float, ...] = ()
     iq_measured: tuple[float, ...] = ()
     speed_measured: tuple[float, ...] = ()
+    svpwm_overmodulation_count: int = 0
+    svpwm_saturation_count: int = 0
+    maximum_modulation_index: float = 0.0
+    minimum_modulation_index: float | None = None
+    minimum_duty: float | None = None
+    maximum_duty: float | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
@@ -211,9 +233,32 @@ class FOCSimulationResult:
             ("voltage_saturation_count", self.voltage_saturation_count),
             ("mtpa_active_count", self.mtpa_active_count),
             ("field_weakening_active_count", self.field_weakening_active_count),
+            ("svpwm_overmodulation_count", self.svpwm_overmodulation_count),
+            ("svpwm_saturation_count", self.svpwm_saturation_count),
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{name} must be a non-negative integer")
+        _require_finite("maximum_modulation_index", self.maximum_modulation_index)
+        if self.maximum_modulation_index < 0.0:
+            raise ValueError("maximum_modulation_index must be non-negative")
+        if self.minimum_modulation_index is not None:
+            _require_finite("minimum_modulation_index", self.minimum_modulation_index)
+            if self.minimum_modulation_index < 0.0:
+                raise ValueError("minimum_modulation_index must be non-negative")
+        for name, value in (
+            ("minimum_duty", self.minimum_duty),
+            ("maximum_duty", self.maximum_duty),
+        ):
+            if value is not None:
+                _require_finite(name, value)
+                if not 0.0 <= value <= 1.0:
+                    raise ValueError(f"{name} must be within [0, 1]")
+        if (
+            self.minimum_duty is not None
+            and self.maximum_duty is not None
+            and self.minimum_duty > self.maximum_duty
+        ):
+            raise ValueError("minimum_duty must not exceed maximum_duty")
         expected_length = len(self.time)
         if expected_length == 0 or any(
             len(series) != expected_length for series in self.series
@@ -260,6 +305,8 @@ class FOCRunner:
         mtpa_controller: MTPAController | None = None,
         field_weakening_controller: FieldWeakeningController | None = None,
         sensor_suite: SensorSuite | None = None,
+        svpwm_config: SVPWMConfig | None = None,
+        svpwm_modulator: SVPWMModulator | None = None,
     ) -> None:
         if config.pole_pairs != motor_parameters.pole_pairs:
             raise ValueError("FOC and PMSM pole_pairs must match")
@@ -280,6 +327,21 @@ class FOCRunner:
             raise ValueError(
                 "sensor_suite is required when enable_sensor_nonidealities is true"
             )
+        if config.voltage_application_mode is VoltageApplicationMode.SVPWM_AVERAGE:
+            if svpwm_config is None or not svpwm_config.enabled:
+                raise ValueError(
+                    "an enabled svpwm_config is required for SVPWM_AVERAGE mode"
+                )
+            if (
+                inverter_config is not None
+                and not math.isclose(
+                    inverter_config.nominal_voltage_v,
+                    svpwm_config.dc_bus_voltage_v,
+                    rel_tol=0.0,
+                    abs_tol=1.0e-12,
+                )
+            ):
+                raise ValueError("inverter and SVPWM DC bus voltages must match")
         self._controller = controller
         self._motor_parameters = motor_parameters
         self._config = config
@@ -289,6 +351,8 @@ class FOCRunner:
         self._mtpa_controller = mtpa_controller
         self._field_weakening_controller = field_weakening_controller
         self._sensor_suite = sensor_suite
+        self._svpwm_config = svpwm_config
+        self._svpwm_modulator = svpwm_modulator or SVPWMModulator()
 
     def step(
         self,
@@ -377,7 +441,29 @@ class FOCRunner:
             vd_command_v=pi_voltage_command.vd_command_v + feedforward.vd_ff_v,
             vq_command_v=pi_voltage_command.vq_command_v + feedforward.vq_ff_v,
         )
-        if self._config.use_inverter_limit:
+        svpwm_result = None
+        if (
+            self._config.voltage_application_mode
+            is VoltageApplicationMode.SVPWM_AVERAGE
+        ):
+            svpwm_result = self._svpwm_modulator.modulate_dq(
+                voltage_command.vd_command_v,
+                voltage_command.vq_command_v,
+                feedback_theta_e_rad,
+                self._svpwm_config,
+                reconstruction_theta_e_rad=true_theta_e_rad,
+            )
+            vd_actual_v = svpwm_result.vd_actual_v
+            vq_actual_v = svpwm_result.vq_actual_v
+            vd_feedback_v = svpwm_result.vd_controller_frame_v
+            vq_feedback_v = svpwm_result.vq_controller_frame_v
+            voltage_limited = svpwm_result.voltage_saturated
+            warning_messages = (
+                sensor_warnings
+                + optimization_warnings
+                + svpwm_result.warning_messages
+            )
+        elif self._config.use_inverter_limit:
             limit_result = InverterVoltageLimiter.apply_limit(
                 voltage_command.vd_command_v,
                 voltage_command.vq_command_v,
@@ -385,6 +471,8 @@ class FOCRunner:
             )
             vd_actual_v = limit_result.vd_actual_v
             vq_actual_v = limit_result.vq_actual_v
+            vd_feedback_v = vd_actual_v
+            vq_feedback_v = vq_actual_v
             voltage_limited = limit_result.was_limited
             warning_messages = (
                 sensor_warnings
@@ -394,13 +482,15 @@ class FOCRunner:
         else:
             vd_actual_v = voltage_command.vd_command_v
             vq_actual_v = voltage_command.vq_command_v
+            vd_feedback_v = vd_actual_v
+            vq_feedback_v = vq_actual_v
             voltage_limited = False
             warning_messages = sensor_warnings + optimization_warnings
 
         self._controller.track_applied_voltage(
             voltage_command,
-            vd_actual_v,
-            vq_actual_v,
+            vd_feedback_v,
+            vq_feedback_v,
             time_step_s,
         )
         current_state = MotorState(
@@ -461,6 +551,7 @@ class FOCRunner:
                 theta_m_measured_rad=feedback_theta_m_rad,
                 omega_m_measured_rad_s=feedback_speed_rad_s,
                 sensor_measurements=sensor_measurements,
+                svpwm_result=svpwm_result,
             ),
             next_state,
         )
@@ -572,6 +663,10 @@ def run_foc_current_control_simulation(
     field_weakening_current_limit_a: float | None = None,
     enable_sensor_nonidealities: bool = False,
     sensor_suite: SensorSuite | None = None,
+    voltage_application_mode: VoltageApplicationMode = (
+        VoltageApplicationMode.SIMPLE_DQ_LIMIT
+    ),
+    svpwm_config: SVPWMConfig | None = None,
 ) -> FOCSimulationResult:
     """Run dq current tracking with optional measurement non-idealities."""
 
@@ -621,12 +716,14 @@ def run_foc_current_control_simulation(
             enable_mtpa=enable_mtpa,
             enable_field_weakening=enable_field_weakening,
             enable_sensor_nonidealities=enable_sensor_nonidealities,
+            voltage_application_mode=voltage_application_mode,
         ),
         inverter_config=inverter_config,
         model=model,
         mtpa_controller=mtpa_controller,
         field_weakening_controller=field_weakening_controller,
         sensor_suite=sensor_suite,
+        svpwm_config=svpwm_config,
     )
 
     state = initial_state
@@ -647,6 +744,11 @@ def run_foc_current_control_simulation(
     mtpa_active_count = 0
     field_weakening_active_count = 0
     warning_messages: list[str] = []
+    svpwm_overmodulation_count = 0
+    svpwm_saturation_count = 0
+    maximum_modulation_index = 0.0
+    observed_duties: list[float] = []
+    observed_modulation_indices: list[float] = []
 
     current_time = 0.0
     while current_time < simulation_time_s:
@@ -701,6 +803,15 @@ def run_foc_current_control_simulation(
         mtpa_active_count += int(output.mtpa_method is not None)
         field_weakening_active_count += int(output.field_weakening_active)
         warning_messages.extend(output.warning_messages)
+        if output.svpwm_result is not None:
+            modulation = output.svpwm_result
+            svpwm_overmodulation_count += int(modulation.overmodulation_active)
+            svpwm_saturation_count += int(modulation.voltage_saturated)
+            maximum_modulation_index = max(
+                maximum_modulation_index, modulation.modulation_index
+            )
+            observed_duties.extend(modulation.duties)
+            observed_modulation_indices.append(modulation.modulation_index)
 
     return FOCSimulationResult(
         time=tuple(time_values),
@@ -719,6 +830,16 @@ def run_foc_current_control_simulation(
         id_measured=tuple(id_measured_values),
         iq_measured=tuple(iq_measured_values),
         speed_measured=tuple(speed_measured_values),
+        svpwm_overmodulation_count=svpwm_overmodulation_count,
+        svpwm_saturation_count=svpwm_saturation_count,
+        maximum_modulation_index=maximum_modulation_index,
+        minimum_modulation_index=(
+            min(observed_modulation_indices)
+            if observed_modulation_indices
+            else None
+        ),
+        minimum_duty=min(observed_duties) if observed_duties else None,
+        maximum_duty=max(observed_duties) if observed_duties else None,
     )
 
 

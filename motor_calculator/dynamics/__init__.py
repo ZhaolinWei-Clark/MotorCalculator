@@ -42,7 +42,20 @@ from .foc_runner import (
 )
 from .integrators import DerivativeEvaluator, EulerIntegrator, RK4Integrator
 from .inverter import DCBusConfig, InverterVoltageLimiter, VoltageLimitResult
+from .modulation import (
+    SVPWMConfig,
+    SVPWMModulator,
+    SVPWMResult,
+    VoltageApplicationMode,
+)
 from .pmsm_model import PMSMDynamicModel, PMSMDynamicParameters
+from .modulation_experiments import (
+    ModulationExampleResult,
+    SpeedModeComparison,
+    SpeedModeMetrics,
+    run_direct_modulation_examples,
+    run_speed_mode_comparison,
+)
 from .sensors import (
     CurrentSensor,
     CurrentSensorConfig,
@@ -115,6 +128,7 @@ __all__ = [
     "MotorState",
     "MTPAController",
     "MTPACurrentReference",
+    "ModulationExampleResult",
     "PMSMDynamicModel",
     "PMSMDynamicParameters",
     "PIController",
@@ -132,6 +146,8 @@ __all__ = [
     "SpeedControllerConfig",
     "SpeedControllerOutput",
     "SpeedControllerState",
+    "SpeedModeComparison",
+    "SpeedModeMetrics",
     "SpeedControlRunnerConfig",
     "SpeedControlSimulationResult",
     "SpeedControlSimulationRunner",
@@ -139,6 +155,10 @@ __all__ = [
     "StateDerivatives",
     "UserSimulationRunner",
     "VoltageLimitResult",
+    "VoltageApplicationMode",
+    "SVPWMConfig",
+    "SVPWMModulator",
+    "SVPWMResult",
     "CurrentControlSimulationRunner",
     "CurrentReferenceProfile",
     "CurrentSensor",
@@ -162,9 +182,11 @@ __all__ = [
     "park_transform",
     "run_user_simulation",
     "run_foc_current_control_simulation",
+    "run_direct_modulation_examples",
     "run_current_sensor_error_experiments",
     "run_rotor_angle_error_experiments",
     "run_speed_load_step_example",
+    "run_speed_mode_comparison",
     "run_speed_startup_example",
     "run_unreachable_speed_example",
     "select_simulation_settings",

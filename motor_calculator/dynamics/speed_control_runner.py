@@ -15,6 +15,7 @@ from .controllers import (
 )
 from .integrators import EulerIntegrator, RK4Integrator
 from .inverter import DCBusConfig, InverterVoltageLimiter
+from .modulation import SVPWMConfig, SVPWMModulator, VoltageApplicationMode
 from .pmsm_model import PMSMDynamicModel, PMSMDynamicParameters
 from .sensors import SensorSuite
 from .state import InputState, MotorState, StateDerivatives
@@ -46,6 +47,9 @@ class SpeedControlRunnerConfig:
     use_inverter_limit: bool = True
     use_decoupling_feedforward: bool = False
     enable_sensor_nonidealities: bool = False
+    voltage_application_mode: VoltageApplicationMode = (
+        VoltageApplicationMode.SIMPLE_DQ_LIMIT
+    )
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -74,6 +78,8 @@ class SpeedControlRunnerConfig:
             raise TypeError("use_decoupling_feedforward must be a bool")
         if not isinstance(self.enable_sensor_nonidealities, bool):
             raise TypeError("enable_sensor_nonidealities must be a bool")
+        if not isinstance(self.voltage_application_mode, VoltageApplicationMode):
+            raise TypeError("voltage_application_mode must be a VoltageApplicationMode")
 
     @staticmethod
     def _require_integer_ratio(period: float, base: float, name: str) -> None:
@@ -115,6 +121,12 @@ class SpeedControlSimulationResult:
     speed_measured: tuple[float, ...] = ()
     id_measured: tuple[float, ...] = ()
     iq_measured: tuple[float, ...] = ()
+    svpwm_overmodulation_count: int = 0
+    svpwm_saturation_count: int = 0
+    maximum_modulation_index: float = 0.0
+    minimum_modulation_index: float | None = None
+    minimum_duty: float | None = None
+    maximum_duty: float | None = None
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
@@ -133,9 +145,32 @@ class SpeedControlSimulationResult:
         for name, value in (
             ("current_limit_count", self.current_limit_count),
             ("voltage_saturation_count", self.voltage_saturation_count),
+            ("svpwm_overmodulation_count", self.svpwm_overmodulation_count),
+            ("svpwm_saturation_count", self.svpwm_saturation_count),
         ):
             if isinstance(value, bool) or not isinstance(value, int) or value < 0:
                 raise ValueError(f"{name} must be a non-negative integer")
+        _require_finite("maximum_modulation_index", self.maximum_modulation_index)
+        if self.maximum_modulation_index < 0.0:
+            raise ValueError("maximum_modulation_index must be non-negative")
+        if self.minimum_modulation_index is not None:
+            _require_finite("minimum_modulation_index", self.minimum_modulation_index)
+            if self.minimum_modulation_index < 0.0:
+                raise ValueError("minimum_modulation_index must be non-negative")
+        for name, value in (
+            ("minimum_duty", self.minimum_duty),
+            ("maximum_duty", self.maximum_duty),
+        ):
+            if value is not None:
+                _require_finite(name, value)
+                if not 0.0 <= value <= 1.0:
+                    raise ValueError(f"{name} must be within [0, 1]")
+        if (
+            self.minimum_duty is not None
+            and self.maximum_duty is not None
+            and self.minimum_duty > self.maximum_duty
+        ):
+            raise ValueError("minimum_duty must not exceed maximum_duty")
 
     @property
     def numeric_series(self) -> tuple[tuple[float, ...], ...]:
@@ -181,6 +216,8 @@ class SpeedControlSimulationRunner:
         model: PMSMDynamicModel | None = None,
         integrator: EulerIntegrator | RK4Integrator | None = None,
         sensor_suite: SensorSuite | None = None,
+        svpwm_config: SVPWMConfig | None = None,
+        svpwm_modulator: SVPWMModulator | None = None,
     ) -> None:
         self._speed_controller = speed_controller
         self._current_controller = current_controller
@@ -192,10 +229,30 @@ class SpeedControlSimulationRunner:
             raise ValueError(
                 "sensor_suite is required when enable_sensor_nonidealities is true"
             )
+        if (
+            self._config.voltage_application_mode
+            is VoltageApplicationMode.SVPWM_AVERAGE
+        ):
+            if svpwm_config is None or not svpwm_config.enabled:
+                raise ValueError(
+                    "an enabled svpwm_config is required for SVPWM_AVERAGE mode"
+                )
+            if (
+                inverter_config is not None
+                and not math.isclose(
+                    inverter_config.nominal_voltage_v,
+                    svpwm_config.dc_bus_voltage_v,
+                    rel_tol=0.0,
+                    abs_tol=1.0e-12,
+                )
+            ):
+                raise ValueError("inverter and SVPWM DC bus voltages must match")
         self._inverter_config = inverter_config
         self._model = model or PMSMDynamicModel()
         self._integrator = integrator or RK4Integrator()
         self._sensor_suite = sensor_suite
+        self._svpwm_config = svpwm_config
+        self._svpwm_modulator = svpwm_modulator or SVPWMModulator()
 
     def run(
         self,
@@ -236,6 +293,11 @@ class SpeedControlSimulationRunner:
         voltage_saturation_flags = [False]
         current_limit_count = 0
         voltage_saturation_count = 0
+        svpwm_overmodulation_count = 0
+        svpwm_saturation_count = 0
+        maximum_modulation_index = 0.0
+        observed_duties: list[float] = []
+        observed_modulation_indices: list[float] = []
         warnings: list[str] = []
 
         held_id_ref = self._speed_controller.config.default_id_ref_a
@@ -247,6 +309,9 @@ class SpeedControlSimulationRunner:
         held_speed_measured = state.omega_m
         held_id_measured = state.id
         held_iq_measured = state.iq
+        held_feedback_theta_e = electrical_angle(
+            state.theta, self._motor_parameters.pole_pairs
+        )
 
         plant_step_count = math.ceil(
             simulation_time_s / self._config.plant_time_step_s
@@ -301,11 +366,17 @@ class SpeedControlSimulationRunner:
                     held_id_measured = measured_dq.d
                     held_iq_measured = measured_dq.q
                     held_speed_measured = measurements.speed.measured_value
+                    held_feedback_theta_e = (
+                        measurements.position.electrical_angle_rad
+                    )
                     warnings.extend(measurements.warning_messages)
                 else:
                     held_id_measured = state.id
                     held_iq_measured = state.iq
                     held_speed_measured = state.omega_m
+                    held_feedback_theta_e = electrical_angle(
+                        state.theta, self._motor_parameters.pole_pairs
+                    )
             if step_index % self._config.speed_steps == 0:
                 speed_output = self._speed_controller.update(
                     omega_ref_rad_s=speed_reference,
@@ -342,7 +413,37 @@ class SpeedControlSimulationRunner:
                     vd_command_v=pi_command.vd_command_v + feedforward.vd_ff_v,
                     vq_command_v=pi_command.vq_command_v + feedforward.vq_ff_v,
                 )
-                if self._config.use_inverter_limit:
+                if (
+                    self._config.voltage_application_mode
+                    is VoltageApplicationMode.SVPWM_AVERAGE
+                ):
+                    true_theta_e = electrical_angle(
+                        state.theta, self._motor_parameters.pole_pairs
+                    )
+                    modulation = self._svpwm_modulator.modulate_dq(
+                        held_voltage_command.vd_command_v,
+                        held_voltage_command.vq_command_v,
+                        held_feedback_theta_e,
+                        self._svpwm_config,
+                        reconstruction_theta_e_rad=true_theta_e,
+                    )
+                    vd_actual = modulation.vd_actual_v
+                    vq_actual = modulation.vq_actual_v
+                    vd_feedback = modulation.vd_controller_frame_v
+                    vq_feedback = modulation.vq_controller_frame_v
+                    held_voltage_saturation = modulation.voltage_saturated
+                    voltage_saturation_count += int(held_voltage_saturation)
+                    svpwm_saturation_count += int(modulation.voltage_saturated)
+                    svpwm_overmodulation_count += int(
+                        modulation.overmodulation_active
+                    )
+                    maximum_modulation_index = max(
+                        maximum_modulation_index, modulation.modulation_index
+                    )
+                    observed_duties.extend(modulation.duties)
+                    observed_modulation_indices.append(modulation.modulation_index)
+                    warnings.extend(modulation.warning_messages)
+                elif self._config.use_inverter_limit:
                     limit_result = InverterVoltageLimiter.apply_limit(
                         held_voltage_command.vd_command_v,
                         held_voltage_command.vq_command_v,
@@ -350,6 +451,8 @@ class SpeedControlSimulationRunner:
                     )
                     vd_actual = limit_result.vd_actual_v
                     vq_actual = limit_result.vq_actual_v
+                    vd_feedback = vd_actual
+                    vq_feedback = vq_actual
                     held_voltage_saturation = limit_result.was_limited
                     if held_voltage_saturation:
                         voltage_saturation_count += 1
@@ -357,11 +460,13 @@ class SpeedControlSimulationRunner:
                 else:
                     vd_actual = held_voltage_command.vd_command_v
                     vq_actual = held_voltage_command.vq_command_v
+                    vd_feedback = vd_actual
+                    vq_feedback = vq_actual
                     held_voltage_saturation = False
                 self._current_controller.track_applied_voltage(
                     held_voltage_command,
-                    vd_actual,
-                    vq_actual,
+                    vd_feedback,
+                    vq_feedback,
                     self._config.current_control_period_s,
                 )
                 held_plant_input = InputState(
@@ -426,6 +531,16 @@ class SpeedControlSimulationRunner:
             speed_measured=tuple(speed_measured_values),
             id_measured=tuple(id_measured_values),
             iq_measured=tuple(iq_measured_values),
+            svpwm_overmodulation_count=svpwm_overmodulation_count,
+            svpwm_saturation_count=svpwm_saturation_count,
+            maximum_modulation_index=maximum_modulation_index,
+            minimum_modulation_index=(
+                min(observed_modulation_indices)
+                if observed_modulation_indices
+                else None
+            ),
+            minimum_duty=min(observed_duties) if observed_duties else None,
+            maximum_duty=max(observed_duties) if observed_duties else None,
         )
 
 
