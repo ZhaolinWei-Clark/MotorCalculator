@@ -1,4 +1,4 @@
-"""Sandbox-only FOC signal-chain orchestration without sensors or PWM."""
+"""Sandbox-only FOC orchestration with optional measurement non-idealities."""
 
 from __future__ import annotations
 
@@ -18,6 +18,7 @@ from .controllers import (
 from .integrators import EulerIntegrator, RK4Integrator
 from .inverter import DCBusConfig, InverterVoltageLimiter
 from .pmsm_model import PMSMDynamicModel, PMSMDynamicParameters
+from .sensors import SensorSuite, SensorSuiteMeasurement
 from .state import InputState, MotorState, StateDerivatives
 from .transforms import (
     ABCPhaseValues,
@@ -52,7 +53,7 @@ class FOCReference:
 
 @dataclass(frozen=True)
 class FOCStepInput:
-    """Ideal current feedback and mechanical state for one FOC step."""
+    """True plant currents and mechanical state entering one FOC step."""
 
     phase_current_a: float
     phase_current_b: float
@@ -92,6 +93,11 @@ class FOCStepOutput:
     mtpa_method: str | None = None
     field_weakening_active: bool = False
     field_weakening_voltage_margin_v: float | None = None
+    id_true_a: float | None = None
+    iq_true_a: float | None = None
+    theta_m_measured_rad: float | None = None
+    omega_m_measured_rad_s: float | None = None
+    sensor_measurements: SensorSuiteMeasurement | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -111,11 +117,19 @@ class FOCStepOutput:
             ("id_reference_a", self.id_reference_a),
             ("iq_reference_a", self.iq_reference_a),
             ("field_weakening_voltage_margin_v", self.field_weakening_voltage_margin_v),
+            ("id_true_a", self.id_true_a),
+            ("iq_true_a", self.iq_true_a),
+            ("theta_m_measured_rad", self.theta_m_measured_rad),
+            ("omega_m_measured_rad_s", self.omega_m_measured_rad_s),
         ):
             if value is not None:
                 _require_finite(name, value)
         if not isinstance(self.field_weakening_active, bool):
             raise TypeError("field_weakening_active must be a bool")
+        if self.sensor_measurements is not None and not isinstance(
+            self.sensor_measurements, SensorSuiteMeasurement
+        ):
+            raise TypeError("sensor_measurements must be None or SensorSuiteMeasurement")
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
 
     @property
@@ -148,6 +162,7 @@ class FOCRunnerConfig:
     use_decoupling_feedforward: bool = False
     enable_mtpa: bool = False
     enable_field_weakening: bool = False
+    enable_sensor_nonidealities: bool = False
 
     def __post_init__(self) -> None:
         if isinstance(self.pole_pairs, bool) or not isinstance(self.pole_pairs, int):
@@ -165,6 +180,8 @@ class FOCRunnerConfig:
             raise ValueError("enable_mtpa must be a bool")
         if not isinstance(self.enable_field_weakening, bool):
             raise ValueError("enable_field_weakening must be a bool")
+        if not isinstance(self.enable_sensor_nonidealities, bool):
+            raise ValueError("enable_sensor_nonidealities must be a bool")
 
 
 @dataclass(frozen=True)
@@ -184,6 +201,9 @@ class FOCSimulationResult:
     warning_messages: tuple[str, ...] = ()
     mtpa_active_count: int = 0
     field_weakening_active_count: int = 0
+    id_measured: tuple[float, ...] = ()
+    iq_measured: tuple[float, ...] = ()
+    speed_measured: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
@@ -201,6 +221,11 @@ class FOCSimulationResult:
             raise ValueError("FOC simulation histories must be non-empty and aligned")
         if any(not math.isfinite(value) for series in self.series for value in series):
             raise ValueError("FOC simulation histories must contain only finite values")
+        for series in self.measurement_series:
+            if series and len(series) != expected_length:
+                raise ValueError("FOC measurement histories must be aligned")
+            if any(not math.isfinite(value) for value in series):
+                raise ValueError("FOC measurement histories must contain finite values")
 
     @property
     def series(self) -> tuple[tuple[float, ...], ...]:
@@ -216,6 +241,10 @@ class FOCSimulationResult:
             self.speed,
         )
 
+    @property
+    def measurement_series(self) -> tuple[tuple[float, ...], ...]:
+        return (self.id_measured, self.iq_measured, self.speed_measured)
+
 
 class FOCRunner:
     """Connect transforms, dq PI control, voltage limiting, and PMSM plant."""
@@ -230,6 +259,7 @@ class FOCRunner:
         integrator: EulerIntegrator | RK4Integrator | None = None,
         mtpa_controller: MTPAController | None = None,
         field_weakening_controller: FieldWeakeningController | None = None,
+        sensor_suite: SensorSuite | None = None,
     ) -> None:
         if config.pole_pairs != motor_parameters.pole_pairs:
             raise ValueError("FOC and PMSM pole_pairs must match")
@@ -246,6 +276,10 @@ class FOCRunner:
                 raise ValueError(
                     "field weakening requires an enabled inverter voltage limit"
                 )
+        if config.enable_sensor_nonidealities and sensor_suite is None:
+            raise ValueError(
+                "sensor_suite is required when enable_sensor_nonidealities is true"
+            )
         self._controller = controller
         self._motor_parameters = motor_parameters
         self._config = config
@@ -254,6 +288,7 @@ class FOCRunner:
         self._integrator = integrator or RK4Integrator()
         self._mtpa_controller = mtpa_controller
         self._field_weakening_controller = field_weakening_controller
+        self._sensor_suite = sensor_suite
 
     def step(
         self,
@@ -279,21 +314,50 @@ class FOCRunner:
         if time_step_s <= 0.0:
             raise ValueError("time_step_s must be greater than zero")
 
-        abc_current = ABCPhaseValues(
+        true_abc_current = ABCPhaseValues(
             a=step_input.phase_current_a,
             b=step_input.phase_current_b,
             c=step_input.phase_current_c,
         )
-        alpha_beta_current = clarke_transform(abc_current)
-        theta_e_rad = electrical_angle(step_input.theta_m_rad, self._config.pole_pairs)
-        dq_current = park_transform(alpha_beta_current, theta_e_rad)
+        true_alpha_beta_current = clarke_transform(true_abc_current)
+        true_theta_e_rad = electrical_angle(
+            step_input.theta_m_rad,
+            self._config.pole_pairs,
+        )
+        true_dq_current = park_transform(true_alpha_beta_current, true_theta_e_rad)
+
+        sensor_measurements = None
+        if (
+            self._config.enable_sensor_nonidealities
+            and self._sensor_suite is not None
+            and self._sensor_suite.enabled
+        ):
+            sensor_measurements = self._sensor_suite.measure(
+                true_phase_currents=true_abc_current,
+                true_position_rad=step_input.theta_m_rad,
+                true_speed_rad_s=step_input.omega_m_rad_s,
+                pole_pairs=self._config.pole_pairs,
+            )
+            feedback_abc_current = sensor_measurements.measured_phase_currents
+            feedback_theta_e_rad = sensor_measurements.position.electrical_angle_rad
+            feedback_theta_m_rad = sensor_measurements.position.measured_value
+            feedback_speed_rad_s = sensor_measurements.speed.measured_value
+            sensor_warnings = sensor_measurements.warning_messages
+        else:
+            feedback_abc_current = true_abc_current
+            feedback_theta_e_rad = true_theta_e_rad
+            feedback_theta_m_rad = step_input.theta_m_rad
+            feedback_speed_rad_s = step_input.omega_m_rad_s
+            sensor_warnings = ()
+        feedback_alpha_beta_current = clarke_transform(feedback_abc_current)
+        dq_current = park_transform(feedback_alpha_beta_current, feedback_theta_e_rad)
 
         (
             effective_reference,
             mtpa_result,
             field_weakening_result,
             optimization_warnings,
-        ) = self._resolve_effective_reference(reference, step_input)
+        ) = self._resolve_effective_reference(reference, feedback_speed_rad_s)
 
         pi_voltage_command = self._controller.compute_voltage_command(
             id_ref=effective_reference.id_ref_a,
@@ -303,7 +367,7 @@ class FOCRunner:
             dt=time_step_s,
         )
         feedforward = compute_pmsm_dq_decoupling_feedforward(
-            omega_e_rad_s=self._config.pole_pairs * step_input.omega_m_rad_s,
+            omega_e_rad_s=self._config.pole_pairs * feedback_speed_rad_s,
             id_a=dq_current.d,
             iq_a=dq_current.q,
             motor_parameters=self._motor_parameters,
@@ -322,12 +386,16 @@ class FOCRunner:
             vd_actual_v = limit_result.vd_actual_v
             vq_actual_v = limit_result.vq_actual_v
             voltage_limited = limit_result.was_limited
-            warning_messages = optimization_warnings + limit_result.warning_messages
+            warning_messages = (
+                sensor_warnings
+                + optimization_warnings
+                + limit_result.warning_messages
+            )
         else:
             vd_actual_v = voltage_command.vd_command_v
             vq_actual_v = voltage_command.vq_command_v
             voltage_limited = False
-            warning_messages = optimization_warnings
+            warning_messages = sensor_warnings + optimization_warnings
 
         self._controller.track_applied_voltage(
             voltage_command,
@@ -336,8 +404,8 @@ class FOCRunner:
             time_step_s,
         )
         current_state = MotorState(
-            id=dq_current.d,
-            iq=dq_current.q,
+            id=true_dq_current.d,
+            iq=true_dq_current.q,
             omega_m=step_input.omega_m_rad_s,
             theta=step_input.theta_m_rad,
         )
@@ -388,6 +456,11 @@ class FOCRunner:
                     if field_weakening_result is not None
                     else None
                 ),
+                id_true_a=true_dq_current.d,
+                iq_true_a=true_dq_current.q,
+                theta_m_measured_rad=feedback_theta_m_rad,
+                omega_m_measured_rad_s=feedback_speed_rad_s,
+                sensor_measurements=sensor_measurements,
             ),
             next_state,
         )
@@ -395,7 +468,7 @@ class FOCRunner:
     def _resolve_effective_reference(
         self,
         reference: FOCReference,
-        step_input: FOCStepInput,
+        feedback_speed_rad_s: float,
     ) -> tuple[
         FOCReference,
         MTPACurrentReference | None,
@@ -428,13 +501,13 @@ class FOCRunner:
 
         if self._config.enable_field_weakening:
             voltage_estimate = self._field_weakening_controller.estimate_steady_state_voltage(
-                speed_rad_s=step_input.omega_m_rad_s,
+                speed_rad_s=feedback_speed_rad_s,
                 id_reference_a=id_reference,
                 iq_reference_a=iq_reference,
                 motor_parameters=self._motor_parameters,
             )
             weakening_result = self._field_weakening_controller.compute_weakening_command(
-                speed_rad_s=step_input.omega_m_rad_s,
+                speed_rad_s=feedback_speed_rad_s,
                 vd_command_v=voltage_estimate.vd_v,
                 vq_command_v=voltage_estimate.vq_v,
                 dc_bus_voltage_v=self._inverter_config.nominal_voltage_v,
@@ -497,8 +570,10 @@ def run_foc_current_control_simulation(
     torque_reference_profile: ScalarProfile | None = None,
     mtpa_current_limit_a: float | None = None,
     field_weakening_current_limit_a: float | None = None,
+    enable_sensor_nonidealities: bool = False,
+    sensor_suite: SensorSuite | None = None,
 ) -> FOCSimulationResult:
-    """Run minimal ideal-feedback dq current tracking through the FOC chain."""
+    """Run dq current tracking with optional measurement non-idealities."""
 
     _require_finite("simulation_time_s", simulation_time_s)
     if simulation_time_s <= 0.0:
@@ -545,11 +620,13 @@ def run_foc_current_control_simulation(
             use_decoupling_feedforward=use_decoupling_feedforward,
             enable_mtpa=enable_mtpa,
             enable_field_weakening=enable_field_weakening,
+            enable_sensor_nonidealities=enable_sensor_nonidealities,
         ),
         inverter_config=inverter_config,
         model=model,
         mtpa_controller=mtpa_controller,
         field_weakening_controller=field_weakening_controller,
+        sensor_suite=sensor_suite,
     )
 
     state = initial_state
@@ -563,6 +640,9 @@ def run_foc_current_control_simulation(
     vq_actual_values = [0.0]
     torque_values = [initial_torque]
     speed_values = [state.omega_m]
+    id_measured_values = [state.id]
+    iq_measured_values = [state.iq]
+    speed_measured_values = [state.omega_m]
     saturation_count = 0
     mtpa_active_count = 0
     field_weakening_active_count = 0
@@ -614,6 +694,9 @@ def run_foc_current_control_simulation(
         vq_actual_values.append(output.vq_actual_v)
         torque_values.append(output.torque_nm)
         speed_values.append(output.omega_m_rad_s)
+        id_measured_values.append(output.id_measured_a)
+        iq_measured_values.append(output.iq_measured_a)
+        speed_measured_values.append(output.omega_m_measured_rad_s)
         saturation_count += int(output.voltage_limited)
         mtpa_active_count += int(output.mtpa_method is not None)
         field_weakening_active_count += int(output.field_weakening_active)
@@ -633,6 +716,9 @@ def run_foc_current_control_simulation(
         warning_messages=tuple(dict.fromkeys(warning_messages)),
         mtpa_active_count=mtpa_active_count,
         field_weakening_active_count=field_weakening_active_count,
+        id_measured=tuple(id_measured_values),
+        iq_measured=tuple(iq_measured_values),
+        speed_measured=tuple(speed_measured_values),
     )
 
 

@@ -43,6 +43,25 @@ from .foc_runner import (
 from .integrators import DerivativeEvaluator, EulerIntegrator, RK4Integrator
 from .inverter import DCBusConfig, InverterVoltageLimiter, VoltageLimitResult
 from .pmsm_model import PMSMDynamicModel, PMSMDynamicParameters
+from .sensors import (
+    CurrentSensor,
+    CurrentSensorConfig,
+    PositionMeasurement,
+    PositionSensor,
+    PositionSensorConfig,
+    SensorMeasurement,
+    SensorSuite,
+    SensorSuiteConfig,
+    SensorSuiteMeasurement,
+    SpeedSensor,
+    SpeedSensorConfig,
+)
+from .sensor_experiments import (
+    CurrentSensorErrorExperimentResult,
+    RotorAngleErrorExperimentResult,
+    run_current_sensor_error_experiments,
+    run_rotor_angle_error_experiments,
+)
 from .simulation_results import SimulationConfidence, SimulationResult, SimulationStatus
 from .simulation_runner import InputProfile, SimulationRunner
 from .state import DQElectricalDerivatives, InputState, MotorState, StateDerivatives
@@ -122,6 +141,19 @@ __all__ = [
     "VoltageLimitResult",
     "CurrentControlSimulationRunner",
     "CurrentReferenceProfile",
+    "CurrentSensor",
+    "CurrentSensorConfig",
+    "CurrentSensorErrorExperimentResult",
+    "PositionMeasurement",
+    "PositionSensor",
+    "PositionSensorConfig",
+    "RotorAngleErrorExperimentResult",
+    "SensorMeasurement",
+    "SensorSuite",
+    "SensorSuiteConfig",
+    "SensorSuiteMeasurement",
+    "SpeedSensor",
+    "SpeedSensorConfig",
     "clarke_transform",
     "compute_pmsm_dq_decoupling_feedforward",
     "electrical_angle",
@@ -130,6 +162,8 @@ __all__ = [
     "park_transform",
     "run_user_simulation",
     "run_foc_current_control_simulation",
+    "run_current_sensor_error_experiments",
+    "run_rotor_angle_error_experiments",
     "run_speed_load_step_example",
     "run_speed_startup_example",
     "run_unreachable_speed_example",

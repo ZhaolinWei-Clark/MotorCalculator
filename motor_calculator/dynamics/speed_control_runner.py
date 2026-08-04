@@ -16,7 +16,16 @@ from .controllers import (
 from .integrators import EulerIntegrator, RK4Integrator
 from .inverter import DCBusConfig, InverterVoltageLimiter
 from .pmsm_model import PMSMDynamicModel, PMSMDynamicParameters
+from .sensors import SensorSuite
 from .state import InputState, MotorState, StateDerivatives
+from .transforms import (
+    DQValues,
+    clarke_transform,
+    electrical_angle,
+    inverse_clarke_transform,
+    inverse_park_transform,
+    park_transform,
+)
 
 
 ScalarProfile = float | Callable[[float], float]
@@ -36,6 +45,7 @@ class SpeedControlRunnerConfig:
     speed_control_period_s: float = 5.0e-3
     use_inverter_limit: bool = True
     use_decoupling_feedforward: bool = False
+    enable_sensor_nonidealities: bool = False
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -62,6 +72,8 @@ class SpeedControlRunnerConfig:
             raise TypeError("use_inverter_limit must be a bool")
         if not isinstance(self.use_decoupling_feedforward, bool):
             raise TypeError("use_decoupling_feedforward must be a bool")
+        if not isinstance(self.enable_sensor_nonidealities, bool):
+            raise TypeError("enable_sensor_nonidealities must be a bool")
 
     @staticmethod
     def _require_integer_ratio(period: float, base: float, name: str) -> None:
@@ -100,6 +112,9 @@ class SpeedControlSimulationResult:
     current_limit_count: int
     voltage_saturation_count: int
     warning_messages: tuple[str, ...] = ()
+    speed_measured: tuple[float, ...] = ()
+    id_measured: tuple[float, ...] = ()
+    iq_measured: tuple[float, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "warning_messages", tuple(self.warning_messages))
@@ -110,6 +125,11 @@ class SpeedControlSimulationResult:
             raise ValueError("speed-control histories must be aligned")
         if any(not math.isfinite(value) for series in self.numeric_series for value in series):
             raise ValueError("speed-control histories must contain finite values")
+        for series in self.measurement_series:
+            if series and len(series) != expected_length:
+                raise ValueError("speed-control measurement histories must be aligned")
+            if any(not math.isfinite(value) for value in series):
+                raise ValueError("speed-control measurement histories must be finite")
         for name, value in (
             ("current_limit_count", self.current_limit_count),
             ("voltage_saturation_count", self.voltage_saturation_count),
@@ -143,6 +163,10 @@ class SpeedControlSimulationResult:
             self.voltage_saturation_active,
         )
 
+    @property
+    def measurement_series(self) -> tuple[tuple[float, ...], ...]:
+        return (self.speed_measured, self.id_measured, self.iq_measured)
+
 
 class SpeedControlSimulationRunner:
     """Coordinate a slower speed PI around the existing fast dq current PI."""
@@ -156,6 +180,7 @@ class SpeedControlSimulationRunner:
         inverter_config: DCBusConfig | None = None,
         model: PMSMDynamicModel | None = None,
         integrator: EulerIntegrator | RK4Integrator | None = None,
+        sensor_suite: SensorSuite | None = None,
     ) -> None:
         self._speed_controller = speed_controller
         self._current_controller = current_controller
@@ -163,9 +188,14 @@ class SpeedControlSimulationRunner:
         self._config = config or SpeedControlRunnerConfig()
         if self._config.use_inverter_limit and inverter_config is None:
             raise ValueError("inverter_config is required when use_inverter_limit is true")
+        if self._config.enable_sensor_nonidealities and sensor_suite is None:
+            raise ValueError(
+                "sensor_suite is required when enable_sensor_nonidealities is true"
+            )
         self._inverter_config = inverter_config
         self._model = model or PMSMDynamicModel()
         self._integrator = integrator or RK4Integrator()
+        self._sensor_suite = sensor_suite
 
     def run(
         self,
@@ -189,10 +219,13 @@ class SpeedControlSimulationRunner:
         time_values = [0.0]
         speed_reference_values = [initial_speed_ref]
         speed_values = [state.omega_m]
+        speed_measured_values = [state.omega_m]
         id_ref_values = [self._speed_controller.config.default_id_ref_a]
         iq_ref_values = [0.0]
         id_values = [state.id]
         iq_values = [state.iq]
+        id_measured_values = [state.id]
+        iq_measured_values = [state.iq]
         vd_command_values = [0.0]
         vq_command_values = [0.0]
         vd_actual_values = [0.0]
@@ -211,6 +244,9 @@ class SpeedControlSimulationRunner:
         held_voltage_saturation = False
         held_voltage_command = DQVoltageCommand(0.0, 0.0)
         held_plant_input = InputState(Vd=0.0, Vq=0.0, load_torque=initial_load)
+        held_speed_measured = state.omega_m
+        held_id_measured = state.id
+        held_iq_measured = state.iq
 
         plant_step_count = math.ceil(
             simulation_time_s / self._config.plant_time_step_s
@@ -231,10 +267,49 @@ class SpeedControlSimulationRunner:
             load_torque = _resolve_profile(
                 load_torque_profile, current_time, "load_torque_profile"
             )
+            if (
+                step_index % self._config.current_steps == 0
+                or step_index % self._config.speed_steps == 0
+            ):
+                if (
+                    self._config.enable_sensor_nonidealities
+                    and self._sensor_suite is not None
+                    and self._sensor_suite.enabled
+                ):
+                    true_theta_e = electrical_angle(
+                        state.theta,
+                        self._motor_parameters.pole_pairs,
+                    )
+                    true_alpha_beta = inverse_park_transform(
+                        DQValues(d=state.id, q=state.iq),
+                        true_theta_e,
+                    )
+                    true_abc = inverse_clarke_transform(true_alpha_beta)
+                    measurements = self._sensor_suite.measure(
+                        true_phase_currents=true_abc,
+                        true_position_rad=state.theta,
+                        true_speed_rad_s=state.omega_m,
+                        pole_pairs=self._motor_parameters.pole_pairs,
+                    )
+                    measured_alpha_beta = clarke_transform(
+                        measurements.measured_phase_currents
+                    )
+                    measured_dq = park_transform(
+                        measured_alpha_beta,
+                        measurements.position.electrical_angle_rad,
+                    )
+                    held_id_measured = measured_dq.d
+                    held_iq_measured = measured_dq.q
+                    held_speed_measured = measurements.speed.measured_value
+                    warnings.extend(measurements.warning_messages)
+                else:
+                    held_id_measured = state.id
+                    held_iq_measured = state.iq
+                    held_speed_measured = state.omega_m
             if step_index % self._config.speed_steps == 0:
                 speed_output = self._speed_controller.update(
                     omega_ref_rad_s=speed_reference,
-                    omega_measured_rad_s=state.omega_m,
+                    omega_measured_rad_s=held_speed_measured,
                     dt=self._config.speed_control_period_s,
                 )
                 held_id_ref = speed_output.id_ref_a
@@ -250,14 +325,16 @@ class SpeedControlSimulationRunner:
                 pi_command = self._current_controller.compute_voltage_command(
                     id_ref=held_id_ref,
                     iq_ref=held_iq_ref,
-                    id_actual=state.id,
-                    iq_actual=state.iq,
+                    id_actual=held_id_measured,
+                    iq_actual=held_iq_measured,
                     dt=self._config.current_control_period_s,
                 )
                 feedforward = compute_pmsm_dq_decoupling_feedforward(
-                    omega_e_rad_s=self._motor_parameters.pole_pairs * state.omega_m,
-                    id_a=state.id,
-                    iq_a=state.iq,
+                    omega_e_rad_s=(
+                        self._motor_parameters.pole_pairs * held_speed_measured
+                    ),
+                    id_a=held_id_measured,
+                    iq_a=held_iq_measured,
                     motor_parameters=self._motor_parameters,
                     enabled=self._config.use_decoupling_feedforward,
                 )
@@ -311,10 +388,13 @@ class SpeedControlSimulationRunner:
             time_values.append(next_time)
             speed_reference_values.append(speed_reference)
             speed_values.append(state.omega_m)
+            speed_measured_values.append(held_speed_measured)
             id_ref_values.append(held_id_ref)
             iq_ref_values.append(held_iq_ref)
             id_values.append(state.id)
             iq_values.append(state.iq)
+            id_measured_values.append(held_id_measured)
+            iq_measured_values.append(held_iq_measured)
             vd_command_values.append(held_voltage_command.vd_command_v)
             vq_command_values.append(held_voltage_command.vq_command_v)
             vd_actual_values.append(held_plant_input.Vd)
@@ -343,6 +423,9 @@ class SpeedControlSimulationRunner:
             current_limit_count=current_limit_count,
             voltage_saturation_count=voltage_saturation_count,
             warning_messages=tuple(dict.fromkeys(warnings)),
+            speed_measured=tuple(speed_measured_values),
+            id_measured=tuple(id_measured_values),
+            iq_measured=tuple(iq_measured_values),
         )
 
 
