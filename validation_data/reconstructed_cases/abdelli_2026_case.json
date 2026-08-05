@@ -1,0 +1,78 @@
+{
+  "case_id": "abdelli_2026_reconstructed_afpm",
+  "source_id": "abdelli_2026_dssr_afpm",
+  "source_title": "Design and Manufacturing of Axial Flux Permanent Magnet Machines for Electric Vehicle Applications",
+  "source_url": "https://doi.org/10.2516/stet/2026004",
+  "topology": "double-stator/single-rotor slotted AFPM; 18 slots; 12 poles",
+  "notes": "Modern measured curves and substantial geometry are available, but scalar measured values are not tabulated and the DSSR open-slot tooth-coil machine is not representable by the default SSDR schema. Prototype turns differ from the initial design table.",
+  "fields": {
+    "mechanical_speed_rpm_validation": {
+      "status": "source_provided", "value": 1000.0, "unit": "rpm",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 6", "location": "Figures 10-12", "note": "Back-EMF and torque validation plots use 1000 rpm."}
+    },
+    "pole_pairs": {
+      "status": "safely_derived", "value": 6, "unit": null, "derivation": "12 poles / 2",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 3", "location": "Table 2", "note": "Pole count is explicit."}
+    },
+    "outer_diameter_m": {
+      "status": "source_provided", "value": 0.245, "unit": "m",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article pp. 2-3", "location": "Tables 1-2", "note": "Active outer diameter."}
+    },
+    "inner_diameter_m": {
+      "status": "source_provided", "value": 0.14, "unit": "m",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 2", "location": "Table 1", "note": "Active inner diameter."}
+    },
+    "air_gap_m": {
+      "status": "source_provided", "value": 0.001, "unit": "m",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 3", "location": "Table 2", "note": "Source air gap; DSSR side semantics must remain topology-specific."}
+    },
+    "magnet_thickness_m": {
+      "status": "source_provided", "value": 0.01, "unit": "m",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 3", "location": "Table 2", "note": "Magnet thickness."}
+    },
+    "magnet_fill_factor": {
+      "status": "source_provided", "value": 0.67, "unit": null,
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 3", "location": "Table 2", "note": "Kept in source terminology; not assumed equal to production pole_arc_coefficient."}
+    },
+    "pole_arc_coefficient": {
+      "status": "ambiguous", "value": 0.67, "unit": null,
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 3", "location": "Table 2", "note": "Magnet fill factor lacks an approved semantic bridge to production pole_arc_coefficient."}
+    },
+    "design_turns_per_winding": {
+      "status": "source_provided", "value": 27, "unit": "turn",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 3", "location": "Table 2", "note": "Initial design value, not the manufactured winding."}
+    },
+    "prototype_turns_per_coil": {
+      "status": "source_provided", "value": 48, "unit": "turn",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 5", "location": "prototype manufacturing description", "note": "Manufactured coil value; phase series/parallel mapping remains incomplete."}
+    },
+    "turns_per_phase": {
+      "status": "ambiguous", "value": null, "unit": "turn",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article pp. 3 and 5", "location": "Table 2 and prototype description", "note": "Design/prototype distinction and coil interconnection prevent a source-equivalent phase value."}
+    },
+    "remanence_t": {
+      "status": "unavailable", "value": null, "unit": "T",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "accessible article", "location": "no numeric Br located", "note": "No value is inferred from generic magnet type."}
+    },
+    "winding_connection": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "accessible article", "location": "terminal semantics not explicit", "note": "No Y/Delta mapping is assumed."}
+    },
+    "winding_factor": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "accessible article", "location": "not reported", "note": "Tooth-coil geometry is not replaced by a project default."}
+    },
+    "leakage_factor": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "accessible article", "location": "not reported as production scalar", "note": "FEA treatment is not mapped to a scalar leakage factor."}
+    },
+    "back_emf_numeric_v": {
+      "status": "unavailable", "value": null, "unit": "V",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 6", "location": "Figures 10-11", "note": "Curves are visible but no authoritative scalar is tabulated; no digitization is used."}
+    },
+    "torque_numeric_nm": {
+      "status": "unavailable", "value": null, "unit": "Nm",
+      "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 6", "location": "Figure 12", "note": "Torque-current sweep is graph-only; no point is digitized."}
+    }
+  }
+}

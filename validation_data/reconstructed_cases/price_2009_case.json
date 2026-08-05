@@ -1,0 +1,86 @@
+{
+  "case_id": "price_2009_reconstructed_afpm",
+  "source_id": "price_2009_coreless_afpm_generator",
+  "source_title": "Design and Testing of a Permanent Magnet Axial Flux Wind Power Generator",
+  "source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf",
+  "topology": "dual-rotor/single-coreless-stator AFPM; 9 coils; Y-connected",
+  "notes": "The current and shaft-torque semantics were recovered from the full article. A production back-EMF prediction remains impossible without Br, pole-pair count, leakage factor, winding factor, and a compatible pole-arc representation.",
+  "fields": {
+    "mechanical_speed_rpm_back_emf": {
+      "status": "source_provided", "value": 600.0, "unit": "rpm",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 65", "location": "Figure 12 caption and text", "note": "No-load single-phase back-EMF operating speed."}
+    },
+    "mechanical_speed_rpm_torque": {
+      "status": "source_provided", "value": 500.0, "unit": "rpm",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 65", "location": "torque paragraph", "note": "Measured average shaft torque operating speed."}
+    },
+    "outer_diameter_m": {
+      "status": "safely_derived", "value": 0.3048, "unit": "m", "derivation": "outer diameter = 2 * source outer radius 0.1524 m",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "Table 1, r_o", "note": "Diameter conversion does not change geometry semantics."}
+    },
+    "inner_diameter_m": {
+      "status": "safely_derived", "value": 0.2032, "unit": "m", "derivation": "inner diameter = 2 * source inner radius 0.1016 m",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "Table 1, r_i", "note": "Diameter conversion does not change geometry semantics."}
+    },
+    "magnet_thickness_m": {
+      "status": "source_provided", "value": 0.0127, "unit": "m",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "Table 1, l_m", "note": "Permanent-magnet axial length."}
+    },
+    "effective_air_gap_length_m": {
+      "status": "source_provided", "value": 0.01905, "unit": "m",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "Table 1, l_g", "note": "Paper defines an effective magnetic gap; it is not mapped to project air_gap_per_side_m."}
+    },
+    "air_gap_per_side_m": {
+      "status": "ambiguous", "value": null, "unit": "m",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "Table 1 and design text", "note": "The effective l_g quantity is not an explicit physical per-side gap."}
+    },
+    "turns_per_coil": {
+      "status": "source_provided", "value": 36, "unit": "turn",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "design paragraph", "note": "Nine identical coils, each with 36 series turns."}
+    },
+    "turns_per_phase": {
+      "status": "safely_derived", "value": 108, "unit": "turn", "derivation": "3 series coils per phase * 36 turns per coil",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "design paragraph", "note": "Both factors and series connection are explicit."}
+    },
+    "winding_connection": {
+      "status": "source_provided", "value": "Y", "unit": null,
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 62", "location": "design paragraph", "note": "Phases are explicitly Y-connected."}
+    },
+    "phase_current_rms_a": {
+      "status": "source_provided", "value": 10.0, "unit": "A phase RMS",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 62-63", "location": "rated-current description and under-load analysis", "note": "Each coil is rated approximately 10 Arms; under-load analysis applies 10 Arms in phase A and -5 A in the other phases."}
+    },
+    "average_shaft_torque_nm": {
+      "status": "source_provided", "value": 12.6, "unit": "Nm",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 65", "location": "torque paragraph", "note": "Boundary is explicitly measured average shaft torque, not electromagnetic torque."}
+    },
+    "back_emf_phase_peak_v": {
+      "status": "source_provided", "value": 37.0, "unit": "V phase peak",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 65", "location": "Figure 12 and adjacent text", "note": "Measured single-phase no-load sinusoidal back-EMF peak."}
+    },
+    "pole_pairs": {
+      "status": "ambiguous", "value": null, "unit": null,
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "figures only", "note": "Pole count is visually inferable but not accepted as a tabulated source value."}
+    },
+    "remanence_t": {
+      "status": "unavailable", "value": null, "unit": "T",
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not reported", "note": "NdFeB is stated, but grade and Br are absent."}
+    },
+    "magnet_relative_permeability": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not reported", "note": "No permeability value is provided."}
+    },
+    "pole_arc_coefficient": {
+      "status": "ambiguous", "value": null, "unit": null,
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 62-63", "location": "Table 1 and Figures 5-7", "note": "Rectangular magnet width relative to pole pitch varies with radius; one scalar is not source-equivalent."}
+    },
+    "leakage_factor": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not reported", "note": "The paper uses a radial-slice field solution rather than the production scalar factor."}
+    },
+    "winding_factor": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not reported", "note": "Coil geometry is explicit, but no source-equivalent scalar winding factor is provided."}
+    }
+  }
+}

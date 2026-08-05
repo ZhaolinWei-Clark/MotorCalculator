@@ -1,0 +1,102 @@
+{
+  "case_id": "hosseini_2008_reconstructed_afpm",
+  "source_id": "hosseini_2008_coreless_afpm_generator",
+  "source_title": "Design, Prototyping and Analysis of a Low-Cost Disk Permanent Magnet Generator with Rectangular Flat-Shaped Magnets",
+  "source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf",
+  "topology": "dual-rotor/single-coreless-stator AFPM; 24 poles; 18 single-layer coils",
+  "notes": "Geometry and magnet material are strong, but conductors-per-coil is not turns-per-phase, series/parallel winding connection is absent, and the measured waveform is harmonic. Axis reactances can be converted to axis inductances without collapsing them to production scalar inductance.",
+  "fields": {
+    "mechanical_speed_rpm": {
+      "status": "source_provided", "value": 3000.0, "unit": "rpm",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Design speed."}
+    },
+    "pole_pairs": {
+      "status": "source_provided", "value": 12, "unit": null,
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Number of pole pairs."}
+    },
+    "outer_diameter_m": {
+      "status": "safely_derived", "value": 0.12, "unit": "m", "derivation": "outer diameter = 2 * 60 mm outer radius",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Exact radius-to-diameter SI conversion."}
+    },
+    "inner_diameter_m": {
+      "status": "safely_derived", "value": 0.07, "unit": "m", "derivation": "inner diameter = 2 * 35 mm inner radius",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Exact radius-to-diameter SI conversion."}
+    },
+    "air_gap_per_side_m": {
+      "status": "source_provided", "value": 0.001, "unit": "m",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Air-gap distance on one side."}
+    },
+    "coil_height_m": {
+      "status": "source_provided", "value": 0.008, "unit": "m",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Thickness of stator winding."}
+    },
+    "magnet_thickness_m": {
+      "status": "source_provided", "value": 0.003, "unit": "m",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Third dimension of 25 x 10 x 3 mm magnet."}
+    },
+    "remanence_t": {
+      "status": "source_provided", "value": 1.2, "unit": "T",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Br."}
+    },
+    "magnet_relative_permeability": {
+      "status": "source_provided", "value": 1.045, "unit": null,
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "Recoil relative permeability."}
+    },
+    "conductors_per_coil": {
+      "status": "source_provided", "value": 50, "unit": "conductor",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "This is not silently interpreted as turns."}
+    },
+    "turns_per_phase": {
+      "status": "ambiguous", "value": null, "unit": "turn",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 197-198", "location": "Table 1 and Figure 6", "note": "Coils per phase can be counted, but turns and series/parallel interconnection are not explicit."}
+    },
+    "winding_connection": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-203", "location": "not reported", "note": "No Y/Delta or series/parallel terminal connection was located."}
+    },
+    "pole_arc_coefficient": {
+      "status": "ambiguous", "value": null, "unit": null,
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1 and rectangular magnet geometry", "note": "A rectangular 10 mm tangential width creates a radius-dependent arc ratio, not one source scalar."}
+    },
+    "leakage_factor": {
+      "status": "ambiguous", "value": 1.5, "unit": null,
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1, k_fb", "note": "The paper does not establish semantic identity between k_fb and production leakage_factor."}
+    },
+    "winding_factor": {
+      "status": "unavailable", "value": null, "unit": null,
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-203", "location": "not reported", "note": "No scalar winding factor is given."}
+    },
+    "back_emf_no_load_peak_to_peak_v": {
+      "status": "source_provided", "value": 160.0, "unit": "V phase peak-to-peak",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 201", "location": "Table 3", "note": "No-load output phase voltage; waveform contains harmonics."}
+    },
+    "output_voltage_fundamental_peak_to_peak_v": {
+      "status": "source_provided", "value": 102.0, "unit": "V phase peak-to-peak",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 201", "location": "Table 3", "note": "Fundamental component of loaded output waveform, not no-load back-EMF."}
+    },
+    "electrical_frequency_hz": {
+      "status": "source_provided", "value": 300.0, "unit": "Hz",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 202", "location": "Table 4", "note": "Nominal electrical frequency."}
+    },
+    "Xsd_ohm": {
+      "status": "source_provided", "value": 2.1, "unit": "ohm",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 202", "location": "Table 4", "note": "Measured/experimental d-axis synchronous reactance."}
+    },
+    "Xsq_ohm": {
+      "status": "source_provided", "value": 2.1, "unit": "ohm",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 202", "location": "Table 4", "note": "Measured/experimental q-axis synchronous reactance."}
+    },
+    "Ld_from_Xsd_h": {
+      "status": "safely_derived", "value": 0.0011140846016432675, "unit": "H", "derivation": "Ld = Xsd / (2*pi*f) = 2.1 / (2*pi*300); remains d-axis only",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 202", "location": "Table 4", "note": "Safe axis-preserving unit transformation; not scalar phase inductance."}
+    },
+    "Lq_from_Xsq_h": {
+      "status": "safely_derived", "value": 0.0011140846016432675, "unit": "H", "derivation": "Lq = Xsq / (2*pi*f) = 2.1 / (2*pi*300); remains q-axis only",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 202", "location": "Table 4", "note": "Safe axis-preserving unit transformation; not scalar phase inductance."}
+    },
+    "phase_current_a": {
+      "status": "ambiguous", "value": 3.6, "unit": "A",
+      "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 202", "location": "Table 4", "note": "Phase current is reported without RMS/peak basis."}
+    }
+  }
+}
