@@ -47,8 +47,10 @@ def test_missing_inputs_stay_missing_without_production_defaults() -> None:
     abdelli = cases["abdelli_2026_dssr_afpm"]
 
     assert price.remanence_t is None
-    assert price.geometry.pole_pairs is None
+    assert price.geometry.pole_pairs == 6
     assert price.geometry.magnet_arc_ratio is None
+    assert price.geometry.radius_dependent_magnet_profile is not None
+    assert price.recovered_fields["pole_pairs"].status.value == "safely_derived"
     assert hosseini.winding.turns_per_phase is None
     assert hosseini.winding.connection is None
     assert abdelli.winding.turns_per_phase is None

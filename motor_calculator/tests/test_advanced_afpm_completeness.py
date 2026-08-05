@@ -36,9 +36,11 @@ def test_back_emf_completeness_is_blocked_with_exact_missing_fields() -> None:
 
     assert all(result.status is CompletenessStatus.BLOCKED for result in results.values())
     assert "geometry.magnet_coverage" in results["parviainen_2005_afpm_prototype"].missing_fields
-    assert "winding.turns_per_phase" in results["hosseini_2008_coreless_afpm_generator"].missing_fields
+    assert "winding_network.effective_series_turns_per_phase" in results["hosseini_2008_coreless_afpm_generator"].missing_fields
     assert "material.remanence_t" in results["price_2009_coreless_afpm_generator"].missing_fields
     assert "back_emf.external_reference" in results["abdelli_2026_dssr_afpm"].missing_fields
+    assert "geometry.pole_pairs" not in results["price_2009_coreless_afpm_generator"].missing_fields
+    assert "geometry.magnet_coverage" not in results["price_2009_coreless_afpm_generator"].missing_fields
 
 
 def test_non_back_emf_metrics_report_partial_or_blocked_without_claiming_physics() -> None:

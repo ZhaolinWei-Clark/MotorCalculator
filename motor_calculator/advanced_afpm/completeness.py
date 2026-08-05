@@ -75,6 +75,17 @@ class AFPMCompletenessGate:
 
     @staticmethod
     def _back_emf(case: AdvancedAFPMCase) -> CompletenessResult:
+        network = case.winding_network
+        effective_turns = (
+            network.effective_series_turns_per_phase
+            if network is not None
+            else case.winding.turns_per_phase
+        )
+        winding_factor = (
+            network.resolve_winding_factor().value
+            if network is not None
+            else case.winding.winding_factor
+        )
         checks = {
             "topology": case.topology.topology_type is not AFPMTopologyType.UNKNOWN,
             "geometry.inner_radius_m": case.geometry.inner_radius_m is not None,
@@ -88,8 +99,8 @@ class AFPMCompletenessGate:
             ),
             "material.remanence_t": case.remanence_t is not None,
             "material.magnet_relative_permeability": case.magnet_relative_permeability is not None,
-            "winding.turns_per_phase": case.winding.turns_per_phase is not None,
-            "winding.winding_factor": case.winding.winding_factor is not None,
+            "winding_network.effective_series_turns_per_phase": effective_turns is not None,
+            "winding_network.winding_factor": winding_factor is not None,
             "back_emf.semantics": case.back_emf_semantics is not None,
             "back_emf.external_reference": (
                 case.back_emf_reference_field is not None
@@ -97,6 +108,10 @@ class AFPMCompletenessGate:
                 and case.source_field(case.back_emf_reference_field).is_usable
             ),
         }
+        if case.topology.topology_type is AFPMTopologyType.DSSR:
+            checks["winding_network.stator_connection"] = (
+                network is not None and network.stator_connection.value in {"series", "parallel"}
+            )
         missing = tuple(name for name, present in checks.items() if not present)
         available = tuple(name for name, present in checks.items() if present)
         return CompletenessResult(

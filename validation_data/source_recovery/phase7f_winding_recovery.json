@@ -1,0 +1,196 @@
+{
+  "phase": "7F",
+  "purpose": "Winding-network and Price geometry recovery without modifying Phase 7C source records",
+  "sources": {
+    "price_2009_coreless_afpm_generator": {
+      "fields": {
+        "pole_pairs": {
+          "status": "safely_derived", "value": 6, "unit": null,
+          "derivation": "9 coils / 3 coils per repeated group * 4 poles per group = 12 poles; pole_pairs = 12 / 2",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "winding paragraph and Figure 2", "note": "The text states nine total coils and that three coils occupy the same circumferential area as four PM poles."}
+        },
+        "turns_per_coil": {
+          "status": "source_provided", "value": 36, "unit": "turn",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "winding paragraph", "note": "Nine identical coils with 36 series turns each."}
+        },
+        "coils_per_phase": {
+          "status": "source_provided", "value": 3, "unit": "coil",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "winding paragraph", "note": "Three series coils per phase."}
+        },
+        "series_coils_per_branch": {
+          "status": "source_provided", "value": 3, "unit": "coil",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "winding paragraph", "note": "All three coils in each phase are explicitly series-connected."}
+        },
+        "parallel_branches": {
+          "status": "safely_derived", "value": 1, "unit": "branch",
+          "derivation": "3 total coils per phase / 3 series coils per branch = 1 branch",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "winding paragraph", "note": "No parallel turn multiplier is introduced."}
+        },
+        "number_of_stators": {
+          "status": "source_provided", "value": 1, "unit": "stator",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 60-61", "location": "topology description and Figures 1-2", "note": "Two rotors and one ironless stator."}
+        },
+        "stator_connection": {
+          "status": "source_provided", "value": "independent", "unit": null,
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 60-63", "location": "single-stator topology", "note": "A one-stator machine requires no inter-stator voltage aggregation."}
+        },
+        "phase_connection": {
+          "status": "source_provided", "value": "Y", "unit": null,
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "winding paragraph", "note": "Phases are explicitly connected in Y."}
+        },
+        "winding_type": {
+          "status": "source_provided", "value": "concentrated", "unit": null,
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "winding paragraph", "note": "Short-pitch concentrated coils."}
+        },
+        "winding_factor": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not numerically reported", "note": "Short-pitch geometry alone is not converted into kw."}
+        },
+        "pitch_factor": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not numerically reported", "note": "Exact electrical coil pitch required for kp is not tabulated."}
+        },
+        "distribution_factor": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not numerically reported", "note": "No scalar kd is reported."}
+        },
+        "magnet_inner_width_m": {
+          "status": "source_provided", "value": 0.0254, "unit": "m",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "Table 1, wi", "note": "Inner magnet width."}
+        },
+        "magnet_outer_width_m": {
+          "status": "source_provided", "value": 0.0254, "unit": "m",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article p. 63", "location": "Table 1, wo", "note": "Outer magnet width."}
+        },
+        "remanence_t": {
+          "status": "unavailable", "value": null, "unit": "T",
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not reported", "note": "NdFeB is named, but no grade or numeric Br is provided."}
+        },
+        "magnet_relative_permeability": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://ijme.us/issues/spring2009/ijme_sp_09.pdf", "page": "article pp. 59-66", "location": "not reported", "note": "Equation symbols do not provide a prototype numeric permeability."}
+        }
+      }
+    },
+    "parviainen_2005_afpm_prototype": {
+      "fields": {
+        "turns_per_coil": {
+          "status": "source_provided", "value": 140, "unit": "turn",
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation p. 74", "location": "prototype winding paragraph", "note": "Each phase coil includes 140 turns."}
+        },
+        "coils_per_phase": {
+          "status": "safely_derived", "value": 6, "unit": "coil per stator phase",
+          "derivation": "840 series phase turns / 140 turns per coil = 6 coils per stator phase",
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation pp. 73-74", "location": "Table 3.1 and winding paragraph", "note": "The source also states one coil per pole per phase with six pole pairs."}
+        },
+        "series_coils_per_branch": {
+          "status": "safely_derived", "value": 6, "unit": "coil",
+          "derivation": "The six 140-turn coils form the reported 840 series turns per stator phase",
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation pp. 73-74", "location": "Table 3.1 and winding paragraph", "note": "Series phase-turn semantics are explicit."}
+        },
+        "parallel_branches": {
+          "status": "safely_derived", "value": 1, "unit": "branch per stator",
+          "derivation": "6 total coils per stator phase / 6 series coils per branch = 1 branch",
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation pp. 73-74", "location": "prototype winding description", "note": "Inter-stator parallel connection remains separate from within-stator branches."}
+        },
+        "number_of_stators": {
+          "status": "source_provided", "value": 2, "unit": "stator",
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation pp. 73-75", "location": "prototype topology", "note": "One rotor, two stators."}
+        },
+        "stator_connection": {
+          "status": "source_provided", "value": "parallel", "unit": null,
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation pp. 73-75", "location": "prototype connection description", "note": "The default test configuration uses electrically parallel stators."}
+        },
+        "phase_connection": {
+          "status": "source_provided", "value": "Y", "unit": null,
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation pp. 73-75", "location": "prototype connection description", "note": "The machine is designed for star connection."}
+        },
+        "winding_type": {
+          "status": "source_provided", "value": "distributed", "unit": null,
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation p. 74", "location": "prototype construction", "note": "Conventional double-layer lap winding."}
+        },
+        "winding_factor": {
+          "status": "ambiguous", "value": null, "unit": null,
+          "provenance": {"source_url": "https://urn.fi/URN:ISBN:952-214-030-9", "page": "dissertation pp. 46-47 and 74", "location": "Eq. 2.23 and prototype description", "note": "Eq. 2.23 requires exact coil span wc; the prototype section does not tabulate a source-equivalent numeric kw."}
+        }
+      }
+    },
+    "hosseini_2008_coreless_afpm_generator": {
+      "fields": {
+        "coils_per_phase": {
+          "status": "safely_derived", "value": 6, "unit": "coil",
+          "derivation": "18 single-layer coils / 3 explicitly reported phases = 6 coils per phase",
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 192 and 197", "location": "winding description and Table 1", "note": "This does not determine series/parallel connection or turns."}
+        },
+        "number_of_stators": {
+          "status": "source_provided", "value": 1, "unit": "stator",
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-193", "location": "machine topology", "note": "One coreless stator between two rotors."}
+        },
+        "stator_connection": {
+          "status": "source_provided", "value": "independent", "unit": null,
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-193", "location": "single-stator topology", "note": "No inter-stator aggregation exists."}
+        },
+        "winding_type_description": {
+          "status": "source_provided", "value": "single-layer trapezoidal three-phase winding", "unit": null,
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 192", "location": "winding description and Figure 3", "note": "The paper does not classify it with a source scalar winding factor."}
+        },
+        "turns_per_coil": {
+          "status": "ambiguous", "value": null, "unit": "turn",
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article p. 197", "location": "Table 1", "note": "50 conductors per coil is not silently divided or equated to turns."}
+        },
+        "series_coils_per_branch": {
+          "status": "unavailable", "value": null, "unit": "coil",
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-203", "location": "not reported", "note": "Phase coil interconnection remains unknown."}
+        },
+        "parallel_branches": {
+          "status": "unavailable", "value": null, "unit": "branch",
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-203", "location": "not reported", "note": "The symbol ap is defined but no prototype value is reported."}
+        },
+        "phase_connection": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-203", "location": "not reported", "note": "No Y/Delta connection is inferred."}
+        },
+        "winding_factor": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://dl.icdst.org/pdfs/files3/4c8ab132b2439e719f68989a63c59837.pdf", "page": "article pp. 191-203", "location": "not numerically reported", "note": "The symbol xi is defined but no prototype scalar value is reported."}
+        }
+      }
+    },
+    "abdelli_2026_dssr_afpm": {
+      "fields": {
+        "turns_per_coil": {
+          "status": "source_provided", "value": 48, "unit": "turn",
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 5", "location": "prototype manufacturing description", "note": "Manufactured prototype coil value, distinct from the 27-turn design value."}
+        },
+        "parallel_branches": {
+          "status": "source_provided", "value": 3, "unit": "parallel coil grouping",
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article p. 3", "location": "Table 2", "note": "Kept as reported; insufficient alone to derive phase series turns."}
+        },
+        "number_of_stators": {
+          "status": "source_provided", "value": 2, "unit": "stator",
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article pp. 1-3", "location": "DSSR topology", "note": "Double-stator/single-rotor machine."}
+        },
+        "winding_type": {
+          "status": "source_provided", "value": "concentrated", "unit": null,
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article pp. 2-3", "location": "18-slot tooth-coil winding", "note": "Open-slot tooth coils are represented as concentrated winding."}
+        },
+        "series_coils_per_branch": {
+          "status": "ambiguous", "value": null, "unit": "coil",
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "article pp. 3 and 5", "location": "design table and prototype description", "note": "Design/prototype and phase grouping are insufficient for a safe series count."}
+        },
+        "stator_connection": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "accessible article", "location": "not explicit", "note": "No inter-stator series/parallel assumption is made."}
+        },
+        "phase_connection": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "accessible article", "location": "not explicit", "note": "No Y/Delta assumption is made."}
+        },
+        "winding_factor": {
+          "status": "unavailable", "value": null, "unit": null,
+          "provenance": {"source_url": "https://doi.org/10.2516/stet/2026004", "page": "accessible article", "location": "not numerically reported", "note": "Tooth-coil geometry is not replaced by a generic concentrated-winding kw."}
+        }
+      }
+    }
+  }
+}

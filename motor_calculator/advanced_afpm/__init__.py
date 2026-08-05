@@ -29,6 +29,14 @@ from .source_adapter import (
 from .topology import AFPMTopology, AFPMTopologyType
 from .torque_semantics import TorqueBoundary, TorqueSemantics
 from .winding import AFPMWinding, WindingType
+from .winding_network import (
+    AFPMWindingNetwork,
+    PhaseConnection,
+    StatorConnection,
+    StatorEMFCombination,
+    WindingFactorMethod,
+    WindingFactorResolution,
+)
 
 __all__ = [
     "AFPMComparabilityPlanner",
@@ -41,6 +49,7 @@ __all__ = [
     "AFPMTopology",
     "AFPMTopologyType",
     "AFPMWinding",
+    "AFPMWindingNetwork",
     "AdvancedAFPMCase",
     "BackEMFScope",
     "BackEMFSemantics",
@@ -51,14 +60,19 @@ __all__ = [
     "CompletenessStatus",
     "ConvergencePoint",
     "MeanRadiusBackEMFResult",
+    "PhaseConnection",
     "RadialMagnetSample",
     "RadialSliceBackEMFModel",
     "RadialSliceBackEMFResult",
     "RadialSliceInputError",
     "TorqueBoundary",
     "TorqueSemantics",
+    "StatorConnection",
+    "StatorEMFCombination",
     "WaveformFamily",
     "WindingType",
+    "WindingFactorMethod",
+    "WindingFactorResolution",
     "adapt_reconstructed_case",
     "build_synthetic_radial_reference_case",
     "convergence_study",

@@ -9,6 +9,7 @@ import pytest
 from advanced_afpm import (
     AFPMTopology,
     AFPMTopologyType,
+    StatorConnection,
     RadialSliceBackEMFModel,
     RadialSliceInputError,
     build_synthetic_radial_reference_case,
@@ -63,10 +64,16 @@ def test_dssr_series_and_parallel_stator_voltage_aggregation_is_explicit() -> No
         topology=topology,
         geometry=geometry,
         winding=replace(base.winding, stator_interconnection="two stators electrically parallel"),
+        winding_network=replace(
+            base.winding_network,
+            number_of_stators=2,
+            stator_connection=StatorConnection.PARALLEL,
+        ),
     )
     series = replace(
         parallel,
         winding=replace(parallel.winding, stator_interconnection="two stators electrically series"),
+        winding_network=replace(parallel.winding_network, stator_connection=StatorConnection.SERIES),
     )
     model = RadialSliceBackEMFModel()
 
@@ -86,7 +93,8 @@ def test_external_case_with_missing_fields_is_rejected_not_filled() -> None:
         RadialSliceBackEMFModel().compute(price)
 
     assert "material.remanence_t" in exc_info.value.missing_fields
-    assert "geometry.pole_pairs" in exc_info.value.missing_fields
+    assert "material.magnet_relative_permeability" in exc_info.value.missing_fields
+    assert "winding_network.winding_factor" in exc_info.value.missing_fields
 
 
 def test_radial_sandbox_does_not_modify_production_or_legacy_baseline() -> None:

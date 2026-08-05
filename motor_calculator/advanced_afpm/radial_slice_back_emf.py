@@ -12,6 +12,7 @@ from .source_adapter import AdvancedAFPMCase
 from .topology import AFPMTopology, AFPMTopologyType
 from .torque_semantics import TorqueBoundary, TorqueSemantics
 from .winding import AFPMWinding, WindingType
+from .winding_network import AFPMWindingNetwork, PhaseConnection, StatorConnection
 
 
 class RadialSliceInputError(ValueError):
@@ -37,6 +38,10 @@ class RadialSliceBackEMFResult:
     electrical_frequency_hz: float
     phase_fundamental_rms_v: float
     voltage_aggregation_multiplier: float
+    effective_series_turns_per_phase: int
+    winding_factor: float
+    winding_factor_method: str
+    stator_connection: str
     contributions: tuple[RadialSliceContribution, ...]
     assumptions: tuple[str, ...]
 
@@ -56,8 +61,33 @@ class ConvergencePoint:
     relative_difference_from_previous_percent: float | None
 
 
-def _missing_solver_fields(case: AdvancedAFPMCase) -> tuple[str, ...]:
+def _network_values(
+    case: AdvancedAFPMCase,
+    explicit_network: AFPMWindingNetwork | None,
+) -> tuple[AFPMWindingNetwork | None, int | None, float | None, str]:
+    network = explicit_network or case.winding_network
+    if network is not None:
+        factor = network.resolve_winding_factor()
+        return (
+            network,
+            network.effective_series_turns_per_phase,
+            factor.value,
+            factor.method.value,
+        )
+    return (
+        None,
+        case.winding.turns_per_phase,
+        case.winding.winding_factor,
+        "phase7e_legacy_explicit_fields",
+    )
+
+
+def _missing_solver_fields(
+    case: AdvancedAFPMCase,
+    explicit_network: AFPMWindingNetwork | None = None,
+) -> tuple[str, ...]:
     geometry = case.geometry
+    network, turns, winding_factor, _ = _network_values(case, explicit_network)
     checks = {
         "geometry.inner_radius_m": geometry.inner_radius_m is not None,
         "geometry.outer_radius_m": geometry.outer_radius_m is not None,
@@ -67,29 +97,46 @@ def _missing_solver_fields(case: AdvancedAFPMCase) -> tuple[str, ...]:
         "geometry.magnet_coverage": geometry.magnet_arc_ratio is not None or bool(geometry.radius_dependent_magnet_profile),
         "material.remanence_t": case.remanence_t is not None,
         "material.magnet_relative_permeability": case.magnet_relative_permeability is not None,
-        "winding.turns_per_phase": case.winding.turns_per_phase is not None,
-        "winding.winding_factor": case.winding.winding_factor is not None,
+        "winding_network.effective_series_turns_per_phase": turns is not None,
+        "winding_network.winding_factor": winding_factor is not None,
         "back_emf.speed_rpm": case.back_emf_semantics is not None,
         "topology": case.topology.topology_type is not AFPMTopologyType.UNKNOWN,
     }
     if case.topology.topology_type is AFPMTopologyType.DSSR:
-        interconnection = (case.winding.stator_interconnection or "").lower()
-        checks["winding.stator_interconnection"] = "parallel" in interconnection or "series" in interconnection
+        if network is not None:
+            checks["winding_network.stator_connection"] = network.stator_connection in {
+                StatorConnection.PARALLEL,
+                StatorConnection.SERIES,
+            }
+            checks["winding_network.number_of_stators"] = (
+                network.number_of_stators == case.topology.stator_count
+            )
+        else:
+            interconnection = (case.winding.stator_interconnection or "").lower()
+            checks["winding.stator_interconnection"] = "parallel" in interconnection or "series" in interconnection
     return tuple(name for name, present in checks.items() if not present)
 
 
-def _topology_factors(case: AdvancedAFPMCase) -> tuple[int, float]:
+def _topology_factors(
+    case: AdvancedAFPMCase,
+    network: AFPMWindingNetwork | None,
+) -> tuple[int, float, str]:
     topology_type = case.topology.topology_type
     if topology_type is AFPMTopologyType.SSDR:
-        return 2, 1.0
+        return 2, 1.0, StatorConnection.INDEPENDENT.value
     if topology_type is AFPMTopologyType.SINGLE_SIDED:
-        return 1, 1.0
+        return 1, 1.0, StatorConnection.INDEPENDENT.value
     if topology_type is AFPMTopologyType.DSSR:
+        if network is not None:
+            if network.stator_connection is StatorConnection.PARALLEL:
+                return 1, 1.0, network.stator_connection.value
+            if network.stator_connection is StatorConnection.SERIES:
+                return 1, float(network.number_of_stators), network.stator_connection.value
         interconnection = (case.winding.stator_interconnection or "").lower()
         if "parallel" in interconnection:
-            return 1, 1.0
+            return 1, 1.0, StatorConnection.PARALLEL.value
         if "series" in interconnection:
-            return 1, float(case.topology.stator_count)
+            return 1, float(case.topology.stator_count), StatorConnection.SERIES.value
     raise RadialSliceInputError(("topology_flux_path_or_stator_interconnection",))
 
 
@@ -105,10 +152,16 @@ def _air_gap_flux_density(case: AdvancedAFPMCase, magnet_layers: int) -> float:
 class RadialSliceBackEMFModel:
     """Compute phase fundamental RMS voltage without production dependencies."""
 
-    def compute(self, case: AdvancedAFPMCase, *, slice_count: int = 100) -> RadialSliceBackEMFResult:
+    def compute(
+        self,
+        case: AdvancedAFPMCase,
+        *,
+        slice_count: int = 100,
+        winding_network: AFPMWindingNetwork | None = None,
+    ) -> RadialSliceBackEMFResult:
         if not isinstance(slice_count, int) or slice_count <= 0:
             raise ValueError("slice_count must be a positive integer")
-        missing = _missing_solver_fields(case)
+        missing = _missing_solver_fields(case, winding_network)
         if missing:
             raise RadialSliceInputError(missing)
         geometry = case.geometry
@@ -117,7 +170,8 @@ class RadialSliceBackEMFModel:
         pole_pairs = int(geometry.pole_pairs)
         dr = (outer - inner) / slice_count
         pole_sector_angle_rad = math.pi / pole_pairs
-        magnet_layers, voltage_multiplier = _topology_factors(case)
+        network, effective_turns, winding_factor, factor_method = _network_values(case, winding_network)
+        magnet_layers, voltage_multiplier, stator_connection = _topology_factors(case, network)
         flux_density = _air_gap_flux_density(case, magnet_layers)
         contributions = []
         pole_flux = 0.0
@@ -133,8 +187,8 @@ class RadialSliceBackEMFModel:
         phase_rms = (
             4.44
             * frequency_hz
-            * int(case.winding.turns_per_phase)
-            * float(case.winding.winding_factor)
+            * int(effective_turns)
+            * float(winding_factor)
             * pole_flux
             * voltage_multiplier
         )
@@ -146,6 +200,10 @@ class RadialSliceBackEMFModel:
             electrical_frequency_hz=frequency_hz,
             phase_fundamental_rms_v=phase_rms,
             voltage_aggregation_multiplier=voltage_multiplier,
+            effective_series_turns_per_phase=int(effective_turns),
+            winding_factor=float(winding_factor),
+            winding_factor_method=factor_method,
+            stator_connection=stator_connection,
             contributions=tuple(contributions),
             assumptions=(
                 "Linear recoil magnetic circuit: B = Br*lm_total/(lm_total + mur*g_effective).",
@@ -156,8 +214,13 @@ class RadialSliceBackEMFModel:
             ),
         )
 
-    def compute_mean_radius(self, case: AdvancedAFPMCase) -> MeanRadiusBackEMFResult:
-        missing = _missing_solver_fields(case)
+    def compute_mean_radius(
+        self,
+        case: AdvancedAFPMCase,
+        *,
+        winding_network: AFPMWindingNetwork | None = None,
+    ) -> MeanRadiusBackEMFResult:
+        missing = _missing_solver_fields(case, winding_network)
         if missing:
             raise RadialSliceInputError(missing)
         geometry = case.geometry
@@ -166,7 +229,8 @@ class RadialSliceBackEMFModel:
         pole_pairs = int(geometry.pole_pairs)
         mean_radius = 0.5 * (inner + outer)
         coverage = geometry.magnet_coverage_at(mean_radius)
-        magnet_layers, voltage_multiplier = _topology_factors(case)
+        network, effective_turns, winding_factor, _ = _network_values(case, winding_network)
+        magnet_layers, voltage_multiplier, _ = _topology_factors(case, network)
         flux_density = _air_gap_flux_density(case, magnet_layers)
         full_pole_sector_area = math.pi * (outer**2 - inner**2) / (2.0 * pole_pairs)
         pole_flux = flux_density * full_pole_sector_area * coverage
@@ -174,8 +238,8 @@ class RadialSliceBackEMFModel:
         phase_rms = (
             4.44
             * frequency_hz
-            * int(case.winding.turns_per_phase)
-            * float(case.winding.winding_factor)
+            * int(effective_turns)
+            * float(winding_factor)
             * pole_flux
             * voltage_multiplier
         )
@@ -238,6 +302,19 @@ def build_synthetic_radial_reference_case() -> AdvancedAFPMCase:
         topology=topology,
         geometry=geometry,
         winding=winding,
+        winding_network=AFPMWindingNetwork(
+            turns_per_coil=20,
+            coils_per_phase=5,
+            series_coils_per_branch=5,
+            parallel_branches=1,
+            number_of_stators=1,
+            stator_connection=StatorConnection.INDEPENDENT,
+            phase_connection=PhaseConnection.Y,
+            winding_type=WindingType.DISTRIBUTED,
+            winding_factor=0.95,
+            pitch_factor=None,
+            distribution_factor=None,
+        ),
         back_emf_semantics=BackEMFSemantics(
             BackEMFScope.PHASE,
             BackEMFValueKind.FUNDAMENTAL_RMS,
@@ -251,6 +328,7 @@ def build_synthetic_radial_reference_case() -> AdvancedAFPMCase:
         magnet_relative_permeability=1.05,
         back_emf_reference_field=None,
         source_fields=MappingProxyType({}),
+        recovered_fields=MappingProxyType({}),
         field_lineage=MappingProxyType({}),
         adapter_notes=("Synthetic analytical case; not external accuracy evidence.",),
     )

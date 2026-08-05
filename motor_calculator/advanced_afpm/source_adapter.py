@@ -17,10 +17,12 @@ from .electrical import (
     BackEMFValueKind,
     WaveformFamily,
 )
-from .geometry import AFPMGeometry
+from .geometry import AFPMGeometry, RadialMagnetSample
+from .source_recovery import RecoveredField, load_phase7f_source_recovery
 from .topology import AFPMTopology, AFPMTopologyType
 from .torque_semantics import TorqueBoundary, TorqueSemantics
 from .winding import AFPMWinding, WindingType
+from .winding_network import AFPMWindingNetwork, PhaseConnection, StatorConnection
 
 
 class AFPMFieldStatus(str, Enum):
@@ -55,6 +57,7 @@ class AdvancedAFPMCase:
     topology: AFPMTopology
     geometry: AFPMGeometry
     winding: AFPMWinding
+    winding_network: AFPMWindingNetwork | None
     back_emf_semantics: BackEMFSemantics | None
     inductance: AFPMInductance
     torque_semantics: TorqueSemantics
@@ -62,6 +65,7 @@ class AdvancedAFPMCase:
     magnet_relative_permeability: float | None
     back_emf_reference_field: str | None
     source_fields: Mapping[str, AFPMFieldRecord]
+    recovered_fields: Mapping[str, RecoveredField]
     field_lineage: Mapping[str, tuple[str, ...]]
     adapter_notes: tuple[str, ...]
 
@@ -72,6 +76,20 @@ class AdvancedAFPMCase:
 def _usable(case: ReconstructedAFPMCase, name: str) -> Any | None:
     field = case.fields.get(name)
     return field.value if field is not None and field.is_usable else None
+
+
+def _recovered_usable(recovered: Mapping[str, RecoveredField], name: str) -> Any | None:
+    field = recovered.get(name)
+    return field.value if field is not None and field.is_usable else None
+
+
+def _best_value(
+    case: ReconstructedAFPMCase,
+    recovered: Mapping[str, RecoveredField],
+    name: str,
+) -> Any | None:
+    recovered_value = _recovered_usable(recovered, name)
+    return recovered_value if recovered_value is not None else _usable(case, name)
 
 
 def _copy_fields(case: ReconstructedAFPMCase) -> Mapping[str, AFPMFieldRecord]:
@@ -117,7 +135,11 @@ def _speed(case: ReconstructedAFPMCase) -> float | None:
     return None
 
 
-def _geometry(case: ReconstructedAFPMCase, topology: AFPMTopology) -> AFPMGeometry:
+def _geometry(
+    case: ReconstructedAFPMCase,
+    topology: AFPMTopology,
+    recovered: Mapping[str, RecoveredField],
+) -> AFPMGeometry:
     outer_diameter = _usable(case, "outer_diameter_m")
     inner_diameter = _usable(case, "inner_diameter_m")
     air_gap = next(
@@ -133,14 +155,33 @@ def _geometry(case: ReconstructedAFPMCase, topology: AFPMTopology) -> AFPMGeomet
         coil_height = _usable(case, "coil_height_m")
         if coil_height is not None and air_gap is not None:
             effective_gap = float(coil_height) + 2.0 * float(air_gap)
+    pole_pairs = _best_value(case, recovered, "pole_pairs")
+    profile = None
+    inner_radius = None if inner_diameter is None else float(inner_diameter) / 2.0
+    outer_radius = None if outer_diameter is None else float(outer_diameter) / 2.0
+    inner_width = _recovered_usable(recovered, "magnet_inner_width_m")
+    outer_width = _recovered_usable(recovered, "magnet_outer_width_m")
+    if None not in (inner_radius, outer_radius, inner_width, outer_width, pole_pairs):
+        profile = (
+            RadialMagnetSample(
+                inner_radius,
+                float(inner_width) * int(pole_pairs) / (3.141592653589793 * inner_radius),
+                float(inner_width),
+            ),
+            RadialMagnetSample(
+                outer_radius,
+                float(outer_width) * int(pole_pairs) / (3.141592653589793 * outer_radius),
+                float(outer_width),
+            ),
+        )
     return AFPMGeometry(
-        inner_radius_m=None if inner_diameter is None else float(inner_diameter) / 2.0,
-        outer_radius_m=None if outer_diameter is None else float(outer_diameter) / 2.0,
+        inner_radius_m=inner_radius,
+        outer_radius_m=outer_radius,
         air_gap_m=None if air_gap is None else float(air_gap),
         magnet_thickness_m=_usable(case, "magnet_thickness_m"),
-        pole_pairs=_usable(case, "pole_pairs"),
+        pole_pairs=pole_pairs,
         magnet_arc_ratio=_usable(case, "pole_arc_coefficient"),
-        radius_dependent_magnet_profile=None,
+        radius_dependent_magnet_profile=profile,
         stator_count=topology.stator_count,
         rotor_count=topology.rotor_count,
         effective_nonmagnetic_gap_m=effective_gap,
@@ -176,6 +217,49 @@ def _winding(case: ReconstructedAFPMCase) -> AFPMWinding:
         distribution_factor=None,
         winding_type=WindingType.UNKNOWN,
         stator_interconnection=stator_interconnection,
+    )
+
+
+def _enum_or_default(enum_type, value: Any, default):
+    try:
+        return enum_type(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _winding_network(
+    case: ReconstructedAFPMCase,
+    recovered: Mapping[str, RecoveredField],
+    topology: AFPMTopology,
+) -> AFPMWindingNetwork:
+    winding_type = _enum_or_default(
+        WindingType,
+        _recovered_usable(recovered, "winding_type"),
+        WindingType.UNKNOWN,
+    )
+    stator_connection = _enum_or_default(
+        StatorConnection,
+        _recovered_usable(recovered, "stator_connection"),
+        StatorConnection.UNKNOWN,
+    )
+    phase_connection = _enum_or_default(
+        PhaseConnection,
+        _recovered_usable(recovered, "phase_connection"),
+        PhaseConnection.UNKNOWN,
+    )
+    return AFPMWindingNetwork(
+        turns_per_coil=_recovered_usable(recovered, "turns_per_coil"),
+        coils_per_phase=_recovered_usable(recovered, "coils_per_phase"),
+        series_coils_per_branch=_recovered_usable(recovered, "series_coils_per_branch"),
+        parallel_branches=_recovered_usable(recovered, "parallel_branches"),
+        number_of_stators=int(_recovered_usable(recovered, "number_of_stators") or topology.stator_count),
+        stator_connection=stator_connection,
+        phase_connection=phase_connection,
+        winding_type=winding_type,
+        winding_factor=_best_value(case, recovered, "winding_factor"),
+        pitch_factor=_recovered_usable(recovered, "pitch_factor"),
+        distribution_factor=_recovered_usable(recovered, "distribution_factor"),
+        winding_type_description=_recovered_usable(recovered, "winding_type_description"),
     )
 
 
@@ -266,7 +350,11 @@ def _field_lineage(case: ReconstructedAFPMCase) -> Mapping[str, tuple[str, ...]]
     return MappingProxyType(lineage)
 
 
-def adapt_reconstructed_case(case: ReconstructedAFPMCase) -> AdvancedAFPMCase:
+def adapt_reconstructed_case(
+    case: ReconstructedAFPMCase,
+    recovered_fields: Mapping[str, RecoveredField] | None = None,
+) -> AdvancedAFPMCase:
+    recovered = recovered_fields or MappingProxyType({})
     topology = _topology(case)
     semantics, reference_field = _back_emf(case)
     torque_boundary = (
@@ -280,15 +368,17 @@ def adapt_reconstructed_case(case: ReconstructedAFPMCase) -> AdvancedAFPMCase:
         source_title=case.source_title,
         source_url=case.source_url,
         topology=topology,
-        geometry=_geometry(case, topology),
+        geometry=_geometry(case, topology, recovered),
         winding=_winding(case),
+        winding_network=_winding_network(case, recovered, topology),
         back_emf_semantics=semantics,
         inductance=_inductance(case),
         torque_semantics=TorqueSemantics(torque_boundary),
-        remanence_t=_usable(case, "remanence_t"),
-        magnet_relative_permeability=_usable(case, "magnet_relative_permeability"),
+        remanence_t=_best_value(case, recovered, "remanence_t"),
+        magnet_relative_permeability=_best_value(case, recovered, "magnet_relative_permeability"),
         back_emf_reference_field=reference_field,
         source_fields=_copy_fields(case),
+        recovered_fields=MappingProxyType(dict(recovered)),
         field_lineage=_field_lineage(case),
         adapter_notes=(
             "No production defaults are applied.",
@@ -299,7 +389,11 @@ def adapt_reconstructed_case(case: ReconstructedAFPMCase) -> AdvancedAFPMCase:
 
 
 def load_advanced_afpm_cases(case_directory: Path) -> tuple[AdvancedAFPMCase, ...]:
-    return tuple(
-        adapt_reconstructed_case(load_reconstructed_case(path))
-        for path in sorted(Path(case_directory).glob("*_case.json"))
-    )
+    recovery_path = Path(case_directory).parent / "source_recovery" / "phase7f_winding_recovery.json"
+    recovery = load_phase7f_source_recovery(recovery_path) if recovery_path.exists() else MappingProxyType({})
+    adapted_cases = []
+    for path in sorted(Path(case_directory).glob("*_case.json")):
+        reconstructed = load_reconstructed_case(path)
+        recovered_fields = recovery.get(reconstructed.source_id, MappingProxyType({}))
+        adapted_cases.append(adapt_reconstructed_case(reconstructed, recovered_fields))
+    return tuple(adapted_cases)
