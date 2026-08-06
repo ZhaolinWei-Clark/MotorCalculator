@@ -1,0 +1,104 @@
+{
+  "reference_id": "phase7h_controlled_coreless_ssdr_v1",
+  "execution_status": "BLOCKED_BY_SOLVER_AVAILABILITY",
+  "solver": {
+    "solver": "UNASSIGNED_EXTERNAL_3D_SOLVER",
+    "solver_version": "UNAVAILABLE_UNTIL_EXECUTION",
+    "model_version": "phase7h-controlled-ssdr-v1",
+    "dimensionality": "3D",
+    "fidelity_tier": "FEA_TIER_1",
+    "automation_path": "external ANSYS Maxwell or COMSOL solve followed by deterministic CSV import"
+  },
+  "geometry": {
+    "topology": "single_stator_double_rotor_coreless",
+    "stator_count": 1,
+    "rotor_count": 2,
+    "active_air_gap_count": 2,
+    "inner_radius_m": 0.05,
+    "outer_radius_m": 0.1,
+    "physical_air_gap_per_side_m": 0.001,
+    "magnet_thickness_m": 0.005,
+    "pole_pairs": 5,
+    "magnet_arc_ratio": 0.7,
+    "rotor_support_thickness_m": 0.008,
+    "winding_axial_thickness_m": 0.008,
+    "air_domain_radial_margin_m": 0.03,
+    "air_domain_axial_margin_m": 0.03
+  },
+  "materials": {
+    "magnet_remanence_t": 1.2,
+    "magnet_relative_permeability": 1.05,
+    "magnet_conductivity_s_per_m": 0.0,
+    "conductor_material": "copper",
+    "conductor_conductivity_s_per_m": 58000000.0,
+    "rotor_support_relative_permeability": 1.0,
+    "rotor_support_conductivity_s_per_m": 0.0,
+    "air_relative_permeability": 1.0,
+    "ferromagnetic_core_present": false,
+    "steel_bh_curve_source": null
+  },
+  "winding": {
+    "phases": 3,
+    "total_coils": 12,
+    "turns_per_coil": 25,
+    "coils_per_phase": 4,
+    "series_coils_per_branch": 4,
+    "parallel_branches": 1,
+    "effective_series_turns_per_phase": 100,
+    "phase_connection": "Y",
+    "coil_shape": "explicit trapezoidal sector coils uniformly placed at 30 mechanical degree pitch",
+    "phase_assignment_by_coil": ["A+", "C-", "B+", "A-", "C+", "B-", "A+", "C-", "B+", "A-", "C+", "B-"],
+    "coil_pitch_mechanical_deg": 30.0,
+    "coil_radial_clearance_m": 0.003,
+    "conductor_fill_factor": 0.55,
+    "analytical_projection_winding_factor": 0.9330127019
+  },
+  "operating_point": {
+    "no_load_speed_rpm": 1000.0,
+    "phase_current_rms_a": 0.0,
+    "rotor_angle_start_deg": 0.0,
+    "rotor_angle_end_deg": 72.0,
+    "rotor_angle_step_deg": 1.0,
+    "operating_temperature_c": 20.0
+  },
+  "boundary_conditions": {
+    "outer_boundary": "magnetic insulation on the outer cylindrical and axial air-domain boundaries",
+    "periodic_symmetry": "none in v1; solve the complete 360 mechanical degree machine",
+    "motion_method": "moving-band or rotating-domain transient/position sweep chosen by external 3D solver",
+    "phase_current_condition": "open-circuit no-load; zero imposed phase current",
+    "magnetization_definition": "alternating axial magnetization with source-defined Br and recoil permeability"
+  },
+  "mesh_plan": {
+    "acceptance_tolerance_percent": 1.0,
+    "acceptance_rule": "every coarse-to-medium and medium-to-fine change in tracked back-EMF and flux linkage must be <= 1.0 percent",
+    "levels": [
+      {"name": "coarse", "global_size_m": 0.006, "air_gap_size_m": 0.0005, "magnet_edge_size_m": 0.0015, "winding_size_m": 0.002},
+      {"name": "medium", "global_size_m": 0.004, "air_gap_size_m": 0.0003, "magnet_edge_size_m": 0.001, "winding_size_m": 0.0015},
+      {"name": "fine", "global_size_m": 0.0025, "air_gap_size_m": 0.0002, "magnet_edge_size_m": 0.0006, "winding_size_m": 0.001}
+    ]
+  },
+  "output": {
+    "primary_metric": "phase_a_no_load_back_emf_waveform",
+    "required_signals": [
+      "rotor_angle_deg",
+      "time_s",
+      "flux_linkage_phase_a_wb_turn",
+      "back_emf_phase_a_v"
+    ],
+    "waveform_period": "one electrical period corresponding to 72 mechanical degrees at five pole pairs",
+    "endpoint_policy": "sample the start and exclude the duplicate end point for numerical waveform analysis",
+    "extraction_notes": "export source-native flux linkage and voltage samples; total RMS and fundamental RMS are computed numerically after import"
+  },
+  "provenance": {
+    "reference_label": "CONTROLLED_FEA_REFERENCE",
+    "parameter_origin": "all values intentionally fixed by Phase 7H before any field-solver output exists",
+    "created_for_phase": "7H",
+    "evidence_classification_after_acceptance": "INDEPENDENT_FEA_REFERENCE",
+    "notes": [
+      "This is a synthetic controlled machine, not a published or experimental motor.",
+      "The coreless topology avoids an untraceable steel B-H curve in the first reference.",
+      "The 12-slot/10-pole A+,C-,B+,A-,C+,B- repeated layout and its analytical projection winding factor are frozen before FEA; the field solver uses explicit coil domains rather than kw.",
+      "No FEA result exists until an independent solver executes all three mesh levels and passes convergence."
+    ]
+  }
+}
