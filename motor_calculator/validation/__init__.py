@@ -1,6 +1,18 @@
 """Read-only validation utilities that remain outside the production calculator."""
 
 from .accuracy_metrics import AccuracyMetricStatus, AccuracyMetrics, compute_accuracy_metrics
+from .confidence_explanation import build_confidence_reasons
+from .confidence_summary import (
+    EngineeringConfidenceSummary,
+    UncertaintyDimensionStatus,
+    build_engineering_confidence_summary,
+    build_unavailable_confidence_summary,
+    confidence_summary_to_dict,
+    export_confidence_summary,
+    load_validation_summary_safely,
+    render_confidence_summary_json,
+    render_confidence_summary_text,
+)
 from .external_metric_comparison import (
     ComparabilityStatus,
     ComparisonOutcome,
@@ -115,6 +127,7 @@ from .uncertainty_models import (
     classify_result_confidence,
     load_uncertainty_specification,
 )
+from .uncertainty_form import UncertaintyInputRow, rows_from_parameters
 from .uncertainty_sweep import (
     BoundSweepMode,
     DeterministicSweepResult,
@@ -129,6 +142,7 @@ __all__ = [
     "AccuracyMetricStatus",
     "AccuracyMetrics",
     "AccuracyEnvelopeResult",
+    "EngineeringConfidenceSummary",
     "BaselineOutcome",
     "BlockerCategory",
     "BlockerResolution",
@@ -190,6 +204,8 @@ __all__ = [
     "ResultConfidence",
     "TargetLock",
     "UncertaintyCategory",
+    "UncertaintyDimensionStatus",
+    "UncertaintyInputRow",
     "UncertaintyKind",
     "UncertaintySpecification",
     "ValidationStatus",
@@ -205,21 +221,28 @@ __all__ = [
     "compare_external_metric",
     "build_phase7b1_campaign",
     "build_phase7c_result",
+    "build_confidence_reasons",
+    "build_engineering_confidence_summary",
+    "build_unavailable_confidence_summary",
     "classify_result_confidence",
     "classify_evidence_quality",
     "classify_validation_coverage",
     "compare_feedback_to_uncertainty_envelope",
     "compute_feedback_error",
+    "confidence_summary_to_dict",
     "detect_bias_candidate",
     "build_validation_summary",
     "hash_input_snapshot",
     "load_feedback_records",
+    "load_validation_summary_safely",
     "load_reconstructed_case",
     "load_fea_reference_definition",
     "load_uncertainty_specification",
     "normalize_copper_resistance_temperature",
     "render_phase7b1_report",
     "render_phase7c_report",
+    "render_confidence_summary_json",
+    "render_confidence_summary_text",
     "require_reconstructed_inputs",
     "run_phase7a_accuracy_baseline",
     "run_phase7b1_campaign",
@@ -227,9 +250,11 @@ __all__ = [
     "run_deterministic_parameter_sweep",
     "run_monte_carlo",
     "run_parameter_bound_envelope",
+    "rows_from_parameters",
     "sha256_file",
     "serialize_feedback",
     "submit_feedback",
     "synchronous_reactance_to_inductance_h",
     "validate_feedback",
+    "export_confidence_summary",
 ]

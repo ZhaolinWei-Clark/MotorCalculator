@@ -45,30 +45,39 @@ def run_phase7i_demonstration(
     *,
     monte_carlo_sample_count: int = 5000,
     random_seed: int = 20260701,
+    specification_override: UncertaintySpecification | None = None,
 ) -> Phase7IUncertaintyDemonstration:
     root = Path(repository_root)
     reference = load_fea_reference_definition(
         root / "validation_data" / "fea_reference" / "phase7h_controlled_ssdr_machine.json"
     )
-    specification = load_uncertainty_specification(
+    specification = specification_override or load_uncertainty_specification(
         root / "validation_data" / "uncertainty" / "phase7i_afpm_back_emf_uncertainty.json"
     )
     reference_nominal = controlled_reference_nominal_values(reference)
     for parameter in specification.parameters:
         if parameter.parameter_name not in reference_nominal:
             raise ValueError(f"uncertainty parameter is not supported by controlled AFPM adapter: {parameter.parameter_name}")
-        if parameter.nominal_value != reference_nominal[parameter.parameter_name]:
+        if specification_override is None and parameter.nominal_value != reference_nominal[parameter.parameter_name]:
             raise ValueError(f"uncertainty nominal does not match frozen reference: {parameter.parameter_name}")
 
     evaluator = lambda values: evaluate_controlled_back_emf_phase_rms_v(reference, values)
     sweep = run_deterministic_parameter_sweep(
         specification.parameters, evaluator, validate_physical_parameter_values
     )
+    bounded_parameter_count = sum(
+        parameter.has_parameter_bounds for parameter in specification.parameters
+    )
+    bound_mode = (
+        BoundSweepMode.FULL_CORNERS
+        if 3 ** bounded_parameter_count <= 5000
+        else BoundSweepMode.CAPPED_COMBINATIONS
+    )
     bound = run_parameter_bound_envelope(
         specification.parameters,
         evaluator,
         validate_physical_parameter_values,
-        mode=BoundSweepMode.FULL_CORNERS,
+        mode=bound_mode,
         max_combinations=5000,
     )
     monte_carlo = run_monte_carlo(
