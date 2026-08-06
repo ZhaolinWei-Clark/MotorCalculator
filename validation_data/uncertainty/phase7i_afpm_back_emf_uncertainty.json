@@ -1,0 +1,132 @@
+{
+  "specification_id": "phase7i_controlled_ssdr_back_emf_demo_v1",
+  "assumption_label": "PROJECT-DEMONSTRATION ASSUMPTIONS",
+  "model_form_uncertainty_status": "UNQUANTIFIED",
+  "external_validation_status": "LIMITED",
+  "assumptions": [
+    "All uncertainty magnitudes in this file are Phase 7I demonstration assumptions, not universal manufacturing tolerances.",
+    "RANGE parameters participate only in the parameter-bound envelope and remain nominal in Monte Carlo.",
+    "NORMAL and UNIFORM distributions are demonstration PDFs explicitly declared for framework verification.",
+    "Model-form effects such as leakage, fringing, saturation and winding abstraction are not included.",
+    "The nominal machine is the frozen Phase 7H controlled coreless SSDR reference."
+  ],
+  "parameters": [
+    {
+      "parameter_name": "magnet_remanence_t",
+      "nominal_value": 1.2,
+      "unit": "T",
+      "uncertainty_kind": "NORMAL",
+      "lower_bound": 1.128,
+      "upper_bound": 1.272,
+      "mean": 1.2,
+      "standard_deviation": 0.024,
+      "provenance": "PROJECT-DEMONSTRATION ASSUMPTION: mean equals frozen Phase 7H Br; sigma=2% and bounds=mean +/- 3 sigma chosen only for software demonstration.",
+      "confidence": "demonstration_only",
+      "notes": ["Not a magnet grade tolerance or temperature-corrected material distribution."]
+    },
+    {
+      "parameter_name": "air_gap_m",
+      "nominal_value": 0.001,
+      "unit": "m per side",
+      "uncertainty_kind": "UNIFORM",
+      "lower_bound": 0.00095,
+      "upper_bound": 0.00105,
+      "mean": null,
+      "standard_deviation": null,
+      "provenance": "PROJECT-DEMONSTRATION ASSUMPTION: +/-0.05 mm around the frozen Phase 7H per-side physical gap.",
+      "confidence": "demonstration_only",
+      "notes": ["Uniform PDF is intentionally declared for framework testing, not inferred from manufacturing data."]
+    },
+    {
+      "parameter_name": "magnet_thickness_m",
+      "nominal_value": 0.005,
+      "unit": "m",
+      "uncertainty_kind": "RANGE",
+      "lower_bound": 0.0048,
+      "upper_bound": 0.0052,
+      "mean": null,
+      "standard_deviation": null,
+      "provenance": "PROJECT-DEMONSTRATION ASSUMPTION: bounded engineering exploration only.",
+      "confidence": "demonstration_only",
+      "notes": ["No PDF is declared; Monte Carlo must hold this parameter nominal."]
+    },
+    {
+      "parameter_name": "winding_factor",
+      "nominal_value": 0.9330127019,
+      "unit": "1",
+      "uncertainty_kind": "NORMAL",
+      "lower_bound": 0.905022320843,
+      "upper_bound": 0.961003082957,
+      "mean": 0.9330127019,
+      "standard_deviation": 0.009330127019,
+      "provenance": "PROJECT-DEMONSTRATION ASSUMPTION: mean equals frozen 12-slot/10-pole analytical projection kw; sigma=1% and bounds=mean +/- 3 sigma.",
+      "confidence": "demonstration_only",
+      "notes": ["This represents analytical projection uncertainty, not random variation in the explicit FEA coil domains."]
+    },
+    {
+      "parameter_name": "turns_per_phase",
+      "nominal_value": 100.0,
+      "unit": "turn",
+      "uncertainty_kind": "EXACT",
+      "lower_bound": null,
+      "upper_bound": null,
+      "mean": null,
+      "standard_deviation": null,
+      "provenance": "Frozen Phase 7H winding definition: 25 turns per coil and four series coils per phase.",
+      "confidence": "controlled_reference_exact",
+      "notes": ["No turn-count variation is introduced in this demonstration."]
+    },
+    {
+      "parameter_name": "inner_radius_m",
+      "nominal_value": 0.05,
+      "unit": "m",
+      "uncertainty_kind": "RANGE",
+      "lower_bound": 0.04975,
+      "upper_bound": 0.05025,
+      "mean": null,
+      "standard_deviation": null,
+      "provenance": "PROJECT-DEMONSTRATION ASSUMPTION: +/-0.25 mm bounded geometry exploration.",
+      "confidence": "demonstration_only",
+      "notes": ["No statistical PDF is declared."]
+    },
+    {
+      "parameter_name": "outer_radius_m",
+      "nominal_value": 0.1,
+      "unit": "m",
+      "uncertainty_kind": "RANGE",
+      "lower_bound": 0.09975,
+      "upper_bound": 0.10025,
+      "mean": null,
+      "standard_deviation": null,
+      "provenance": "PROJECT-DEMONSTRATION ASSUMPTION: +/-0.25 mm bounded geometry exploration.",
+      "confidence": "demonstration_only",
+      "notes": ["No statistical PDF is declared."]
+    },
+    {
+      "parameter_name": "magnet_arc_ratio",
+      "nominal_value": 0.7,
+      "unit": "1",
+      "uncertainty_kind": "UNIFORM",
+      "lower_bound": 0.68,
+      "upper_bound": 0.72,
+      "mean": null,
+      "standard_deviation": null,
+      "provenance": "PROJECT-DEMONSTRATION ASSUMPTION: explicit bounded uniform PDF around the frozen scalar magnet coverage.",
+      "confidence": "demonstration_only",
+      "notes": ["Does not represent a radius-dependent magnet profile."]
+    },
+    {
+      "parameter_name": "magnet_relative_permeability",
+      "nominal_value": 1.05,
+      "unit": "1",
+      "uncertainty_kind": "UNKNOWN",
+      "lower_bound": null,
+      "upper_bound": null,
+      "mean": null,
+      "standard_deviation": null,
+      "provenance": "Frozen Phase 7H controlled nominal; no defensible uncertainty distribution declared.",
+      "confidence": "unknown_uncertainty",
+      "notes": ["Must remain nominal and produce an unsampled UNKNOWN warning."]
+    }
+  ]
+}
