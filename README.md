@@ -24,6 +24,16 @@ Launch the current GUI entry point with:
 .venv\Scripts\python.exe motor_calculator\app.py
 ```
 
+Verify Tcl/Tk independently before GUI work:
+
+```powershell
+.venv\Scripts\python.exe work\check_tk_runtime.py
+```
+
+Mutable runtime data is stored outside the repository under
+`%LOCALAPPDATA%\MotorCalculator\` by default. Set
+`MOTOR_CALCULATOR_USER_DATA` only when a controlled portable/test location is required.
+
 If `matplotlib` is not installed, the GUI should still start importing correctly, but chart tabs and chart saving will be disabled with a Chinese error message instead of crashing.
 
 ## Run Tests
@@ -72,6 +82,19 @@ $env:TK_LIBRARY = "C:\Path\To\Python\tcl\tk8.6"
 ```
 
 Do not hard-code these absolute paths into repository code.
+
+## Build The Windows Engineering Preview
+
+Use a complete Windows CPython installation whose Tk probe succeeds, then install the
+separate packaging dependency and build the preferred one-folder distribution:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements-packaging.txt
+powershell -ExecutionPolicy Bypass -File work\build_windows_preview.ps1
+```
+
+The build script stops before packaging if Tcl/Tk is unusable. Generated `build/` and
+`dist/` directories are intentionally not committed.
 
 ## Scope Reminder
 

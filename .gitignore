@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .pytest_cache/
+/build/
+/dist/
+*.log
+/validation_data/user_feedback/feedback_records.jsonl

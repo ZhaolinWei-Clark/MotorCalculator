@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import logging
 import sys
 import tkinter as tk
 from dataclasses import replace
@@ -10,11 +11,16 @@ from pathlib import Path
 from typing import Any, Dict
 from tkinter import filedialog, messagebox, ttk
 
-_REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
-if str(_REPOSITORY_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPOSITORY_ROOT))
+_BOOTSTRAP_ROOT = Path(__file__).resolve().parents[2]
+if str(_BOOTSTRAP_ROOT) not in sys.path:
+    sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
-from motor_core import LegacyGuiMotorModelBridge, MotorCalculationError, MotorValidationError, parse_legacy_gui_params
+from motor_calculator.motor_core import (
+    LegacyGuiMotorModelBridge,
+    MotorCalculationError,
+    MotorValidationError,
+    parse_legacy_gui_params,
+)
 
 from .confidence_panel import ConfidencePanel
 from .feedback_dialog import (
@@ -40,10 +46,24 @@ from motor_calculator.validation.feedback_models import (
 from motor_calculator.validation.feedback_service import submit_feedback
 from motor_calculator.validation.phase7i_uncertainty_report import run_phase7i_demonstration
 from motor_calculator.validation.uncertainty_models import UncertaintySpecification, load_uncertainty_specification
+from motor_calculator.runtime import (
+    bounded_window_size,
+    check_runtime_health,
+    create_runtime_directories,
+    enable_windows_dpi_awareness,
+    format_startup_failure,
+    initialize_local_logging,
+    resolve_runtime_paths,
+)
+from motor_calculator.version import application_version_label
+
+
+_RUNTIME_PATHS = resolve_runtime_paths()
+_REPOSITORY_ROOT = _RUNTIME_PATHS.resource_root
 
 
 def _load_legacy_module():
-    legacy_path = Path(__file__).resolve().parents[1] / "PMDC_Calculator_claude204.py"
+    legacy_path = _RUNTIME_PATHS.resource("motor_calculator", "PMDC_Calculator_claude204.py")
     spec = importlib.util.spec_from_file_location("legacy_motor_calculator_ui", legacy_path)
     if spec is None or spec.loader is None:
         raise RuntimeError(f"无法加载 legacy GUI 文件: {legacy_path}")
@@ -81,8 +101,10 @@ class MotorCalculatorAppMixin:
 
     def __init__(self, root):
         super().__init__(root)
+        self._runtime_paths = create_runtime_directories(_RUNTIME_PATHS)
         self._repository_root = _REPOSITORY_ROOT
-        self._feedback_store = self._repository_root / "validation_data" / "user_feedback" / "feedback_records.jsonl"
+        self._feedback_store = self._runtime_paths.feedback_store
+        self.root.title(f"Motor Calculator {application_version_label()}")
         self._latest_accuracy_envelope = None
         self._engineering_confidence_summary = None
         self._user_uncertainty_parameters = None
@@ -305,6 +327,7 @@ class MotorCalculatorAppMixin:
         path = filedialog.asksaveasfilename(
             parent=self.root,
             title="Export confidence summary locally",
+            initialdir=str(self._runtime_paths.export_dir),
             defaultextension=".json",
             filetypes=(("JSON", "*.json"), ("Text", "*.txt")),
         )
@@ -380,14 +403,37 @@ class MotorCalculatorApp:
         return real_app_class(*args, **kwargs)
 
 
-def main():
+def _create_root_or_exit(runtime_paths, logger):
     try:
-        root = tk.Tk()
+        return tk.Tk()
     except tk.TclError as exc:
+        logger.exception("Tkinter runtime initialization failed")
+        health = check_runtime_health(runtime_paths)
+        raise SystemExit(format_startup_failure(exc, runtime_paths, report=health)) from None
+
+
+def main():
+    user_data_error = None
+    try:
+        runtime_paths = create_runtime_directories(_RUNTIME_PATHS)
+        logger = initialize_local_logging(runtime_paths)
+    except OSError as exc:
+        user_data_error = exc
+        runtime_paths = _RUNTIME_PATHS
+        logger = logging.getLogger("motor_calculator.startup")
+        logger.addHandler(logging.NullHandler())
+        logger.propagate = False
+    dpi_status = enable_windows_dpi_awareness()
+    logger.info("Application startup requested; mode=%s dpi=%s", runtime_paths.mode, dpi_status)
+    root = _create_root_or_exit(runtime_paths, logger)
+    if user_data_error is not None:
+        root.destroy()
         raise SystemExit(
-            "GUI 启动失败：当前 Python 环境的 Tcl/Tk 运行时不可用，"
-            "请参考 README 中的 GUI 启动说明修复 Python/Tcl/Tk 安装。"
-        ) from exc
+            "Motor Calculator could not initialize its writable user-data directory.\n"
+            f"Target: {runtime_paths.user_data_dir}\n"
+            f"Reason: {user_data_error}\n"
+            "Check Windows folder permissions or set MOTOR_CALCULATOR_USER_DATA to a writable directory."
+        ) from None
     try:
         root.iconbitmap("motor_icon.ico")
     except Exception:
@@ -395,9 +441,14 @@ def main():
 
     MotorCalculatorApp(root)
     root.update_idletasks()
-    width = root.winfo_width()
-    height = root.winfo_height()
+    width, height = bounded_window_size(
+        root.winfo_width(),
+        root.winfo_height(),
+        root.winfo_screenwidth(),
+        root.winfo_screenheight(),
+    )
     x_pos = (root.winfo_screenwidth() // 2) - (width // 2)
     y_pos = (root.winfo_screenheight() // 2) - (height // 2)
-    root.geometry(f"+{x_pos}+{y_pos}")
+    root.geometry(f"{width}x{height}+{x_pos}+{y_pos}")
+    logger.info("Main window initialized at %sx%s", width, height)
     root.mainloop()

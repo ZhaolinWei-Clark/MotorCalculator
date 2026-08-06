@@ -13,6 +13,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Mapping
 
+from motor_calculator.runtime.paths import resolve_runtime_paths
+
 from .accuracy_metrics import AccuracyMetrics, compute_accuracy_metrics
 from .feedback_models import (
     DuplicateStatus,
@@ -27,7 +29,7 @@ from .feedback_models import (
 
 
 FEEDBACK_SCHEMA_VERSION = "phase7j.feedback.v1"
-DEFAULT_FEEDBACK_STORE = Path("validation_data/user_feedback/feedback_records.jsonl")
+DEFAULT_FEEDBACK_STORE = resolve_runtime_paths().feedback_store
 _SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
@@ -349,11 +351,11 @@ def _deserialize_feedback(payload: Mapping[str, Any]) -> ValidationFeedbackRecor
 
 
 def load_feedback_records(
-    store_path: Path = DEFAULT_FEEDBACK_STORE,
+    store_path: Path | None = None,
     *,
     verify_integrity: bool = True,
 ) -> tuple[ValidationFeedbackRecord, ...]:
-    path = Path(store_path)
+    path = Path(store_path) if store_path is not None else resolve_runtime_paths().feedback_store
     if not path.exists():
         return ()
     records: list[ValidationFeedbackRecord] = []
@@ -406,7 +408,7 @@ def _append_record(path: Path, record: ValidationFeedbackRecord) -> None:
 
 def submit_feedback(
     submission: FeedbackSubmission,
-    store_path: Path = DEFAULT_FEEDBACK_STORE,
+    store_path: Path | None = None,
     *,
     record_id: str | None = None,
     created_at: str | None = None,
@@ -416,7 +418,7 @@ def submit_feedback(
     snapshot = _normalize_snapshot(submission.full_input_snapshot, "full_input_snapshot")
     uncertainty = _normalize_snapshot(submission.uncertainty_snapshot, "uncertainty_snapshot")
     assert snapshot is not None
-    path = Path(store_path)
+    path = Path(store_path) if store_path is not None else resolve_runtime_paths().feedback_store
     existing = load_feedback_records(path)
     identifier = record_id or str(uuid.uuid4())
     _required_text("record_id", identifier)
