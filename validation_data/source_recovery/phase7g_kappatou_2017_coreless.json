@@ -1,0 +1,524 @@
+{
+    "phase":  "7G",
+    "source_id":  "kappatou_2017_coreless_afpm",
+    "source_title":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+    "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+    "source_family":  {
+                          "publications":  [
+                                               "https://www.scirp.org/pdf/JEMAA_2016111615243457.pdf",
+                                               "https://www.mdpi.com/1996-1073/10/9/1269"
+                                           ],
+                          "identity_evidence":  "The later open-access article cites the design work and reports construction/testing; the family is retained as a candidate, but no cross-paper value is used unless repeated for the same machine.",
+                          "license_note":  "Open-access article plus publicly readable design paper; facts only are recorded."
+                      },
+    "quality_scores":  {
+                           "topology_compatibility":  4,
+                           "geometry_completeness":  2,
+                           "magnet_material_completeness":  2,
+                           "winding_completeness":  2,
+                           "operating_point_completeness":  3,
+                           "back_emf_semantic_clarity":  2,
+                           "experimental_provenance":  4,
+                           "fea_provenance":  2,
+                           "reproducibility":  3,
+                           "license_accessibility":  5
+                       },
+    "fields":  {
+                   "topology_type":  {
+                                         "status":  "source_provided",
+                                         "value":  "single_stator_double_rotor",
+                                         "unit":  null,
+                                         "provenance":  {
+                                                            "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                            "page":  "machine description",
+                                                            "location":  "coreless AFPM topology",
+                                                            "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                            "table":  null,
+                                                            "figure":  null,
+                                                            "equation":  null
+                                                        },
+                                         "notes":  "Central coreless stator and two rotors."
+                                     },
+                   "stator_count":  {
+                                        "status":  "source_provided",
+                                        "value":  1,
+                                        "unit":  "stator",
+                                        "provenance":  {
+                                                           "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                           "page":  "machine description",
+                                                           "location":  "topology",
+                                                           "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Single stator."
+                                    },
+                   "rotor_count":  {
+                                       "status":  "source_provided",
+                                       "value":  2,
+                                       "unit":  "rotor",
+                                       "provenance":  {
+                                                          "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                          "page":  "machine description",
+                                                          "location":  "topology",
+                                                          "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "Double rotor."
+                                   },
+                   "active_air_gap_count":  {
+                                                "status":  "safely_derived",
+                                                "value":  2,
+                                                "unit":  "air gap",
+                                                "derivation":  "The coreless central stator has one rotor-facing active side on each face.",
+                                                "provenance":  {
+                                                                   "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                   "page":  "machine figure",
+                                                                   "location":  "cross-section",
+                                                                   "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                   "table":  null,
+                                                                   "figure":  "cross-section",
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "Topology count."
+                                            },
+                   "winding_location":  {
+                                            "status":  "source_provided",
+                                            "value":  "central coreless stator",
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                               "page":  "machine description",
+                                                               "location":  "stator",
+                                                               "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Ironless winding support."
+                                        },
+                   "magnet_location":  {
+                                           "status":  "source_provided",
+                                           "value":  "inward faces of both rotors",
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                              "page":  "machine figure",
+                                                              "location":  "rotor PMs",
+                                                              "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Double-sided PM excitation."
+                                       },
+                   "inner_radius_m":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  "m",
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                             "page":  "current recovery pass",
+                                                             "location":  "not safely extracted",
+                                                             "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "No value copied from a different design case."
+                                      },
+                   "outer_radius_m":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  "m",
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                             "page":  "current recovery pass",
+                                                             "location":  "not safely extracted",
+                                                             "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Remains unavailable in this package."
+                                      },
+                   "physical_air_gap_m":  {
+                                              "status":  "unavailable",
+                                              "value":  null,
+                                              "unit":  "m",
+                                              "provenance":  {
+                                                                 "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                 "page":  "current recovery pass",
+                                                                 "location":  "not safely extracted",
+                                                                 "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "Unknown."
+                                          },
+                   "effective_nonmagnetic_gap_m":  {
+                                                       "status":  "unavailable",
+                                                       "value":  null,
+                                                       "unit":  "m",
+                                                       "provenance":  {
+                                                                          "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                          "page":  "current recovery pass",
+                                                                          "location":  "not reported as solver-ready quantity",
+                                                                          "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                          "table":  null,
+                                                                          "figure":  null,
+                                                                          "equation":  null
+                                                                      },
+                                                       "notes":  "Unknown."
+                                                   },
+                   "magnet_thickness_m":  {
+                                              "status":  "unavailable",
+                                              "value":  null,
+                                              "unit":  "m",
+                                              "provenance":  {
+                                                                 "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                 "page":  "current recovery pass",
+                                                                 "location":  "not safely extracted",
+                                                                 "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "Unknown."
+                                          },
+                   "pole_pairs":  {
+                                      "status":  "unavailable",
+                                      "value":  null,
+                                      "unit":  null,
+                                      "provenance":  {
+                                                         "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                         "page":  "current recovery pass",
+                                                         "location":  "not locked",
+                                                         "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                         "table":  null,
+                                                         "figure":  null,
+                                                         "equation":  null
+                                                     },
+                                      "notes":  "No memory-based value admitted."
+                                  },
+                   "magnet_arc_ratio":  {
+                                            "status":  "unavailable",
+                                            "value":  null,
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                               "page":  "current recovery pass",
+                                                               "location":  "not locked",
+                                                               "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Unknown."
+                                        },
+                   "magnet_profile_samples":  {
+                                                  "status":  "unavailable",
+                                                  "value":  null,
+                                                  "unit":  null,
+                                                  "provenance":  {
+                                                                     "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                     "page":  "current recovery pass",
+                                                                     "location":  "not tabulated",
+                                                                     "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                     "table":  null,
+                                                                     "figure":  null,
+                                                                     "equation":  null
+                                                                 },
+                                                  "notes":  "Unknown."
+                                              },
+                   "remanence_t":  {
+                                       "status":  "unavailable",
+                                       "value":  null,
+                                       "unit":  "T",
+                                       "provenance":  {
+                                                          "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                          "page":  "current recovery pass",
+                                                          "location":  "not locked",
+                                                          "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "No generic magnet grade value."
+                                   },
+                   "magnet_relative_permeability":  {
+                                                        "status":  "unavailable",
+                                                        "value":  null,
+                                                        "unit":  null,
+                                                        "provenance":  {
+                                                                           "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                           "page":  "current recovery pass",
+                                                                           "location":  "not locked",
+                                                                           "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                           "table":  null,
+                                                                           "figure":  null,
+                                                                           "equation":  null
+                                                                       },
+                                                        "notes":  "Unknown."
+                                                    },
+                   "operating_temperature_c":  {
+                                                   "status":  "unavailable",
+                                                   "value":  null,
+                                                   "unit":  "degC",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                      "page":  "experiment section",
+                                                                      "location":  "not locked",
+                                                                      "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "Unknown."
+                                               },
+                   "turns_per_coil":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  "turn",
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                             "page":  "current recovery pass",
+                                                             "location":  "not safely extracted",
+                                                             "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Unknown."
+                                      },
+                   "coils_per_phase":  {
+                                           "status":  "unavailable",
+                                           "value":  null,
+                                           "unit":  "coil",
+                                           "provenance":  {
+                                                              "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                              "page":  "current recovery pass",
+                                                              "location":  "not safely extracted",
+                                                              "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Unknown."
+                                       },
+                   "series_coils_per_branch":  {
+                                                   "status":  "unavailable",
+                                                   "value":  null,
+                                                   "unit":  "coil",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                      "page":  "current recovery pass",
+                                                                      "location":  "not explicit",
+                                                                      "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "Unknown."
+                                               },
+                   "parallel_branches":  {
+                                             "status":  "unavailable",
+                                             "value":  null,
+                                             "unit":  "branch",
+                                             "provenance":  {
+                                                                "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                "page":  "current recovery pass",
+                                                                "location":  "not explicit",
+                                                                "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  null
+                                                            },
+                                             "notes":  "Unknown."
+                                         },
+                   "stator_connection":  {
+                                             "status":  "source_provided",
+                                             "value":  "independent",
+                                             "unit":  null,
+                                             "provenance":  {
+                                                                "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                "page":  "machine topology",
+                                                                "location":  "single stator",
+                                                                "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  null
+                                                            },
+                                             "notes":  "No inter-stator connection."
+                                         },
+                   "phase_connection":  {
+                                            "status":  "unavailable",
+                                            "value":  null,
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                               "page":  "current recovery pass",
+                                                               "location":  "not locked",
+                                                               "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Unknown."
+                                        },
+                   "winding_type":  {
+                                        "status":  "source_provided",
+                                        "value":  "concentrated",
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                           "page":  "winding description",
+                                                           "location":  "coreless concentrated coils",
+                                                           "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Source classification."
+                                    },
+                   "winding_type_description":  {
+                                                    "status":  "source_provided",
+                                                    "value":  "coreless concentrated winding",
+                                                    "unit":  null,
+                                                    "provenance":  {
+                                                                       "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                       "page":  "winding description",
+                                                                       "location":  "stator construction",
+                                                                       "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                       "table":  null,
+                                                                       "figure":  null,
+                                                                       "equation":  null
+                                                                   },
+                                                    "notes":  "No factor inferred."
+                                                },
+                   "winding_factor":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                             "page":  "current recovery pass",
+                                                             "location":  "not locked",
+                                                             "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Unknown."
+                                      },
+                   "pitch_factor":  {
+                                        "status":  "unavailable",
+                                        "value":  null,
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                           "page":  "current recovery pass",
+                                                           "location":  "not locked",
+                                                           "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Unknown."
+                                    },
+                   "distribution_factor":  {
+                                               "status":  "unavailable",
+                                               "value":  null,
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                  "page":  "current recovery pass",
+                                                                  "location":  "not locked",
+                                                                  "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "Unknown."
+                                           },
+                   "speed_rpm":  {
+                                     "status":  "unavailable",
+                                     "value":  null,
+                                     "unit":  "rpm",
+                                     "provenance":  {
+                                                        "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                        "page":  "current recovery pass",
+                                                        "location":  "exact comparison point not locked",
+                                                        "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                        "table":  null,
+                                                        "figure":  null,
+                                                        "equation":  null
+                                                    },
+                                     "notes":  "No operating point inferred."
+                                 },
+                   "back_emf_reference_v":  {
+                                                "status":  "unavailable",
+                                                "value":  null,
+                                                "unit":  "V",
+                                                "provenance":  {
+                                                                   "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                   "page":  "experiment section",
+                                                                   "location":  "waveform not normalized into this package",
+                                                                   "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                   "table":  null,
+                                                                   "figure":  "waveform not normalized into this package",
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "Measured evidence exists, but a scalar with closed scope/RMS semantics was not recovered."
+                                            },
+                   "back_emf_scope":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                             "page":  "experiment section",
+                                                             "location":  "not locked",
+                                                             "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Unknown."
+                                      },
+                   "back_emf_value_kind":  {
+                                               "status":  "unavailable",
+                                               "value":  null,
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                                  "page":  "experiment section",
+                                                                  "location":  "not locked",
+                                                                  "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "Unknown."
+                                           },
+                   "waveform_family":  {
+                                           "status":  "unavailable",
+                                           "value":  null,
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://www.mdpi.com/1996-1073/10/9/1269",
+                                                              "page":  "experiment section",
+                                                              "location":  "not locked",
+                                                              "publication":  "Design and Analysis of a Coreless Axial Flux Permanent Magnet Machine",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Unknown."
+                                       }
+               }
+}

@@ -1,0 +1,525 @@
+{
+    "phase":  "7G",
+    "source_id":  "huang_2016_concentrated_afpm",
+    "source_title":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+    "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+    "source_family":  {
+                          "publications":  [
+                                               "https://www.mdpi.com/1996-1073/9/11/892"
+                                           ],
+                          "identity_evidence":  "Single open-access paper with one experimental 10 kW machine.",
+                          "license_note":  "Open-access publisher article; extracted metadata remains attributed."
+                      },
+    "quality_scores":  {
+                           "topology_compatibility":  5,
+                           "geometry_completeness":  3,
+                           "magnet_material_completeness":  3,
+                           "winding_completeness":  2,
+                           "operating_point_completeness":  4,
+                           "back_emf_semantic_clarity":  2,
+                           "experimental_provenance":  4,
+                           "fea_provenance":  2,
+                           "reproducibility":  5,
+                           "license_accessibility":  5
+                       },
+    "fields":  {
+                   "topology_type":  {
+                                         "status":  "source_provided",
+                                         "value":  "single_stator_double_rotor",
+                                         "unit":  null,
+                                         "provenance":  {
+                                                            "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                            "page":  "Section 2 and Figure 1",
+                                                            "location":  "machine topology",
+                                                            "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                            "table":  null,
+                                                            "figure":  null,
+                                                            "equation":  null
+                                                        },
+                                         "notes":  "Two rotors and one segmented stator."
+                                     },
+                   "stator_count":  {
+                                        "status":  "source_provided",
+                                        "value":  1,
+                                        "unit":  "stator",
+                                        "provenance":  {
+                                                           "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                           "page":  "Section 2",
+                                                           "location":  "machine description",
+                                                           "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "SMC segmented stator."
+                                    },
+                   "rotor_count":  {
+                                       "status":  "source_provided",
+                                       "value":  2,
+                                       "unit":  "rotor",
+                                       "provenance":  {
+                                                          "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                          "page":  "Section 2",
+                                                          "location":  "machine description",
+                                                          "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "Double rotor."
+                                   },
+                   "active_air_gap_count":  {
+                                                "status":  "safely_derived",
+                                                "value":  2,
+                                                "unit":  "air gap",
+                                                "derivation":  "One stator face is active toward each rotor.",
+                                                "provenance":  {
+                                                                   "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                   "page":  "Figure 1",
+                                                                   "location":  "cross-section",
+                                                                   "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                   "table":  null,
+                                                                   "figure":  "cross-section",
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "Topology count."
+                                            },
+                   "winding_location":  {
+                                            "status":  "source_provided",
+                                            "value":  "segmented central stator",
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                               "page":  "Section 2",
+                                                               "location":  "winding description",
+                                                               "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Non-overlap concentrated winding."
+                                        },
+                   "magnet_location":  {
+                                           "status":  "source_provided",
+                                           "value":  "inward rotor faces",
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                              "page":  "Figure 1",
+                                                              "location":  "machine topology",
+                                                              "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "PM rotor disks."
+                                       },
+                   "inner_radius_m":  {
+                                          "status":  "source_provided",
+                                          "value":  0.045,
+                                          "unit":  "m",
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                             "page":  "Table 1",
+                                                             "location":  "inner radius",
+                                                             "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "45 mm."
+                                      },
+                   "outer_radius_m":  {
+                                          "status":  "source_provided",
+                                          "value":  0.07,
+                                          "unit":  "m",
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                             "page":  "Table 1",
+                                                             "location":  "outer radius",
+                                                             "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "70 mm."
+                                      },
+                   "physical_air_gap_m":  {
+                                              "status":  "source_provided",
+                                              "value":  0.003,
+                                              "unit":  "m per side",
+                                              "provenance":  {
+                                                                 "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                 "page":  "Table 1",
+                                                                 "location":  "air gap",
+                                                                 "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "3 mm physical gap."
+                                          },
+                   "effective_nonmagnetic_gap_m":  {
+                                                       "status":  "unavailable",
+                                                       "value":  null,
+                                                       "unit":  "m",
+                                                       "provenance":  {
+                                                                          "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                          "page":  "accessible article",
+                                                                          "location":  "not tabulated",
+                                                                          "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                          "table":  null,
+                                                                          "figure":  null,
+                                                                          "equation":  null
+                                                                      },
+                                                       "notes":  "Not inferred."
+                                                   },
+                   "magnet_thickness_m":  {
+                                              "status":  "unavailable",
+                                              "value":  null,
+                                              "unit":  "m",
+                                              "provenance":  {
+                                                                 "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                 "page":  "Table 1 and accessible article",
+                                                                 "location":  "not tabulated",
+                                                                 "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "Required solver input remains absent."
+                                          },
+                   "pole_pairs":  {
+                                      "status":  "safely_derived",
+                                      "value":  3,
+                                      "unit":  null,
+                                      "derivation":  "6 poles / 2.",
+                                      "provenance":  {
+                                                         "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                         "page":  "Table 1",
+                                                         "location":  "six poles",
+                                                         "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                         "table":  null,
+                                                         "figure":  null,
+                                                         "equation":  null
+                                                     },
+                                      "notes":  "Three pole pairs."
+                                  },
+                   "magnet_arc_ratio":  {
+                                            "status":  "unavailable",
+                                            "value":  null,
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                               "page":  "accessible article",
+                                                               "location":  "not tabulated",
+                                                               "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "No scalar coverage."
+                                        },
+                   "magnet_profile_samples":  {
+                                                  "status":  "unavailable",
+                                                  "value":  null,
+                                                  "unit":  null,
+                                                  "provenance":  {
+                                                                     "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                     "page":  "accessible article",
+                                                                     "location":  "not tabulated",
+                                                                     "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                     "table":  null,
+                                                                     "figure":  null,
+                                                                     "equation":  null
+                                                                 },
+                                                  "notes":  "No radial coverage profile."
+                                              },
+                   "remanence_t":  {
+                                       "status":  "source_provided",
+                                       "value":  1.03,
+                                       "unit":  "T",
+                                       "provenance":  {
+                                                          "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                          "page":  "Table 1",
+                                                          "location":  "PM remanence",
+                                                          "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "NdFeB source value."
+                                   },
+                   "magnet_relative_permeability":  {
+                                                        "status":  "ambiguous",
+                                                        "value":  null,
+                                                        "unit":  null,
+                                                        "provenance":  {
+                                                                           "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                           "page":  "analytical assumptions",
+                                                                           "location":  "relative permeability close to unity",
+                                                                           "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                           "table":  null,
+                                                                           "figure":  null,
+                                                                           "equation":  null
+                                                                       },
+                                                        "notes":  "Qualitative statement is not converted to numeric 1.0."
+                                                    },
+                   "operating_temperature_c":  {
+                                                   "status":  "unavailable",
+                                                   "value":  null,
+                                                   "unit":  "degC",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                      "page":  "experiment section",
+                                                                      "location":  "not reported",
+                                                                      "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "Unknown."
+                                               },
+                   "turns_per_coil":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  "turn",
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                             "page":  "accessible article",
+                                                             "location":  "not tabulated",
+                                                             "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "No inference from rated voltage."
+                                      },
+                   "coils_per_phase":  {
+                                           "status":  "safely_derived",
+                                           "value":  3,
+                                           "unit":  "coil",
+                                           "derivation":  "9 non-overlap coils / 3 phases.",
+                                           "provenance":  {
+                                                              "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                              "page":  "Table 1 and winding description",
+                                                              "location":  "9 slots, three phases",
+                                                              "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Connectivity and turns remain unknown."
+                                       },
+                   "series_coils_per_branch":  {
+                                                   "status":  "unavailable",
+                                                   "value":  null,
+                                                   "unit":  "coil",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                      "page":  "accessible article",
+                                                                      "location":  "not explicit",
+                                                                      "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "Unknown."
+                                               },
+                   "parallel_branches":  {
+                                             "status":  "unavailable",
+                                             "value":  null,
+                                             "unit":  "branch",
+                                             "provenance":  {
+                                                                "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                "page":  "accessible article",
+                                                                "location":  "not reported",
+                                                                "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  null
+                                                            },
+                                             "notes":  "Unknown."
+                                         },
+                   "stator_connection":  {
+                                             "status":  "source_provided",
+                                             "value":  "independent",
+                                             "unit":  null,
+                                             "provenance":  {
+                                                                "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                "page":  "Section 2",
+                                                                "location":  "single stator",
+                                                                "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  null
+                                                            },
+                                             "notes":  "No stator aggregation."
+                                         },
+                   "phase_connection":  {
+                                            "status":  "unavailable",
+                                            "value":  null,
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                               "page":  "accessible article",
+                                                               "location":  "not explicit",
+                                                               "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "No Y/Delta inference."
+                                        },
+                   "winding_type":  {
+                                        "status":  "source_provided",
+                                        "value":  "concentrated",
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                           "page":  "title and Section 2",
+                                                           "location":  "non-overlap concentrated winding",
+                                                           "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Source classification."
+                                    },
+                   "winding_type_description":  {
+                                                    "status":  "source_provided",
+                                                    "value":  "three-phase 6-pole 9-slot non-overlap winding",
+                                                    "unit":  null,
+                                                    "provenance":  {
+                                                                       "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                       "page":  "Table 1 and Section 2",
+                                                                       "location":  "machine specification",
+                                                                       "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                       "table":  null,
+                                                                       "figure":  null,
+                                                                       "equation":  null
+                                                                   },
+                                                    "notes":  "No scalar kw inferred."
+                                                },
+                   "winding_factor":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                             "page":  "accessible article",
+                                                             "location":  "not tabulated as source-equivalent kw",
+                                                             "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  "not tabulated as source-equivalent kw"
+                                                         },
+                                          "notes":  "Unknown."
+                                      },
+                   "pitch_factor":  {
+                                        "status":  "unavailable",
+                                        "value":  null,
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                           "page":  "accessible article",
+                                                           "location":  "not tabulated",
+                                                           "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Unknown."
+                                    },
+                   "distribution_factor":  {
+                                               "status":  "unavailable",
+                                               "value":  null,
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                  "page":  "accessible article",
+                                                                  "location":  "not tabulated",
+                                                                  "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "Unknown."
+                                           },
+                   "speed_rpm":  {
+                                     "status":  "source_provided",
+                                     "value":  20000.0,
+                                     "unit":  "rpm",
+                                     "provenance":  {
+                                                        "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                        "page":  "Table 1",
+                                                        "location":  "rated speed",
+                                                        "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                        "table":  null,
+                                                        "figure":  null,
+                                                        "equation":  null
+                                                    },
+                                     "notes":  "Rated point, not necessarily the coefficient test point."
+                                 },
+                   "back_emf_reference_v":  {
+                                                "status":  "ambiguous",
+                                                "value":  null,
+                                                "unit":  "source coefficient",
+                                                "provenance":  {
+                                                                   "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                   "page":  "Table 2",
+                                                                   "location":  "experimental back-EMF coefficient 5.28",
+                                                                   "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                   "table":  null,
+                                                                   "figure":  null,
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "The accessible table does not close the exact scalar voltage, speed normalization, and phase/line semantics needed by the gate."
+                                            },
+                   "back_emf_scope":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                             "page":  "Table 2",
+                                                             "location":  "coefficient comparison",
+                                                             "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Not safely mapped."
+                                      },
+                   "back_emf_value_kind":  {
+                                               "status":  "unavailable",
+                                               "value":  null,
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                                  "page":  "Table 2",
+                                                                  "location":  "coefficient comparison",
+                                                                  "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "Not safely mapped."
+                                           },
+                   "waveform_family":  {
+                                           "status":  "unavailable",
+                                           "value":  null,
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://www.mdpi.com/1996-1073/9/11/892",
+                                                              "page":  "experiment section",
+                                                              "location":  "not locked for scalar comparison",
+                                                              "publication":  "Analytical Modeling of Static Eccentricities in Axial Flux Permanent-Magnet Machines with Concentrated Windings",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Unknown source-native scalar semantics."
+                                       }
+               }
+}

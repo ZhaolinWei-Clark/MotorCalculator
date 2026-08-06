@@ -1,0 +1,529 @@
+{
+    "phase":  "7G",
+    "source_id":  "mahmoudi_2013_slotted_torus",
+    "source_title":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+    "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+    "source_family":  {
+                          "publications":  [
+                                               "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377"
+                                           ],
+                          "identity_evidence":  "Single paper and explicitly tested 1 kW prototype.",
+                          "license_note":  "Publisher landing page is traceable; this package contains facts and citations only."
+                      },
+    "quality_scores":  {
+                           "topology_compatibility":  5,
+                           "geometry_completeness":  4,
+                           "magnet_material_completeness":  3,
+                           "winding_completeness":  4,
+                           "operating_point_completeness":  5,
+                           "back_emf_semantic_clarity":  5,
+                           "experimental_provenance":  5,
+                           "fea_provenance":  3,
+                           "reproducibility":  5,
+                           "license_accessibility":  3
+                       },
+    "fields":  {
+                   "topology_type":  {
+                                         "status":  "source_provided",
+                                         "value":  "single_stator_double_rotor",
+                                         "unit":  null,
+                                         "provenance":  {
+                                                            "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                            "page":  "prototype design section",
+                                                            "location":  "TORUS topology",
+                                                            "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                            "table":  null,
+                                                            "figure":  null,
+                                                            "equation":  null
+                                                        },
+                                         "notes":  "One stator between two rotors."
+                                     },
+                   "stator_count":  {
+                                        "status":  "source_provided",
+                                        "value":  1,
+                                        "unit":  "stator",
+                                        "provenance":  {
+                                                           "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                           "page":  "prototype design section",
+                                                           "location":  "topology",
+                                                           "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Slotted stator."
+                                    },
+                   "rotor_count":  {
+                                       "status":  "source_provided",
+                                       "value":  2,
+                                       "unit":  "rotor",
+                                       "provenance":  {
+                                                          "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                          "page":  "prototype design section",
+                                                          "location":  "topology",
+                                                          "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "Twin rotors."
+                                   },
+                   "active_air_gap_count":  {
+                                                "status":  "safely_derived",
+                                                "value":  2,
+                                                "unit":  "air gap",
+                                                "derivation":  "The central stator has one active face toward each rotor.",
+                                                "provenance":  {
+                                                                   "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                   "page":  "machine cross-section",
+                                                                   "location":  "TORUS topology",
+                                                                   "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                   "table":  null,
+                                                                   "figure":  null,
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "Topology count."
+                                            },
+                   "winding_location":  {
+                                            "status":  "source_provided",
+                                            "value":  "central slotted stator",
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                               "page":  "prototype section",
+                                                               "location":  "stator construction",
+                                                               "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Double-sided winding."
+                                        },
+                   "magnet_location":  {
+                                           "status":  "source_provided",
+                                           "value":  "inward faces of both rotors",
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                              "page":  "prototype section",
+                                                              "location":  "rotor construction",
+                                                              "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Two PM arrays."
+                                       },
+                   "inner_radius_m":  {
+                                          "status":  "safely_derived",
+                                          "value":  0.04,
+                                          "unit":  "m",
+                                          "derivation":  "80 mm inner diameter / 2.",
+                                          "provenance":  {
+                                                             "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                             "page":  "prototype parameter table",
+                                                             "location":  "inner diameter",
+                                                             "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "SI radius conversion."
+                                      },
+                   "outer_radius_m":  {
+                                          "status":  "safely_derived",
+                                          "value":  0.085,
+                                          "unit":  "m",
+                                          "derivation":  "170 mm outer diameter / 2.",
+                                          "provenance":  {
+                                                             "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                             "page":  "prototype parameter table",
+                                                             "location":  "outer diameter",
+                                                             "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "SI radius conversion."
+                                      },
+                   "physical_air_gap_m":  {
+                                              "status":  "source_provided",
+                                              "value":  0.001,
+                                              "unit":  "m per side",
+                                              "provenance":  {
+                                                                 "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                 "page":  "prototype parameter table",
+                                                                 "location":  "air gap",
+                                                                 "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "Physical slot opening/fringing not folded in."
+                                          },
+                   "effective_nonmagnetic_gap_m":  {
+                                                       "status":  "unavailable",
+                                                       "value":  null,
+                                                       "unit":  "m",
+                                                       "provenance":  {
+                                                                          "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                          "page":  "full paper",
+                                                                          "location":  "not reported",
+                                                                          "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                          "table":  null,
+                                                                          "figure":  null,
+                                                                          "equation":  null
+                                                                      },
+                                                       "notes":  "Physical gap is not substituted."
+                                                   },
+                   "magnet_thickness_m":  {
+                                              "status":  "source_provided",
+                                              "value":  0.0025,
+                                              "unit":  "m",
+                                              "provenance":  {
+                                                                 "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                 "page":  "prototype parameter table",
+                                                                 "location":  "PM axial length",
+                                                                 "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "2.5 mm."
+                                          },
+                   "pole_pairs":  {
+                                      "status":  "safely_derived",
+                                      "value":  2,
+                                      "unit":  null,
+                                      "derivation":  "4 poles / 2.",
+                                      "provenance":  {
+                                                         "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                         "page":  "prototype specification",
+                                                         "location":  "pole count",
+                                                         "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                         "table":  null,
+                                                         "figure":  null,
+                                                         "equation":  null
+                                                     },
+                                      "notes":  "Four-pole prototype."
+                                  },
+                   "magnet_arc_ratio":  {
+                                            "status":  "ambiguous",
+                                            "value":  null,
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                               "page":  "prototype parameter table",
+                                                               "location":  "118 degree pole-pitch entry",
+                                                               "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "The reported angular label is not silently interpreted as the solver\u0027s local magnet coverage ratio."
+                                        },
+                   "magnet_profile_samples":  {
+                                                  "status":  "unavailable",
+                                                  "value":  null,
+                                                  "unit":  null,
+                                                  "provenance":  {
+                                                                     "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                     "page":  "full paper",
+                                                                     "location":  "not tabulated",
+                                                                     "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                     "table":  null,
+                                                                     "figure":  null,
+                                                                     "equation":  null
+                                                                 },
+                                                  "notes":  "No radial profile."
+                                              },
+                   "remanence_t":  {
+                                       "status":  "source_provided",
+                                       "value":  1.3,
+                                       "unit":  "T",
+                                       "provenance":  {
+                                                          "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                          "page":  "prototype parameter table",
+                                                          "location":  "NdFeB remanence",
+                                                          "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "Numeric source value."
+                                   },
+                   "magnet_relative_permeability":  {
+                                                        "status":  "unavailable",
+                                                        "value":  null,
+                                                        "unit":  null,
+                                                        "provenance":  {
+                                                                           "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                           "page":  "full paper",
+                                                                           "location":  "not numerically reported",
+                                                                           "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                           "table":  null,
+                                                                           "figure":  null,
+                                                                           "equation":  null
+                                                                       },
+                                                        "notes":  "No grade-derived value inserted."
+                                                    },
+                   "operating_temperature_c":  {
+                                                   "status":  "unavailable",
+                                                   "value":  null,
+                                                   "unit":  "degC",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                      "page":  "back-EMF experiment",
+                                                                      "location":  "not reported",
+                                                                      "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "Unknown."
+                                               },
+                   "turns_per_coil":  {
+                                          "status":  "source_provided",
+                                          "value":  18,
+                                          "unit":  "turn",
+                                          "provenance":  {
+                                                             "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                             "page":  "winding design section",
+                                                             "location":  "coil turns",
+                                                             "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Source winding layout."
+                                      },
+                   "coils_per_phase":  {
+                                           "status":  "safely_derived",
+                                           "value":  10,
+                                           "unit":  "coil",
+                                           "derivation":  "The source reports 180 phase turns and 18 turns per coil.",
+                                           "provenance":  {
+                                                              "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                              "page":  "winding design section",
+                                                              "location":  "Nph equation and coil turns",
+                                                              "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  "Nph equation and coil turns"
+                                                          },
+                                           "notes":  "180 / 18."
+                                       },
+                   "series_coils_per_branch":  {
+                                                   "status":  "safely_derived",
+                                                   "value":  10,
+                                                   "unit":  "coil",
+                                                   "derivation":  "The reported phase-turn equation gives 180 effective series turns from ten 18-turn coils.",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                      "page":  "winding design section",
+                                                                      "location":  "Nph = 180",
+                                                                      "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "Source-equivalent phase series path."
+                                               },
+                   "parallel_branches":  {
+                                             "status":  "safely_derived",
+                                             "value":  1,
+                                             "unit":  "branch",
+                                             "derivation":  "10 coils per phase / 10 series coils per branch.",
+                                             "provenance":  {
+                                                                "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                "page":  "winding design section",
+                                                                "location":  "phase-turn equation",
+                                                                "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  "phase-turn equation"
+                                                            },
+                                             "notes":  "No additional branch inferred."
+                                         },
+                   "stator_connection":  {
+                                             "status":  "source_provided",
+                                             "value":  "independent",
+                                             "unit":  null,
+                                             "provenance":  {
+                                                                "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                "page":  "topology section",
+                                                                "location":  "single stator",
+                                                                "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  null
+                                                            },
+                                             "notes":  "No inter-stator connection."
+                                         },
+                   "phase_connection":  {
+                                            "status":  "source_provided",
+                                            "value":  "Y",
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                               "page":  "prototype specification",
+                                                               "location":  "star connection",
+                                                               "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Y connected."
+                                        },
+                   "winding_type":  {
+                                        "status":  "source_provided",
+                                        "value":  "distributed",
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                           "page":  "winding design section",
+                                                           "location":  "30-slot winding layout",
+                                                           "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Slotted distributed winding."
+                                    },
+                   "winding_type_description":  {
+                                                    "status":  "source_provided",
+                                                    "value":  "30 total slots, 15 on each stator face",
+                                                    "unit":  null,
+                                                    "provenance":  {
+                                                                       "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                       "page":  "prototype parameter table",
+                                                                       "location":  "slot count",
+                                                                       "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                       "table":  null,
+                                                                       "figure":  null,
+                                                                       "equation":  null
+                                                                   },
+                                                    "notes":  "Layout metadata only."
+                                                },
+                   "winding_factor":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                             "page":  "full paper",
+                                                             "location":  "not reported as source-equivalent scalar",
+                                                             "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  "not reported as source-equivalent scalar"
+                                                         },
+                                          "notes":  "No generic value used."
+                                      },
+                   "pitch_factor":  {
+                                        "status":  "unavailable",
+                                        "value":  null,
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                           "page":  "full paper",
+                                                           "location":  "not numerically reported",
+                                                           "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Unknown."
+                                    },
+                   "distribution_factor":  {
+                                               "status":  "unavailable",
+                                               "value":  null,
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                  "page":  "full paper",
+                                                                  "location":  "not numerically reported",
+                                                                  "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "Unknown."
+                                           },
+                   "speed_rpm":  {
+                                     "status":  "source_provided",
+                                     "value":  1500.0,
+                                     "unit":  "rpm",
+                                     "provenance":  {
+                                                        "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                        "page":  "experimental back-EMF table",
+                                                        "location":  "test speed",
+                                                        "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                        "table":  null,
+                                                        "figure":  null,
+                                                        "equation":  null
+                                                    },
+                                     "notes":  "Primary test point."
+                                 },
+                   "back_emf_reference_v":  {
+                                                "status":  "source_provided",
+                                                "value":  52.0,
+                                                "unit":  "V phase RMS",
+                                                "provenance":  {
+                                                                   "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                   "page":  "experimental back-EMF table",
+                                                                   "location":  "measured RMS at 1500 rpm",
+                                                                   "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                   "table":  null,
+                                                                   "figure":  null,
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "Measured total RMS; source also reports 2.6% THD."
+                                            },
+                   "back_emf_scope":  {
+                                          "status":  "source_provided",
+                                          "value":  "phase",
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                             "page":  "back-EMF experiment",
+                                                             "location":  "phase voltage",
+                                                             "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Source-native phase scope."
+                                      },
+                   "back_emf_value_kind":  {
+                                               "status":  "source_provided",
+                                               "value":  "rms",
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                                  "page":  "experimental table",
+                                                                  "location":  "Vrms column",
+                                                                  "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "Total RMS."
+                                           },
+                   "waveform_family":  {
+                                           "status":  "source_provided",
+                                           "value":  "arbitrary",
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://ietresearch.onlinelibrary.wiley.com/doi/10.1049/iet-epa.2012.0377",
+                                                              "page":  "experimental table",
+                                                              "location":  "THD column",
+                                                              "publication":  "Design and prototyping of an optimised axial-flux permanent-magnet machine",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Small but nonzero measured harmonic content; no sinusoidal conversion applied."
+                                       }
+               }
+}

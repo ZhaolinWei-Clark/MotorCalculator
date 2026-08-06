@@ -1,0 +1,526 @@
+{
+    "phase":  "7G",
+    "source_id":  "ferreira_2007_ipb_dssr_generator",
+    "source_title":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+    "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+    "source_family":  {
+                          "publications":  [
+                                               "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                               "https://bibliotecadigital.ipb.pt/bitstreams/30bba33f-d119-4caa-8f1b-604f3d919dd3/download",
+                                               "https://bibliotecadigital.ipb.pt/bitstreams/4189f3ec-c4a0-4e2a-a88e-fff6270288d0/content"
+                                           ],
+                          "identity_evidence":  "The publications repeat the same authors/project, DSSR topology, 65/90 mm radii, N30SH magnets, 24 turns per coil, 60 coils per stator, and 600 rpm prototype.",
+                          "license_note":  "Publicly downloadable institutional-repository copies; this record redistributes metadata and extracted facts only."
+                      },
+    "quality_scores":  {
+                           "topology_compatibility":  5,
+                           "geometry_completeness":  4,
+                           "magnet_material_completeness":  4,
+                           "winding_completeness":  4,
+                           "operating_point_completeness":  5,
+                           "back_emf_semantic_clarity":  4,
+                           "experimental_provenance":  5,
+                           "fea_provenance":  3,
+                           "reproducibility":  5,
+                           "license_accessibility":  5
+                       },
+    "fields":  {
+                   "topology_type":  {
+                                         "status":  "source_provided",
+                                         "value":  "double_stator_single_rotor",
+                                         "unit":  null,
+                                         "provenance":  {
+                                                            "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                            "page":  "pp. 1-2",
+                                                            "location":  "machine description and Figure 1",
+                                                            "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                            "table":  null,
+                                                            "figure":  "machine description and Figure 1",
+                                                            "equation":  null
+                                                        },
+                                         "notes":  "Two slotted stators and one internal PM rotor."
+                                     },
+                   "stator_count":  {
+                                        "status":  "source_provided",
+                                        "value":  2,
+                                        "unit":  "stator",
+                                        "provenance":  {
+                                                           "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                           "page":  "pp. 1-2",
+                                                           "location":  "machine description",
+                                                           "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "DSSR topology."
+                                    },
+                   "rotor_count":  {
+                                       "status":  "source_provided",
+                                       "value":  1,
+                                       "unit":  "rotor",
+                                       "provenance":  {
+                                                          "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                          "page":  "pp. 1-2",
+                                                          "location":  "machine description",
+                                                          "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "Central rotor."
+                                   },
+                   "active_air_gap_count":  {
+                                                "status":  "safely_derived",
+                                                "value":  2,
+                                                "unit":  "air gap",
+                                                "derivation":  "One central rotor has one active face toward each of the two stators.",
+                                                "provenance":  {
+                                                                   "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                   "page":  "Figure 1",
+                                                                   "location":  "cross-section",
+                                                                   "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                   "table":  null,
+                                                                   "figure":  "cross-section",
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "Topology count only."
+                                            },
+                   "winding_location":  {
+                                            "status":  "source_provided",
+                                            "value":  "one winding system on each outer stator",
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                               "page":  "pp. 1-3",
+                                                               "location":  "stator and winding description",
+                                                               "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Slotted stators."
+                                        },
+                   "magnet_location":  {
+                                           "status":  "source_provided",
+                                           "value":  "both faces of central rotor",
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                              "page":  "Figure 1",
+                                                              "location":  "rotor drawing",
+                                                              "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                              "table":  null,
+                                                              "figure":  "rotor drawing",
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Axially magnetized PMs."
+                                       },
+                   "inner_radius_m":  {
+                                          "status":  "source_provided",
+                                          "value":  0.065,
+                                          "unit":  "m",
+                                          "provenance":  {
+                                                             "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                             "page":  "Table 1",
+                                                             "location":  "core inner radius",
+                                                             "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Converted from 6.5 cm."
+                                      },
+                   "outer_radius_m":  {
+                                          "status":  "source_provided",
+                                          "value":  0.09,
+                                          "unit":  "m",
+                                          "provenance":  {
+                                                             "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                             "page":  "Table 1",
+                                                             "location":  "core outer radius",
+                                                             "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Converted from 9 cm."
+                                      },
+                   "physical_air_gap_m":  {
+                                              "status":  "source_provided",
+                                              "value":  0.0005,
+                                              "unit":  "m per side",
+                                              "provenance":  {
+                                                                 "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                 "page":  "Table 1",
+                                                                 "location":  "air gap",
+                                                                 "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "Physical slotted-machine clearance, not an effective Carter-corrected gap."
+                                          },
+                   "effective_nonmagnetic_gap_m":  {
+                                                       "status":  "unavailable",
+                                                       "value":  null,
+                                                       "unit":  "m",
+                                                       "provenance":  {
+                                                                          "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                          "page":  "full paper",
+                                                                          "location":  "not reported",
+                                                                          "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                          "table":  null,
+                                                                          "figure":  null,
+                                                                          "equation":  null
+                                                                      },
+                                                       "notes":  "Physical gap is not silently re-labelled as effective gap."
+                                                   },
+                   "magnet_thickness_m":  {
+                                              "status":  "source_provided",
+                                              "value":  0.01,
+                                              "unit":  "m",
+                                              "provenance":  {
+                                                                 "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                 "page":  "Table 1",
+                                                                 "location":  "PM axial length",
+                                                                 "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                 "table":  null,
+                                                                 "figure":  null,
+                                                                 "equation":  null
+                                                             },
+                                              "notes":  "Converted from 1 cm."
+                                          },
+                   "pole_pairs":  {
+                                      "status":  "source_provided",
+                                      "value":  10,
+                                      "unit":  null,
+                                      "provenance":  {
+                                                         "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                         "page":  "Table 1",
+                                                         "location":  "pole pairs",
+                                                         "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                         "table":  null,
+                                                         "figure":  null,
+                                                         "equation":  null
+                                                     },
+                                      "notes":  "Reported p = 10."
+                                  },
+                   "magnet_arc_ratio":  {
+                                            "status":  "ambiguous",
+                                            "value":  null,
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                               "page":  "magnet sizing section",
+                                                               "location":  "average-radius occupation ratio",
+                                                               "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "0.617 is stated at average radius, while the prototype uses cylindrical magnets whose local coverage varies with radius."
+                                        },
+                   "magnet_profile_samples":  {
+                                                  "status":  "unavailable",
+                                                  "value":  null,
+                                                  "unit":  null,
+                                                  "provenance":  {
+                                                                     "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                     "page":  "magnet sizing section",
+                                                                     "location":  "cylindrical magnet description",
+                                                                     "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                     "table":  null,
+                                                                     "figure":  null,
+                                                                     "equation":  null
+                                                                 },
+                                                  "notes":  "No source-tabulated radial coverage profile."
+                                              },
+                   "remanence_t":  {
+                                       "status":  "source_provided",
+                                       "value":  1.12,
+                                       "unit":  "T",
+                                       "provenance":  {
+                                                          "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/4189f3ec-c4a0-4e2a-a88e-fff6270288d0/content",
+                                                          "page":  "prototype specification panel",
+                                                          "location":  "N30SH remanence",
+                                                          "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                          "table":  null,
+                                                          "figure":  null,
+                                                          "equation":  null
+                                                      },
+                                       "notes":  "Same-machine poster value."
+                                   },
+                   "magnet_relative_permeability":  {
+                                                        "status":  "source_provided",
+                                                        "value":  1.0,
+                                                        "unit":  null,
+                                                        "provenance":  {
+                                                                           "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/30bba33f-d119-4caa-8f1b-604f3d919dd3/download",
+                                                                           "page":  "magnetic model section",
+                                                                           "location":  "PM recoil permeability assumption",
+                                                                           "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                           "table":  null,
+                                                                           "figure":  null,
+                                                                           "equation":  null
+                                                                       },
+                                                        "notes":  "Source model assumption, not a generic material lookup."
+                                                    },
+                   "operating_temperature_c":  {
+                                                   "status":  "unavailable",
+                                                   "value":  null,
+                                                   "unit":  "degC",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                      "page":  "back-EMF experiment section",
+                                                                      "location":  "not reported",
+                                                                      "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "Magnet grade temperature rating is not operating temperature."
+                                               },
+                   "turns_per_coil":  {
+                                          "status":  "source_provided",
+                                          "value":  24,
+                                          "unit":  "turn",
+                                          "provenance":  {
+                                                             "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                             "page":  "Table 1",
+                                                             "location":  "turns per coil",
+                                                             "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Per stator coil."
+                                      },
+                   "coils_per_phase":  {
+                                           "status":  "safely_derived",
+                                           "value":  20,
+                                           "unit":  "coil per stator phase",
+                                           "derivation":  "60 coils per stator / 3 phases = 20 coils per phase per stator.",
+                                           "provenance":  {
+                                                              "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                              "page":  "Table 1",
+                                                              "location":  "three phases and 60 coils per stator",
+                                                              "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Does not by itself establish all-series connectivity."
+                                       },
+                   "series_coils_per_branch":  {
+                                                   "status":  "ambiguous",
+                                                   "value":  null,
+                                                   "unit":  "coil",
+                                                   "provenance":  {
+                                                                      "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                      "page":  "winding section",
+                                                                      "location":  "phase network description",
+                                                                      "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                      "table":  null,
+                                                                      "figure":  null,
+                                                                      "equation":  null
+                                                                  },
+                                                   "notes":  "The scalar series count needed by the sandbox is not explicitly tabulated."
+                                               },
+                   "parallel_branches":  {
+                                             "status":  "unavailable",
+                                             "value":  null,
+                                             "unit":  "branch",
+                                             "provenance":  {
+                                                                "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                "page":  "full paper",
+                                                                "location":  "not reported",
+                                                                "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  null
+                                                            },
+                                             "notes":  "No branch count inferred."
+                                         },
+                   "stator_connection":  {
+                                             "status":  "source_provided",
+                                             "value":  "series",
+                                             "unit":  null,
+                                             "provenance":  {
+                                                                "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                "page":  "experimental connection description",
+                                                                "location":  "two stator windings",
+                                                                "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                "table":  null,
+                                                                "figure":  null,
+                                                                "equation":  null
+                                                            },
+                                             "notes":  "The two stator windings are connected in series."
+                                         },
+                   "phase_connection":  {
+                                            "status":  "source_provided",
+                                            "value":  "Y",
+                                            "unit":  null,
+                                            "provenance":  {
+                                                               "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                               "page":  "Table 1",
+                                                               "location":  "winding connection",
+                                                               "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                               "table":  null,
+                                                               "figure":  null,
+                                                               "equation":  null
+                                                           },
+                                            "notes":  "Star connection."
+                                        },
+                   "winding_type":  {
+                                        "status":  "source_provided",
+                                        "value":  "distributed",
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                           "page":  "winding design section",
+                                                           "location":  "one slot per pole per phase",
+                                                           "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Slotted distributed winding."
+                                    },
+                   "winding_type_description":  {
+                                                    "status":  "source_provided",
+                                                    "value":  "60 coils per stator, one slot per pole per phase",
+                                                    "unit":  null,
+                                                    "provenance":  {
+                                                                       "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                       "page":  "Table 1 and winding section",
+                                                                       "location":  "winding layout",
+                                                                       "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                       "table":  null,
+                                                                       "figure":  null,
+                                                                       "equation":  null
+                                                                   },
+                                                    "notes":  "Geometry is retained without inventing kw."
+                                                },
+                   "winding_factor":  {
+                                          "status":  "unavailable",
+                                          "value":  null,
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                             "page":  "full paper",
+                                                             "location":  "not numerically reported",
+                                                             "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "No generic q=1 winding factor substituted."
+                                      },
+                   "pitch_factor":  {
+                                        "status":  "unavailable",
+                                        "value":  null,
+                                        "unit":  null,
+                                        "provenance":  {
+                                                           "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                           "page":  "full paper",
+                                                           "location":  "not numerically reported",
+                                                           "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                           "table":  null,
+                                                           "figure":  null,
+                                                           "equation":  null
+                                                       },
+                                        "notes":  "Exact source-equivalent coil pitch factor unavailable."
+                                    },
+                   "distribution_factor":  {
+                                               "status":  "unavailable",
+                                               "value":  null,
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                  "page":  "full paper",
+                                                                  "location":  "not numerically reported",
+                                                                  "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "No scalar kd reported."
+                                           },
+                   "speed_rpm":  {
+                                     "status":  "source_provided",
+                                     "value":  600.0,
+                                     "unit":  "rpm",
+                                     "provenance":  {
+                                                        "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                        "page":  "experimental section",
+                                                        "location":  "no-load test point",
+                                                        "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                        "table":  null,
+                                                        "figure":  null,
+                                                        "equation":  null
+                                                    },
+                                     "notes":  "Prototype test speed."
+                                 },
+                   "back_emf_reference_v":  {
+                                                "status":  "source_provided",
+                                                "value":  80.6,
+                                                "unit":  "V phase-neutral RMS",
+                                                "provenance":  {
+                                                                   "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                   "page":  "experimental results table",
+                                                                   "location":  "no-load phase voltage at 600 rpm",
+                                                                   "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                   "table":  null,
+                                                                   "figure":  null,
+                                                                   "equation":  null
+                                                               },
+                                                "notes":  "Source-native total RMS; source reports substantial third harmonic, so it is not a fundamental-RMS reference."
+                                            },
+                   "back_emf_scope":  {
+                                          "status":  "source_provided",
+                                          "value":  "phase",
+                                          "unit":  null,
+                                          "provenance":  {
+                                                             "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                             "page":  "experimental results",
+                                                             "location":  "phase-to-neutral voltage",
+                                                             "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                             "table":  null,
+                                                             "figure":  null,
+                                                             "equation":  null
+                                                         },
+                                          "notes":  "Source-native scope."
+                                      },
+                   "back_emf_value_kind":  {
+                                               "status":  "source_provided",
+                                               "value":  "rms",
+                                               "unit":  null,
+                                               "provenance":  {
+                                                                  "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                                  "page":  "experimental results table",
+                                                                  "location":  "RMS voltage",
+                                                                  "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                                  "table":  null,
+                                                                  "figure":  null,
+                                                                  "equation":  null
+                                                              },
+                                               "notes":  "Total waveform RMS."
+                                           },
+                   "waveform_family":  {
+                                           "status":  "source_provided",
+                                           "value":  "arbitrary",
+                                           "unit":  null,
+                                           "provenance":  {
+                                                              "source_url":  "https://bibliotecadigital.ipb.pt/bitstreams/c12b3d6d-93c0-4078-8c4b-5b8ce84c1281/download",
+                                                              "page":  "waveform figure and harmonic table",
+                                                              "location":  "23.1% third harmonic",
+                                                              "publication":  "Prototype of an Axial Flux Permanent Magnet Generator for Wind Energy Systems Applications",
+                                                              "table":  null,
+                                                              "figure":  null,
+                                                              "equation":  null
+                                                          },
+                                           "notes":  "Not converted using sinusoidal RMS/peak identities."
+                                       }
+               }
+}
