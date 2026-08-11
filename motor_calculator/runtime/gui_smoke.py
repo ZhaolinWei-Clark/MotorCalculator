@@ -131,6 +131,92 @@ def _exercise_dialogs(root, app, screenshot_base: Path) -> dict[str, Any]:
     }
 
 
+def _exercise_project_workflow(root, app, main_window_module, output: Path) -> dict[str, Any]:
+    """Exercise project lifecycle through the real GUI controller methods."""
+
+    from motor_calculator.project import load_project
+
+    primary = output.with_name(output.stem + "-project.motorproj")
+    save_as = output.with_name(output.stem + "-project-save-as.motorproj")
+    for path in (primary, primary.with_name(primary.name + ".bak"), save_as, save_as.with_name(save_as.name + ".bak")):
+        path.unlink(missing_ok=True)
+
+    if not app._new_project():
+        raise RuntimeError("new project action was cancelled unexpectedly")
+    project_created = app._project_manager.current_path is None and not app._project_manager.is_dirty
+
+    app.vars["n_rated"].set("2375.0")
+    root.update()
+    dirty_after_edit = app._project_manager.is_dirty and app.root.title().endswith(" *")
+    expected_inputs = dict(app._get_params())
+    app.run_analysis()
+    root.update()
+    expected_calculation = _calculation_snapshot(app.calc_results)
+    if not app._save_project_to_path(primary, save_as=True):
+        raise RuntimeError("direct project save failed")
+    clean_after_save = not app._project_manager.is_dirty and primary.is_file()
+
+    if not app._new_project():
+        raise RuntimeError("new project reset failed")
+    reset_changed_inputs = dict(app._get_params()) != expected_inputs
+
+    original_open_dialog = main_window_module.filedialog.askopenfilename
+    main_window_module.filedialog.askopenfilename = lambda **_kwargs: str(primary)
+    try:
+        opened_through_dialog = app._open_project()
+    finally:
+        main_window_module.filedialog.askopenfilename = original_open_dialog
+    restored_inputs = dict(app._get_params())
+    exact_inputs_restored = restored_inputs == expected_inputs
+    app.run_analysis()
+    root.update()
+    restored_calculation = _calculation_snapshot(app.calc_results)
+    calculation_reproduced = restored_calculation == expected_calculation
+
+    original_save_dialog = main_window_module.filedialog.asksaveasfilename
+    main_window_module.filedialog.asksaveasfilename = lambda **_kwargs: str(save_as)
+    try:
+        saved_as_through_dialog = app._save_project_as()
+    finally:
+        main_window_module.filedialog.asksaveasfilename = original_save_dialog
+    save_as_document = load_project(save_as)
+
+    app.vars["Br"].set("1.27")
+    root.update()
+    dirty_before_cancel = app._project_manager.is_dirty
+    original_prompt = main_window_module.messagebox.askyesnocancel
+    main_window_module.messagebox.askyesnocancel = lambda *_args, **_kwargs: None
+    try:
+        cancel_protected = not app._confirm_abandon_changes()
+    finally:
+        main_window_module.messagebox.askyesnocancel = original_prompt
+    dirty_after_cancel = app._project_manager.is_dirty
+
+    if not app._open_project_path(save_as, prompt_for_unsaved=False):
+        raise RuntimeError("final project restore failed")
+    app.run_analysis()
+    root.update()
+    return {
+        "project_file": str(primary),
+        "project_file_exists": primary.is_file(),
+        "project_save_as_file": str(save_as),
+        "project_save_as_exists": save_as.is_file(),
+        "project_schema_version": save_as_document.schema_version,
+        "project_created": project_created,
+        "project_dirty_after_edit": dirty_after_edit,
+        "project_clean_after_save": clean_after_save,
+        "project_reset_changed_inputs": reset_changed_inputs,
+        "project_opened_through_file_dialog": bool(opened_through_dialog),
+        "project_saved_as_through_file_dialog": bool(saved_as_through_dialog),
+        "project_exact_inputs_restored": exact_inputs_restored,
+        "project_calculation_reproduced": calculation_reproduced,
+        "project_exit_cancel_protected": cancel_protected and dirty_before_cancel and dirty_after_cancel,
+        "project_recent_entry_present": any(
+            entry.path == save_as for entry in app._project_manager.recent_store.entries()
+        ),
+    }
+
+
 def _capture_window(root, destination: Path) -> str | None:
     try:
         from PIL import ImageGrab
@@ -190,6 +276,23 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         calculation = _calculation_snapshot(app.calc_results)
         if not all(math.isfinite(value) for value in calculation.values()):
             raise RuntimeError("GUI calculation produced non-finite output")
+        project_results = _exercise_project_workflow(root, app, main_window_module, output)
+        if not all(
+            project_results[name]
+            for name in (
+                "project_created",
+                "project_dirty_after_edit",
+                "project_clean_after_save",
+                "project_reset_changed_inputs",
+                "project_opened_through_file_dialog",
+                "project_saved_as_through_file_dialog",
+                "project_exact_inputs_restored",
+                "project_calculation_reproduced",
+                "project_exit_cancel_protected",
+                "project_recent_entry_present",
+            )
+        ):
+            raise RuntimeError("project save/load GUI smoke did not pass every lifecycle gate")
         dialog_results = _exercise_dialogs(root, app, screenshot)
         records_before, records_after = _submit_smoke_feedback(app, main_window_module)
         confidence_export = app._runtime_paths.export_dir / "phase8a2_smoke_confidence.json"
@@ -229,6 +332,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "confidence_export": str(confidence_export),
                 "confidence_export_exists": confidence_export.is_file(),
                 "screenshot_error": screenshot_error,
+                **project_results,
                 **dialog_results,
             }
         )

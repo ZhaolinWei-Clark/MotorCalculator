@@ -9,7 +9,7 @@ import tkinter as tk
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, Dict
-from tkinter import filedialog, messagebox, ttk
+from tkinter import filedialog, messagebox, simpledialog, ttk
 
 _BOOTSTRAP_ROOT = Path(__file__).resolve().parents[2]
 if str(_BOOTSTRAP_ROOT) not in sys.path:
@@ -20,6 +20,20 @@ from motor_calculator.motor_core import (
     MotorCalculationError,
     MotorValidationError,
     parse_legacy_gui_params,
+)
+from motor_calculator.project import (
+    PROJECT_FILE_EXTENSION,
+    ProjectDocument,
+    ProjectManager,
+    ProjectSerializationError,
+    ProjectValidationError,
+    RecentProjectStore,
+    UnsavedChangesDecision,
+    create_project_document,
+    flatten_project_inputs,
+    missing_feedback_record_ids,
+    uncertainty_parameters_from_payload,
+    utc_now_iso,
 )
 
 from .confidence_panel import ConfidencePanel
@@ -43,9 +57,14 @@ from motor_calculator.validation.feedback_models import (
     FeedbackSubmission,
     MetricSemantics,
 )
-from motor_calculator.validation.feedback_service import submit_feedback
+from motor_calculator.validation.feedback_service import load_feedback_records, submit_feedback
 from motor_calculator.validation.phase7i_uncertainty_report import run_phase7i_demonstration
-from motor_calculator.validation.uncertainty_models import UncertaintySpecification, load_uncertainty_specification
+from motor_calculator.validation.uncertainty_models import (
+    ParameterUncertainty,
+    UncertaintyKind,
+    UncertaintySpecification,
+    load_uncertainty_specification,
+)
 from motor_calculator.runtime import (
     bounded_window_size,
     check_runtime_health,
@@ -111,6 +130,247 @@ class MotorCalculatorAppMixin:
         self._engineering_confidence_summary = None
         self._user_uncertainty_parameters = None
         self._create_confidence_tab()
+        self._initialize_project_support()
+
+    def _initialize_project_support(self) -> None:
+        self._project_suppress_dirty = True
+        self._project_notes = ""
+        self._project_validation_record_ids: list[str] = []
+        self._project_default_inputs = dict(self._get_params())
+        recent_store = RecentProjectStore(self._runtime_paths.user_data_dir / "recent_projects.json")
+        self._project_manager = ProjectManager(recent_store)
+        document = create_project_document("Untitled", self._project_default_inputs)
+        self._project_manager.new_project(document)
+        self._create_project_menu()
+        self._project_traces = [
+            variable.trace_add("write", self._on_project_input_changed)
+            for variable in (*self.vars.values(), self.coreless_var)
+        ]
+        self.root.protocol("WM_DELETE_WINDOW", self._request_exit)
+        self._project_suppress_dirty = False
+        self._update_project_title()
+
+    def _create_project_menu(self) -> None:
+        menu_bar = tk.Menu(self.root)
+        file_menu = tk.Menu(menu_bar, tearoff=False)
+        file_menu.add_command(label="New Project", accelerator="Ctrl+N", command=self._new_project)
+        file_menu.add_command(label="Open Project...", accelerator="Ctrl+O", command=self._open_project)
+        file_menu.add_separator()
+        file_menu.add_command(label="Save", accelerator="Ctrl+S", command=self._save_project)
+        file_menu.add_command(label="Save As...", command=self._save_project_as)
+        self._recent_projects_menu = tk.Menu(file_menu, tearoff=False, postcommand=self._refresh_recent_projects_menu)
+        file_menu.add_cascade(label="Recent Projects", menu=self._recent_projects_menu)
+        file_menu.add_command(label="Project Notes...", command=self._edit_project_notes)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self._request_exit)
+        menu_bar.add_cascade(label="File", menu=file_menu)
+        self.root.configure(menu=menu_bar)
+        self._project_menu_bar = menu_bar
+        self._project_file_menu = file_menu
+        self.root.bind_all("<Control-n>", lambda _event: self._new_project())
+        self.root.bind_all("<Control-o>", lambda _event: self._open_project())
+        self.root.bind_all("<Control-s>", lambda _event: self._save_project())
+
+    def _on_project_input_changed(self, *_args) -> None:
+        if self._project_suppress_dirty:
+            return
+        self._project_manager.mark_dirty()
+        self._update_project_title()
+
+    def _update_project_title(self) -> None:
+        document = self._project_manager.current_project
+        if document is None:
+            display_name = "Untitled"
+        elif self._project_manager.current_path is not None:
+            display_name = self._project_manager.current_path.name
+        else:
+            display_name = document.metadata.project_name
+        dirty = " *" if self._project_manager.is_dirty else ""
+        self.root.title(f"Motor Calculator {application_version_label()} - {display_name}{dirty}")
+
+    def _build_project_document(self, *, project_name: str | None = None) -> ProjectDocument:
+        current = self._project_manager.current_project
+        name = project_name or (current.metadata.project_name if current else "Untitled")
+        return create_project_document(
+            name,
+            self._get_params(),
+            project_uuid=None if current is None else current.metadata.project_uuid,
+            created_at=None if current is None else current.metadata.created_at,
+            modified_at=utc_now_iso(),
+            uncertainty_assumptions=self._user_uncertainty_parameters,
+            notes=self._project_notes,
+            validation_record_ids=self._project_validation_record_ids,
+        )
+
+    @staticmethod
+    def _restore_uncertainty_assumptions(document: ProjectDocument) -> tuple[ParameterUncertainty, ...] | None:
+        normalized = uncertainty_parameters_from_payload(document.uncertainty_assumptions)
+        if not normalized:
+            return None
+        return tuple(
+            ParameterUncertainty(
+                parameter_name=str(item["parameter_name"]),
+                nominal_value=float(item["nominal_value"]),
+                unit=str(item["unit"]),
+                uncertainty_kind=UncertaintyKind(str(item["uncertainty_kind"])),
+                lower_bound=item["lower_bound"],
+                upper_bound=item["upper_bound"],
+                mean=item["mean"],
+                standard_deviation=item["standard_deviation"],
+                provenance=str(item["provenance"]),
+                confidence=str(item["confidence"]),
+                notes=tuple(str(note) for note in item["notes"]),
+            )
+            for item in normalized
+        )
+
+    def _clear_project_results(self) -> None:
+        self.calc_results = None
+        self.result_text.delete("1.0", tk.END)
+        for tab, title in (
+            (self.curves_tab, "Performance curves"),
+            (self.emf_tab, "Back EMF"),
+            (self.torque_tab, "Torque analysis"),
+            (self.flux_tab, "Flux distribution"),
+            (self.geo_tab, "Geometry"),
+        ):
+            self._set_chart_placeholder(tab, title, "Run the calculation to refresh this project result.")
+        self._set_unavailable_current_summary()
+
+    def _apply_project_document(self, document: ProjectDocument) -> None:
+        restored = flatten_project_inputs(document.inputs)
+        self._project_suppress_dirty = True
+        try:
+            for name, value in restored.items():
+                if name == "coreless":
+                    self.coreless_var.set(bool(value))
+                else:
+                    self.vars[name].set(str(value))
+            self._user_uncertainty_parameters = self._restore_uncertainty_assumptions(document)
+            self._project_notes = document.notes
+            self._project_validation_record_ids = list(document.validation_record_ids)
+            self._clear_project_results()
+        finally:
+            self._project_suppress_dirty = False
+        self._project_manager.mark_clean(document)
+        self._update_project_title()
+
+    def _confirm_abandon_changes(self) -> bool:
+        if not self._project_manager.is_dirty:
+            return True
+        answer = messagebox.askyesnocancel(
+            "Unsaved project changes",
+            "Save changes before continuing?",
+            parent=self.root,
+        )
+        if answer is None:
+            decision = UnsavedChangesDecision.CANCEL
+        elif answer:
+            decision = UnsavedChangesDecision.SAVE
+        else:
+            decision = UnsavedChangesDecision.DISCARD
+        return self._project_manager.can_abandon(decision, save_callback=self._save_project)
+
+    def _new_project(self) -> bool:
+        if not self._confirm_abandon_changes():
+            return False
+        document = create_project_document("Untitled", self._project_default_inputs)
+        self._project_manager.new_project(document)
+        self._apply_project_document(document)
+        return True
+
+    def _open_project(self) -> bool:
+        if not self._confirm_abandon_changes():
+            return False
+        selected = filedialog.askopenfilename(
+            parent=self.root,
+            title="Open MotorCalculator project",
+            filetypes=(("MotorCalculator project", f"*{PROJECT_FILE_EXTENSION}"), ("All files", "*.*")),
+        )
+        return False if not selected else self._open_project_path(Path(selected), prompt_for_unsaved=False)
+
+    def _open_project_path(self, path: Path, *, prompt_for_unsaved: bool = True) -> bool:
+        if prompt_for_unsaved and not self._confirm_abandon_changes():
+            return False
+        try:
+            document = self._project_manager.open_project(path)
+            self._apply_project_document(document)
+        except ProjectSerializationError as exc:
+            messagebox.showerror("Open project", str(exc), parent=self.root)
+            return False
+        try:
+            available = [record.record_id for record in load_feedback_records(self._feedback_store)]
+        except Exception:
+            available = []
+        missing = missing_feedback_record_ids(document, available)
+        if missing:
+            messagebox.showwarning(
+                "Project validation references",
+                f"{len(missing)} linked local validation record(s) are unavailable. The project inputs were loaded normally.",
+                parent=self.root,
+            )
+        return True
+
+    def _save_project(self) -> bool:
+        if self._project_manager.current_path is None:
+            return self._save_project_as()
+        return self._save_project_to_path(self._project_manager.current_path)
+
+    def _save_project_as(self) -> bool:
+        current_path = self._project_manager.current_path
+        selected = filedialog.asksaveasfilename(
+            parent=self.root,
+            title="Save MotorCalculator project",
+            initialdir=str(current_path.parent if current_path else Path.home()),
+            initialfile=current_path.name if current_path else f"Untitled{PROJECT_FILE_EXTENSION}",
+            defaultextension=PROJECT_FILE_EXTENSION,
+            filetypes=(("MotorCalculator project", f"*{PROJECT_FILE_EXTENSION}"),),
+        )
+        return False if not selected else self._save_project_to_path(Path(selected), save_as=True)
+
+    def _save_project_to_path(self, path: Path, *, save_as: bool = False) -> bool:
+        target = Path(path)
+        if target.suffix.lower() != PROJECT_FILE_EXTENSION:
+            target = target.with_name(target.name + PROJECT_FILE_EXTENSION)
+        name = target.stem if save_as or self._project_manager.current_path is None else None
+        try:
+            document = self._build_project_document(project_name=name)
+            self._project_manager.save_as(document, target)
+        except (ProjectSerializationError, ProjectValidationError, MotorValidationError) as exc:
+            messagebox.showerror("Save project", str(exc), parent=self.root)
+            return False
+        self._update_project_title()
+        return True
+
+    def _refresh_recent_projects_menu(self) -> None:
+        self._recent_projects_menu.delete(0, tk.END)
+        entries = self._project_manager.recent_store.entries(existing_only=True)
+        if not entries:
+            self._recent_projects_menu.add_command(label="(No recent projects)", state=tk.DISABLED)
+            return
+        for entry in entries:
+            self._recent_projects_menu.add_command(
+                label=f"{entry.project_name} - {entry.path}",
+                command=lambda path=entry.path: self._open_project_path(path),
+            )
+
+    def _edit_project_notes(self) -> None:
+        edited = simpledialog.askstring(
+            "Project Notes",
+            "Plain-text engineering notes:",
+            initialvalue=self._project_notes,
+            parent=self.root,
+        )
+        if edited is not None and edited != self._project_notes:
+            self._project_notes = edited
+            self._project_manager.mark_dirty()
+            self._update_project_title()
+
+    def _request_exit(self) -> bool:
+        if not self._confirm_abandon_changes():
+            return False
+        self.root.destroy()
+        return True
 
     def _create_confidence_tab(self) -> None:
         self.confidence_tab = ttk.Frame(self.notebook)
@@ -217,6 +477,8 @@ class MotorCalculatorAppMixin:
             return
         if edited is not None:
             self._user_uncertainty_parameters = edited
+            self._project_manager.mark_dirty()
+            self._update_project_title()
             messagebox.showinfo(
                 "Uncertainty assumptions",
                 "Local assumptions saved for the next explicit controlled-reference estimate.\nProduction defaults were not changed.",
@@ -319,6 +581,10 @@ class MotorCalculatorAppMixin:
             )
             return
         messagebox.showinfo("Validation feedback saved locally", display, parent=self.root)
+        if result.record.record_id not in self._project_validation_record_ids:
+            self._project_validation_record_ids.append(result.record.record_id)
+            self._project_manager.mark_dirty()
+            self._update_project_title()
         self._set_unavailable_current_summary()
 
     def _export_confidence_summary(self) -> None:
