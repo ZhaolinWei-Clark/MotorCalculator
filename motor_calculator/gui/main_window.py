@@ -50,10 +50,12 @@ from motor_calculator.runtime import (
     bounded_window_size,
     check_runtime_health,
     create_runtime_directories,
+    dpi_scaled_window_size,
     enable_windows_dpi_awareness,
     format_startup_failure,
     initialize_local_logging,
     resolve_runtime_paths,
+    windows_work_area,
 )
 from motor_calculator.version import application_version_label
 
@@ -412,6 +414,15 @@ def _create_root_or_exit(runtime_paths, logger):
         raise SystemExit(format_startup_failure(exc, runtime_paths, report=health)) from None
 
 
+def _smoke_output_argument(arguments: list[str]) -> Path | None:
+    if "--smoke-output" not in arguments:
+        return None
+    index = arguments.index("--smoke-output")
+    if index + 1 >= len(arguments) or not arguments[index + 1].strip():
+        raise SystemExit("--smoke-output requires a JSON destination path")
+    return Path(arguments[index + 1])
+
+
 def main():
     user_data_error = None
     try:
@@ -439,16 +450,37 @@ def main():
     except Exception:
         pass
 
-    MotorCalculatorApp(root)
+    try:
+        app = MotorCalculatorApp(root)
+    except Exception:
+        logger.exception("Main application initialization failed")
+        root.destroy()
+        raise
     root.update_idletasks()
-    width, height = bounded_window_size(
-        root.winfo_width(),
-        root.winfo_height(),
+    work_left, work_top, work_right, work_bottom = windows_work_area(
         root.winfo_screenwidth(),
         root.winfo_screenheight(),
     )
-    x_pos = (root.winfo_screenwidth() // 2) - (width // 2)
-    y_pos = (root.winfo_screenheight() // 2) - (height // 2)
+    work_width = work_right - work_left
+    work_height = work_bottom - work_top
+    requested_width, requested_height = dpi_scaled_window_size(
+        root.winfo_width(),
+        root.winfo_height(),
+        float(root.tk.call("tk", "scaling")),
+    )
+    width, height = bounded_window_size(
+        requested_width,
+        requested_height,
+        work_width,
+        work_height,
+    )
+    x_pos = work_left + (work_width - width) // 2
+    y_pos = work_top + (work_height - height) // 2
     root.geometry(f"{width}x{height}+{x_pos}+{y_pos}")
     logger.info("Main window initialized at %sx%s", width, height)
+    smoke_output = _smoke_output_argument(sys.argv[1:])
+    if smoke_output is not None:
+        from motor_calculator.runtime.gui_smoke import run_real_gui_smoke
+
+        root.after(300, run_real_gui_smoke, root, app, smoke_output)
     root.mainloop()

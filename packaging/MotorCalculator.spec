@@ -10,6 +10,7 @@ hidden_imports = [
     "motor_calculator.gui.main_window",
     "motor_calculator.validation.feedback_service",
     "motor_calculator.validation.phase7i_uncertainty_report",
+    "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:
     hidden_imports.extend(

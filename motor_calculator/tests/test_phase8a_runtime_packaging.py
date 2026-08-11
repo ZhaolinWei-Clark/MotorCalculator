@@ -10,12 +10,17 @@ from pathlib import Path
 
 import pytest
 
-from motor_calculator.runtime.display import bounded_window_size
+from motor_calculator.runtime.display import (
+    bounded_window_size,
+    dpi_scaled_window_size,
+    windows_work_area,
+)
 from motor_calculator.runtime.health import (
     HealthStatus,
     check_runtime_health,
     format_startup_failure,
 )
+from motor_calculator.gui.main_window import _smoke_output_argument
 from motor_calculator.runtime.logging_config import LOGGER_NAME, initialize_local_logging
 from motor_calculator.runtime.paths import (
     check_packaged_resources,
@@ -143,6 +148,33 @@ def test_window_size_is_bounded_for_scaled_desktops():
     assert bounded_window_size(1200, 700, 1920, 1080) == (1200, 700)
 
 
+def test_windows_work_area_is_valid_for_current_platform():
+    left, top, right, bottom = windows_work_area(1920, 1080)
+    assert right > left
+    assert bottom > top
+
+
+@pytest.mark.parametrize(
+    ("tk_scaling", "expected"),
+    (
+        (96.0 / 72.0, (1800, 1000)),
+        (120.0 / 72.0, (2250, 1250)),
+        (144.0 / 72.0, (2700, 1500)),
+        (192.0 / 72.0, (3600, 2000)),
+    ),
+)
+def test_window_request_scales_for_common_windows_dpi(tk_scaling: float, expected: tuple[int, int]):
+    assert dpi_scaled_window_size(1800, 1000, tk_scaling) == expected
+
+
+def test_gui_smoke_argument_is_explicit_and_validated(tmp_path: Path):
+    destination = tmp_path / "smoke.json"
+    assert _smoke_output_argument(["--smoke-output", str(destination)]) == destination
+    assert _smoke_output_argument([]) is None
+    with pytest.raises(SystemExit):
+        _smoke_output_argument(["--smoke-output"])
+
+
 def test_runtime_modules_have_no_network_imports():
     forbidden = {"requests", "urllib", "http", "socket", "ftplib"}
     runtime_dir = ROOT / "motor_calculator" / "runtime"
@@ -165,6 +197,7 @@ def test_one_folder_spec_excludes_development_and_user_data():
     assert "feedback_records.jsonl" not in content
     assert "tmp" not in content
     assert "motor_calculator.tests" in content
+    assert '"tkinter.scrolledtext"' in content
 
 
 @pytest.mark.parametrize(

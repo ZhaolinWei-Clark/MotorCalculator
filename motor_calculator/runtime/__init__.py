@@ -1,6 +1,11 @@
 """Windows-oriented runtime reliability helpers for source and packaged modes."""
 
-from .display import bounded_window_size, enable_windows_dpi_awareness
+from .display import (
+    bounded_window_size,
+    dpi_scaled_window_size,
+    enable_windows_dpi_awareness,
+    windows_work_area,
+)
 from .health import (
     HealthCheck,
     HealthStatus,
@@ -26,9 +31,11 @@ __all__ = [
     "check_packaged_resources",
     "check_runtime_health",
     "create_runtime_directories",
+    "dpi_scaled_window_size",
     "enable_windows_dpi_awareness",
     "format_startup_failure",
     "initialize_local_logging",
     "probe_tk_runtime",
     "resolve_runtime_paths",
+    "windows_work_area",
 ]
