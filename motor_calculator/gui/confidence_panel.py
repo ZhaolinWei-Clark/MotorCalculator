@@ -67,19 +67,32 @@ class ConfidencePanel(ttk.Frame):
 
         metrics = ttk.LabelFrame(self, text=tr("confidence.metrics"), padding=10)
         metrics.pack(fill=tk.X)
-        for row, (label, variable) in enumerate((
+        for index, (label, variable) in enumerate((
             (tr("confidence.nominal"), self._nominal),
             (tr("confidence.range"), self._bounds),
             (tr("confidence.monte_carlo"), self._percentiles),
             (tr("confidence.overall"), self._confidence),
             (tr("confidence.coverage"), self._coverage),
         )):
-            ttk.Label(metrics, text=label).grid(row=row, column=0, sticky="w", padx=(0, 24), pady=2)
-            ttk.Label(metrics, textvariable=variable, style="SubHeader.TLabel").grid(row=row, column=1, sticky="w", pady=2)
+            row, block = divmod(index, 2)
+            column = block * 2
+            ttk.Label(metrics, text=label).grid(
+                row=row, column=column, sticky="w", padx=(0, 16), pady=2
+            )
+            ttk.Label(metrics, textvariable=variable, style="SubHeader.TLabel").grid(
+                row=row, column=column + 1, sticky="w", padx=(0, 28), pady=2
+            )
 
         self.range_canvas = tk.Canvas(self, height=92, background="#f5f2ea", highlightthickness=1, highlightbackground="#c9c2b5")
         self.range_canvas.pack(fill=tk.X, pady=12)
         self.range_canvas.bind("<Configure>", lambda _event: self._draw_range())
+
+        self.actions = ttk.Frame(self)
+        self.actions.pack(side=tk.BOTTOM, fill=tk.X, pady=(14, 0))
+        ttk.Button(self.actions, text=tr("confidence.estimate"), command=on_estimate).pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Button(self.actions, text=tr("confidence.edit"), command=on_edit_assumptions).pack(side=tk.LEFT, padx=6)
+        ttk.Button(self.actions, text=tr("confidence.add"), command=on_add_feedback).pack(side=tk.LEFT, padx=6)
+        ttk.Button(self.actions, text=tr("confidence.export"), command=on_export).pack(side=tk.RIGHT)
 
         details = ttk.Frame(self)
         details.pack(fill=tk.BOTH, expand=True)
@@ -93,12 +106,6 @@ class ConfidencePanel(ttk.Frame):
         ttk.Label(left, textvariable=self._drivers, justify=tk.LEFT, wraplength=410).pack(anchor="w", pady=(4, 0))
         ttk.Label(right, textvariable=self._evidence, justify=tk.LEFT, wraplength=410).pack(anchor="w")
 
-        actions = ttk.Frame(self)
-        actions.pack(fill=tk.X, pady=(14, 0))
-        ttk.Button(actions, text=tr("confidence.estimate"), command=on_estimate).pack(side=tk.LEFT, padx=(0, 6))
-        ttk.Button(actions, text=tr("confidence.edit"), command=on_edit_assumptions).pack(side=tk.LEFT, padx=6)
-        ttk.Button(actions, text=tr("confidence.add"), command=on_add_feedback).pack(side=tk.LEFT, padx=6)
-        ttk.Button(actions, text=tr("confidence.export"), command=on_export).pack(side=tk.RIGHT)
 
     def set_summary(self, summary: EngineeringConfidenceSummary) -> None:
         self._summary = summary

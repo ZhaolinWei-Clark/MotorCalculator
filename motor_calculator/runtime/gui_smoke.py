@@ -19,6 +19,20 @@ def _window_fits_screen(window) -> bool:
     )
 
 
+def _widget_fits_window(widget, window) -> bool:
+    window.update_idletasks()
+    widget.update_idletasks()
+    return (
+        bool(widget.winfo_ismapped())
+        and widget.winfo_rootx() >= window.winfo_rootx()
+        and widget.winfo_rooty() >= window.winfo_rooty()
+        and widget.winfo_rootx() + widget.winfo_width()
+        <= window.winfo_rootx() + window.winfo_width()
+        and widget.winfo_rooty() + widget.winfo_height()
+        <= window.winfo_rooty() + window.winfo_height()
+    )
+
+
 def _calculation_snapshot(result) -> dict[str, float]:
     return {
         "back_emf_phase_rms_v": float(result.electrical.E_phase_rms),
@@ -515,6 +529,9 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         root.lift()
         root.update_idletasks()
         root.update()
+        chinese_ui["confidence_actions_visible"] = _widget_fits_window(
+            app.confidence_panel.actions, root
+        )
         time.sleep(0.2)
         root.update()
         screenshot_error = _capture_window(root, screenshot)

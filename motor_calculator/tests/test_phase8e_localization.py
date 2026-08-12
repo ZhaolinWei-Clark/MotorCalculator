@@ -104,3 +104,10 @@ def test_runtime_source_has_no_absolute_repository_dependency() -> None:
         ROOT / "packaging" / "MotorCalculator.spec",
     )
     assert all(old_root not in path.read_text(encoding="utf-8") for path in runtime_files)
+
+
+def test_gui_smoke_checks_confidence_actions_remain_visible() -> None:
+    source = (ROOT / "motor_calculator" / "runtime" / "gui_smoke.py").read_text(encoding="utf-8")
+    assert '"confidence_actions_visible"' in source
+    assert "_widget_fits_window(" in source
+    assert "app.confidence_panel.actions" in source
