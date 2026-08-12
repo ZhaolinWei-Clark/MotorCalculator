@@ -307,4 +307,4 @@ def test_rapid_interactive_changes_debounce_recovery_schedule():
     assert len(app.root.scheduled) == 20
     assert len(app.root.cancelled) == 19
     assert app._recovery_after_id == "after-19"
-    assert app._recovery_status_var.value == "Unsaved changes; recovery snapshot scheduled"
+    assert app._recovery_status_var.value == "存在未保存修改；已安排恢复快照"

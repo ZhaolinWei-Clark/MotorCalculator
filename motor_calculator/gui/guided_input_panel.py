@@ -6,8 +6,13 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Mapping
 
+from motor_calculator.i18n import (
+    input_tooltip,
+    localize_message,
+    preset_name,
+    tr,
+)
 from motor_calculator.input_ux import (
-    INPUT_DEFINITIONS,
     SLIDER_SPECS,
     DisplayUnitPreferences,
     slider_from_numeric_text,
@@ -76,11 +81,14 @@ class GuidedInputPanel:
         self.temperature_unit_var = tk.StringVar(value=preferences.temperature)
         self.preset_var = tk.StringVar()
         self.magnet_var = tk.StringVar(value=str(field_vars["magnet_grade"].get()))
-        self.guidance_var = tk.StringVar(value="Guidance: inputs not yet evaluated")
+        self.guidance_var = tk.StringVar(value=tr("guided.not_evaluated"))
         self.slider_status_vars: dict[str, tk.StringVar] = {}
         self.slider_unit_vars: dict[str, tk.StringVar] = {}
         self.sliders: dict[str, ttk.Scale] = {}
-        self._preset_by_label = {preset.display_name: preset for preset in registry.presets}
+        self._preset_by_label = {
+            preset_name(preset.preset_id, preset.display_name): preset for preset in registry.presets
+        }
+        self._custom_magnet_label = tr("guided.custom")
         self._build()
         self._field_traces = [
             field_vars[name].trace_add("write", lambda *_args, field=name: self.sync_field(field))
@@ -90,22 +98,25 @@ class GuidedInputPanel:
         self.refresh_all()
 
     def _build(self) -> None:
-        self.frame = ttk.LabelFrame(self.parent, text="Guided Input (starting aids, not optimization)", padding=7)
+        self.frame = ttk.LabelFrame(self.parent, text=tr("guided.title"), padding=7)
         mode_row = ttk.Frame(self.frame)
         mode_row.pack(fill=tk.X)
-        ttk.Label(mode_row, text="Input mode:").pack(side=tk.LEFT)
+        ttk.Label(mode_row, text=tr("guided.mode")).pack(side=tk.LEFT)
         for value in ("BASIC", "ADVANCED"):
             ttk.Radiobutton(
-                mode_row, text=value.title(), value=value, variable=self.mode_var,
+                mode_row,
+                text=tr("guided.basic" if value == "BASIC" else "guided.advanced"),
+                value=value,
+                variable=self.mode_var,
                 command=lambda selected=value: self.on_mode_change(selected),
             ).pack(side=tk.LEFT, padx=(6, 0))
-        ttk.Button(mode_row, text="Help", width=7, command=self.on_help).pack(side=tk.RIGHT)
+        ttk.Button(mode_row, text=tr("guided.help"), width=7, command=self.on_help).pack(side=tk.RIGHT)
 
         preset_row = ttk.Frame(self.frame)
         preset_row.pack(fill=tk.X, pady=(6, 0))
-        ttk.Label(preset_row, text="Starting template:").pack(side=tk.LEFT)
+        ttk.Label(preset_row, text=tr("guided.starting_template")).pack(side=tk.LEFT)
         template_labels = [
-            preset.display_name for preset in self.registry.presets
+            preset_name(preset.preset_id, preset.display_name) for preset in self.registry.presets
             if preset.category.value != "magnet_material"
         ]
         self.preset_combo = ttk.Combobox(
@@ -115,32 +126,36 @@ class GuidedInputPanel:
         self.preset_combo.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=5)
         if template_labels:
             self.preset_var.set(template_labels[0])
-        ttk.Button(preset_row, text="Preview / Apply", command=self._apply_selected).pack(side=tk.LEFT)
-        ttk.Button(preset_row, text="Info", width=5, command=self._details_selected).pack(
+        ttk.Button(preset_row, text=tr("guided.preview_apply"), command=self._apply_selected).pack(side=tk.LEFT)
+        ttk.Button(preset_row, text=tr("guided.info"), width=5, command=self._details_selected).pack(
             side=tk.LEFT, padx=(4, 0)
         )
 
         magnet_row = ttk.Frame(self.frame)
         magnet_row.pack(fill=tk.X, pady=(5, 0))
-        ttk.Label(magnet_row, text="Magnet grade:").pack(side=tk.LEFT)
-        magnet_values = ["Custom", "N35", "N42", "N48", "N52"]
+        ttk.Label(magnet_row, text=tr("guided.magnet_grade")).pack(side=tk.LEFT)
+        magnet_values = [self._custom_magnet_label, "N35", "N42", "N48", "N52"]
         self.magnet_combo = ttk.Combobox(
             magnet_row, textvariable=self.magnet_var, values=magnet_values,
             state="readonly", width=12,
         )
         self.magnet_combo.pack(side=tk.LEFT, padx=5)
         self.magnet_combo.bind("<<ComboboxSelected>>", self._apply_magnet_selected)
-        ttk.Label(magnet_row, text="Partial preset; Br remains editable").pack(side=tk.LEFT)
+        ttk.Label(magnet_row, text=tr("guided.partial_magnet")).pack(side=tk.LEFT)
 
         units = ttk.Frame(self.frame)
         units.pack(fill=tk.X, pady=(6, 2))
-        self._unit_selector(units, "Length", self.length_unit_var, ("mm", "m"), "length")
-        self._unit_selector(units, "Speed", self.speed_unit_var, ("rpm", "rad/s"), "speed")
-        self._unit_selector(units, "Temp", self.temperature_unit_var, ("degC", "K"), "temperature")
+        self._unit_selector(units, tr("guided.length"), self.length_unit_var, ("mm", "m"), "length")
+        self._unit_selector(units, tr("guided.speed"), self.speed_unit_var, ("rpm", "rad/s"), "speed")
+        self._unit_selector(units, tr("guided.temperature"), self.temperature_unit_var, ("degC", "K"), "temperature")
 
-        quick = ttk.LabelFrame(self.frame, text="Quick adjust + exact entry", padding=5)
+        quick = ttk.LabelFrame(self.frame, text=tr("guided.quick_adjust"), padding=5)
         quick.pack(fill=tk.X, pady=(5, 0))
-        labels = {"g_side": "Air gap", "n_rated": "Speed", "k_w": "Winding factor"}
+        labels = {
+            "g_side": tr("guided.air_gap"),
+            "n_rated": tr("guided.speed"),
+            "k_w": tr("guided.winding_factor"),
+        }
         for row, field in enumerate(("g_side", "n_rated", "k_w")):
             ttk.Label(quick, text=labels[field], width=14).grid(row=row * 2, column=0, sticky="w")
             minimum, maximum, _step = slider_range_for_units(SLIDER_SPECS[field], self.preferences)
@@ -154,7 +169,7 @@ class GuidedInputPanel:
             unit_var = tk.StringVar()
             ttk.Label(quick, textvariable=unit_var, width=6).grid(row=row * 2, column=3, sticky="w")
             ttk.Button(
-                quick, text="Reset", width=6,
+                quick, text=tr("guided.reset"), width=6,
                 command=lambda name=field: self.on_reset_field(name),
             ).grid(row=row * 2, column=4, padx=(3, 0))
             status = tk.StringVar()
@@ -165,25 +180,25 @@ class GuidedInputPanel:
             self.sliders[field] = scale
             self.slider_status_vars[field] = status
             self.slider_unit_vars[field] = unit_var
-            ToolTip(exact, INPUT_DEFINITIONS[field].tooltip)
+            ToolTip(exact, input_tooltip(field))
 
         discrete = ttk.Frame(self.frame)
         discrete.pack(fill=tk.X, pady=(6, 0))
-        ttk.Label(discrete, text="Pole pairs:").pack(side=tk.LEFT)
+        ttk.Label(discrete, text=tr("guided.pole_pairs")).pack(side=tk.LEFT)
         self.pole_spinbox = ttk.Spinbox(
             discrete, from_=1, to=1_000_000_000, increment=1,
             textvariable=self.field_vars["p"], width=8,
         )
         self.pole_spinbox.pack(side=tk.LEFT, padx=(4, 10))
-        ttk.Label(discrete, text="Waveform:").pack(side=tk.LEFT)
+        ttk.Label(discrete, text=tr("guided.waveform")).pack(side=tk.LEFT)
         self.waveform_combo = ttk.Combobox(
             discrete, textvariable=self.field_vars["waveform"],
             values=("正弦波", "梯形波"), state="readonly", width=10,
         )
         self.waveform_combo.pack(side=tk.LEFT, padx=4)
-        ttk.Button(discrete, text="Reset quick fields", command=self.on_reset_guided).pack(side=tk.RIGHT)
-        ToolTip(self.pole_spinbox, INPUT_DEFINITIONS["p"].tooltip)
-        ToolTip(self.waveform_combo, INPUT_DEFINITIONS["waveform"].tooltip)
+        ttk.Button(discrete, text=tr("guided.reset_quick"), command=self.on_reset_guided).pack(side=tk.RIGHT)
+        ToolTip(self.pole_spinbox, input_tooltip("p"))
+        ToolTip(self.waveform_combo, input_tooltip("waveform"))
 
         ttk.Label(
             self.frame, textvariable=self.guidance_var, wraplength=430,
@@ -211,7 +226,7 @@ class GuidedInputPanel:
 
     def _apply_magnet_selected(self, _event=None) -> None:
         grade = self.magnet_var.get()
-        if grade == "Custom":
+        if grade == self._custom_magnet_label:
             return
         applied = self.on_apply_preset(f"magnet.{grade.lower()}.v1")
         if not applied:
@@ -219,20 +234,22 @@ class GuidedInputPanel:
 
     def _sync_magnet_selector(self, *_args) -> None:
         grade = str(self.field_vars["magnet_grade"].get())
-        self.magnet_var.set(grade if grade in {"N35", "N42", "N48", "N52"} else "Custom")
+        self.magnet_var.set(
+            grade if grade in {"N35", "N42", "N48", "N52"} else self._custom_magnet_label
+        )
 
     def _slider_moved(self, field: str, value: str) -> None:
         if self._syncing:
             return
         result = slider_to_numeric_text(float(value), SLIDER_SPECS[field], self.preferences)
-        self.slider_status_vars[field].set(result.guidance)
+        self.slider_status_vars[field].set(localize_message(result.guidance))
         self.field_vars[field].set(result.numeric_text)
 
     def sync_field(self, field: str) -> None:
         if self._syncing:
             return
         result = slider_from_numeric_text(str(self.field_vars[field].get()), SLIDER_SPECS[field], self.preferences)
-        self.slider_status_vars[field].set(result.guidance)
+        self.slider_status_vars[field].set(localize_message(result.guidance))
         if result.slider_value is not None:
             self._syncing = True
             try:

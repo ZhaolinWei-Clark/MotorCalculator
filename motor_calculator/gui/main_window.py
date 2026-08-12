@@ -32,6 +32,14 @@ from motor_calculator.input_ux import (
     evaluate_input_guidance,
     format_engineering_value,
 )
+from motor_calculator.i18n import (
+    input_label,
+    input_tooltip,
+    localize_message,
+    localize_status,
+    preset_name,
+    tr,
+)
 from motor_calculator.presets import apply_preset, default_preset_registry, preview_preset
 from motor_calculator.project import (
     PROJECT_FILE_EXTENSION,
@@ -106,7 +114,7 @@ def _load_legacy_module():
     legacy_path = _RUNTIME_PATHS.resource("motor_calculator", "PMDC_Calculator_claude204.py")
     spec = importlib.util.spec_from_file_location("legacy_motor_calculator_ui", legacy_path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"无法加载 legacy GUI 文件: {legacy_path}")
+        raise RuntimeError(f"Legacy GUI module could not be loaded: {legacy_path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.PMDCMotorModel = LegacyGuiMotorModelBridge
@@ -144,7 +152,7 @@ class MotorCalculatorAppMixin:
         self._runtime_paths = create_runtime_directories(_RUNTIME_PATHS)
         self._repository_root = _REPOSITORY_ROOT
         self._feedback_store = self._runtime_paths.feedback_store
-        self.root.title(f"Motor Calculator {application_version_label()}")
+        self.root.title(f"{tr('app.title')} {application_version_label()}")
         self._latest_accuracy_envelope = None
         self._engineering_confidence_summary = None
         self._user_uncertainty_parameters = None
@@ -188,7 +196,7 @@ class MotorCalculatorAppMixin:
         )
         for name, entry in self.entries.items():
             if name in INPUT_DEFINITIONS:
-                ToolTip(entry, INPUT_DEFINITIONS[name].tooltip)
+                ToolTip(entry, input_tooltip(name))
         self._apply_input_mode_visibility()
 
     def _index_legacy_input_widgets(self, frame) -> None:
@@ -262,9 +270,10 @@ class MotorCalculatorAppMixin:
                     converted_values[field] = format_engineering_value(value)
         except (TypeError, ValueError) as exc:
             self._guided_input_panel.set_preferences(self._display_unit_preferences)
+            logging.getLogger(__name__).warning("Display unit conversion rejected: %s", exc)
             messagebox.showwarning(
-                "Unit change not applied",
-                f"Correct the current numeric input before changing units:\n{exc}",
+                tr("unit.change_failed_title"),
+                tr("unit.change_failed"),
                 parent=self.root,
             )
             return
@@ -333,30 +342,37 @@ class MotorCalculatorAppMixin:
     def _apply_preset_by_id(self, preset_id: str) -> bool:
         preset = self._preset_registry.get(preset_id)
         if not preset.available:
-            messagebox.showwarning("Preset unavailable", preset.unavailable_reason, parent=self.root)
+            messagebox.showwarning(
+                tr("preset.unavailable_title"),
+                tr("preset.schema_unavailable"),
+                parent=self.root,
+            )
             return False
         try:
             current = self._get_params()
             changes = preview_preset(current, preset)
         except (MotorValidationError, TypeError, ValueError) as exc:
+            logging.getLogger(__name__).warning("Preset preview rejected invalid current inputs: %s", exc)
             messagebox.showerror(
-                "Preset preview", f"Current inputs must be valid before preview:\n{exc}", parent=self.root
+                tr("preset.preview_title"), tr("preset.invalid_current"), parent=self.root
             )
             return False
         if not changes:
-            messagebox.showinfo("Preset preview", "No input value would change.", parent=self.root)
+            messagebox.showinfo(tr("preset.preview_title"), tr("preset.no_changes"), parent=self.root)
             return True
         lines = [
-            f"{INPUT_DEFINITIONS[item.field_name].gui_label}: {item.current_value} -> {item.preset_value}"
+            f"{input_label(item.field_name)}：{item.current_value} -> {item.preset_value}"
             for item in changes
         ]
         detail = (
-            f"{preset.display_name}\nEvidence: {preset.evidence_kind.value}\n"
-            f"Provenance: {preset.provenance}\nAssumptions: {'; '.join(preset.assumptions)}\n\n"
+            f"{preset_name(preset.preset_id, preset.display_name)}\n"
+            f"{tr('preset.evidence')}：{localize_status(preset.evidence_kind.value)}\n"
+            f"{tr('preset.provenance')}：{localize_message(preset.provenance)}\n"
+            f"{tr('preset.assumptions')}：{'; '.join(localize_message(item) for item in preset.assumptions)}\n\n"
             + "\n".join(lines)
-            + "\n\nApply only these fields?"
+            + f"\n\n{tr('preset.apply_question')}"
         )
-        if not messagebox.askokcancel("Preset preview", detail, parent=self.root):
+        if not messagebox.askokcancel(tr("preset.preview_title"), detail, parent=self.root):
             return False
         updated = apply_preset(current, preset)
         displayed = canonical_to_display_inputs(updated, self._display_unit_preferences)
@@ -381,12 +397,17 @@ class MotorCalculatorAppMixin:
 
     def _show_preset_details(self, preset_id: str) -> None:
         preset = self._preset_registry.get(preset_id)
-        values = ", ".join(f"{name}={value}" for name, value in preset.values.items()) or "None"
+        values = ", ".join(
+            f"{input_label(name)}={value}" for name, value in preset.values.items()
+        ) or tr("common.none")
         messagebox.showinfo(
-            "Preset details",
-            f"{preset.display_name}\nAvailable: {preset.available}\nValues: {values}\n"
-            f"Provenance: {preset.provenance}\nAssumptions: {'; '.join(preset.assumptions) or 'None'}\n"
-            f"Notes: {'; '.join(preset.notes) or 'None'}",
+            tr("preset.details_title"),
+            f"{preset_name(preset.preset_id, preset.display_name)}\n"
+            f"{tr('preset.available')}：{tr('common.yes') if preset.available else tr('common.no')}\n"
+            f"{tr('preset.values')}：{values}\n"
+            f"{tr('preset.provenance')}：{localize_message(preset.provenance)}\n"
+            f"{tr('preset.assumptions')}：{'; '.join(localize_message(item) for item in preset.assumptions) or tr('common.none')}\n"
+            f"{tr('preset.notes')}：{'; '.join(localize_message(item) for item in preset.notes) or tr('common.none')}",
             parent=self.root,
         )
 
@@ -402,8 +423,8 @@ class MotorCalculatorAppMixin:
 
     def _reset_guided_fields(self) -> None:
         if messagebox.askokcancel(
-            "Reset quick fields",
-            "Reset air gap, speed, winding factor and pole pairs to application defaults?",
+            tr("reset.quick_title"),
+            tr("reset.quick_question"),
             parent=self.root,
         ):
             for field in ("g_side", "n_rated", "k_w", "p"):
@@ -411,7 +432,7 @@ class MotorCalculatorAppMixin:
 
     def reset_defaults(self):
         if not messagebox.askokcancel(
-            "Reset all inputs", "Restore all 41 inputs to the frozen application defaults?", parent=self.root
+            tr("reset.all_title"), tr("reset.all_question"), parent=self.root
         ):
             return False
         displayed = canonical_to_display_inputs(APPLICATION_DEFAULTS, self._display_unit_preferences)
@@ -432,19 +453,14 @@ class MotorCalculatorAppMixin:
         self._guided_input_panel.refresh_all()
         self._schedule_input_guidance()
         messagebox.showinfo(
-            "Reset complete", "All inputs were restored to application defaults.", parent=self.root
+            tr("reset.complete_title"), tr("reset.complete"), parent=self.root
         )
         return True
 
     def _show_input_help(self) -> None:
         messagebox.showinfo(
-            "Engineering input help",
-            "Presets are transparent starting points, not optimized designs.\n\n"
-            "Br depends on supplier and temperature. Winding factor represents pitch/distribution. "
-            "Air gap is entered per side for the existing SSDR model. Pole pairs are half the total pole count.\n\n"
-            "Ke/Kt, RMS/peak and phase/line semantics depend on the selected PMSM/BLDC waveform. "
-            "DSSR cannot be represented by the current production schema. Slider ranges are quick-adjust "
-            "ranges only; exact values outside them are preserved.",
+            tr("help.title"),
+            tr("help.body"),
             parent=self.root,
         )
 
@@ -460,10 +476,15 @@ class MotorCalculatorAppMixin:
         try:
             issues = evaluate_input_guidance(self._get_params())
             text = " | ".join(
-                f"{item.severity.value}/{item.level.value}: {item.message}" for item in issues
+                f"{localize_status(item.severity)}/{localize_status(item.level)}：{localize_message(item.message)}"
+                for item in issues
             )
         except Exception as exc:
-            text = f"ERROR/INVALID: {exc}"
+            logging.getLogger(__name__).warning("Input guidance evaluation failed: %s", exc)
+            text = (
+                f"{localize_status('ERROR')}/{localize_status('INVALID')}："
+                f"{tr('guidance.evaluation_failed')}"
+            )
         self._guided_input_panel.set_guidance(text)
 
     def _initialize_project_support(self) -> None:
@@ -479,11 +500,12 @@ class MotorCalculatorAppMixin:
         try:
             self._recovery_manager.begin_session()
         except (OSError, ProjectSerializationError, ValueError) as exc:
-            recovery_startup_warning = f"Recovery protection is unavailable: {exc}"
+            recovery_startup_warning = tr("status.recovery_unavailable")
+            logging.getLogger(__name__).warning("Recovery protection unavailable: %s", exc)
         self._recovery_after_id = None
         self._recovery_candidates = initial_recovery_scan.candidates
         self._recovery_status_var = tk.StringVar(
-            value=recovery_startup_warning or "Recovery protection active"
+            value=recovery_startup_warning or tr("status.recovery_active")
         )
         document = create_project_document("Untitled", self._project_default_inputs)
         self._project_manager.new_project(document)
@@ -509,24 +531,24 @@ class MotorCalculatorAppMixin:
             logging.getLogger(__name__).warning(recovery_startup_warning)
         elif self._recovery_candidates:
             self._recovery_status_var.set(
-                f"Recovered work available ({len(self._recovery_candidates)}); use File > Recover Unsaved Work"
+                tr("status.recovered_available", count=len(self._recovery_candidates))
             )
 
     def _create_project_menu(self) -> None:
         menu_bar = tk.Menu(self.root)
         file_menu = tk.Menu(menu_bar, tearoff=False)
-        file_menu.add_command(label="New Project", accelerator="Ctrl+N", command=self._new_project)
-        file_menu.add_command(label="Open Project...", accelerator="Ctrl+O", command=self._open_project)
+        file_menu.add_command(label=tr("menu.new"), accelerator="Ctrl+N", command=self._new_project)
+        file_menu.add_command(label=tr("menu.open"), accelerator="Ctrl+O", command=self._open_project)
         file_menu.add_separator()
-        file_menu.add_command(label="Save", accelerator="Ctrl+S", command=self._save_project)
-        file_menu.add_command(label="Save As...", command=self._save_project_as)
+        file_menu.add_command(label=tr("menu.save"), accelerator="Ctrl+S", command=self._save_project)
+        file_menu.add_command(label=tr("menu.save_as"), command=self._save_project_as)
         self._recent_projects_menu = tk.Menu(file_menu, tearoff=False, postcommand=self._refresh_recent_projects_menu)
-        file_menu.add_cascade(label="Recent Projects", menu=self._recent_projects_menu)
-        file_menu.add_command(label="Recover Unsaved Work...", command=self._recover_unsaved_work)
-        file_menu.add_command(label="Project Notes...", command=self._edit_project_notes)
+        file_menu.add_cascade(label=tr("menu.recent"), menu=self._recent_projects_menu)
+        file_menu.add_command(label=tr("menu.recover"), command=self._recover_unsaved_work)
+        file_menu.add_command(label=tr("menu.notes"), command=self._edit_project_notes)
         file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self._request_exit)
-        menu_bar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label=tr("menu.exit"), command=self._request_exit)
+        menu_bar.add_cascade(label=tr("menu.file"), menu=file_menu)
         self.root.configure(menu=menu_bar)
         self._project_menu_bar = menu_bar
         self._project_file_menu = file_menu
@@ -547,17 +569,18 @@ class MotorCalculatorAppMixin:
             self.root.after_cancel(self._recovery_after_id)
         delay_ms = self._recovery_manager.autosave_interval_seconds * 1000
         self._recovery_after_id = self.root.after(delay_ms, self._perform_recovery_autosave)
-        self._recovery_status_var.set("Unsaved changes; recovery snapshot scheduled")
+        self._recovery_status_var.set(tr("status.unsaved_scheduled"))
 
     def _perform_recovery_autosave(self) -> bool:
         self._recovery_after_id = None
         if not self._project_manager.is_dirty:
-            self._recovery_status_var.set("Project saved; recovery protection active")
+            self._recovery_status_var.set(tr("status.project_saved"))
             return False
         try:
             document = self._build_project_document()
         except (ProjectValidationError, MotorValidationError, ValueError) as exc:
-            self._recovery_status_var.set(f"Recovery waiting for valid inputs: {exc}")
+            logging.getLogger(__name__).warning("Recovery waiting for valid inputs: %s", exc)
+            self._recovery_status_var.set(tr("status.recovery_waiting"))
             return False
         current = self._project_manager.current_project
         result = self._recovery_manager.try_write_recovery(
@@ -567,30 +590,34 @@ class MotorCalculatorAppMixin:
             last_normal_save_timestamp=None if current is None else current.metadata.modified_at,
         )
         if not result.written:
-            self._recovery_status_var.set(result.warning or "Recovery autosave unavailable")
+            self._recovery_status_var.set(tr("status.recovery_autosave_unavailable"))
             logging.getLogger(__name__).warning(result.warning)
             return False
-        self._recovery_status_var.set(f"Recovery snapshot created {utc_now_iso()}")
+        self._recovery_status_var.set(tr("status.recovery_created", timestamp=utc_now_iso()))
         return True
 
     def _cleanup_project_recovery(self, project_uuid: str, *, saved_input_hash: str | None = None) -> None:
         try:
             self._recovery_manager.cleanup_project(project_uuid, saved_input_hash=saved_input_hash)
         except OSError as exc:
-            warning = f"Recovery cleanup could not be completed: {exc}"
+            warning = tr("status.recovery_cleanup_failed")
             self._recovery_status_var.set(warning)
             logging.getLogger(__name__).warning(warning)
 
     def _update_project_title(self) -> None:
         document = self._project_manager.current_project
         if document is None:
-            display_name = "Untitled"
+            display_name = tr("project.untitled")
         elif self._project_manager.current_path is not None:
             display_name = self._project_manager.current_path.name
         else:
-            display_name = document.metadata.project_name
+            display_name = (
+                tr("project.untitled")
+                if document.metadata.project_name == "Untitled"
+                else document.metadata.project_name
+            )
         dirty = " *" if self._project_manager.is_dirty else ""
-        self.root.title(f"Motor Calculator {application_version_label()} - {display_name}{dirty}")
+        self.root.title(f"{tr('app.title')} {application_version_label()} - {display_name}{dirty}")
 
     def _build_project_document(self, *, project_name: str | None = None) -> ProjectDocument:
         current = self._project_manager.current_project
@@ -633,13 +660,13 @@ class MotorCalculatorAppMixin:
         self.calc_results = None
         self.result_text.delete("1.0", tk.END)
         for tab, title in (
-            (self.curves_tab, "Performance curves"),
-            (self.emf_tab, "Back EMF"),
-            (self.torque_tab, "Torque analysis"),
-            (self.flux_tab, "Flux distribution"),
-            (self.geo_tab, "Geometry"),
+            (self.curves_tab, tr("chart.performance")),
+            (self.emf_tab, tr("chart.back_emf")),
+            (self.torque_tab, tr("chart.torque")),
+            (self.flux_tab, tr("chart.flux")),
+            (self.geo_tab, tr("chart.geometry")),
         ):
-            self._set_chart_placeholder(tab, title, "Run the calculation to refresh this project result.")
+            self._set_chart_placeholder(tab, title, tr("chart.refresh"))
         self._set_unavailable_current_summary()
 
     def _apply_project_document(self, document: ProjectDocument) -> None:
@@ -670,8 +697,8 @@ class MotorCalculatorAppMixin:
         if not self._project_manager.is_dirty:
             return True
         answer = messagebox.askyesnocancel(
-            "Unsaved project changes",
-            "Save changes before continuing?",
+            tr("project.unsaved_title"),
+            tr("project.unsaved_question"),
             parent=self.root,
         )
         if answer is None:
@@ -699,8 +726,8 @@ class MotorCalculatorAppMixin:
             return False
         selected = filedialog.askopenfilename(
             parent=self.root,
-            title="Open MotorCalculator project",
-            filetypes=(("MotorCalculator project", f"*{PROJECT_FILE_EXTENSION}"), ("All files", "*.*")),
+            title=tr("project.open_title"),
+            filetypes=((tr("project.file_type"), f"*{PROJECT_FILE_EXTENSION}"), (tr("project.all_files"), "*.*")),
         )
         if not selected:
             return False
@@ -717,25 +744,27 @@ class MotorCalculatorAppMixin:
         sources = inspect_project_sources(path)
         report = sources.official
         if report.status is CompatibilityStatus.NEWER_SCHEMA_UNSUPPORTED:
-            messagebox.showerror("Open project", report.message, parent=self.root)
+            logging.getLogger(__name__).warning("Project open blocked: %s", report.message)
+            messagebox.showerror(tr("project.open_error"), tr("project.open_failed"), parent=self.root)
             return False
         if report.status in {CompatibilityStatus.CORRUPT, CompatibilityStatus.INVALID}:
             if sources.backup is not None and sources.backup.status is CompatibilityStatus.COMPATIBLE:
                 use_backup = messagebox.askyesno(
-                    "Open project backup",
-                    f"The official project is invalid or corrupt.\n\n{report.message}\n\nOpen its valid .bak copy without overwriting either file?",
+                    tr("project.backup_title"),
+                    tr("project.backup_question"),
                     parent=self.root,
                 )
                 if not use_backup:
                     return False
                 source_path = sources.backup.path
             else:
-                messagebox.showerror("Open project", report.message, parent=self.root)
+                logging.getLogger(__name__).warning("Project open invalid/corrupt: %s", report.message)
+                messagebox.showerror(tr("project.open_error"), tr("project.open_failed"), parent=self.root)
                 return False
         elif report.status is CompatibilityStatus.MIGRATION_AVAILABLE:
             if not messagebox.askokcancel(
-                "Project migration",
-                f"{report.message}. Open using the approved in-memory migration path?",
+                tr("project.migration_title"),
+                tr("project.migration_question"),
                 parent=self.root,
             ):
                 return False
@@ -743,7 +772,8 @@ class MotorCalculatorAppMixin:
             document = self._project_manager.open_project(source_path)
             self._apply_project_document(document)
         except ProjectSerializationError as exc:
-            messagebox.showerror("Open project", str(exc), parent=self.root)
+            logging.getLogger(__name__).warning("Project serialization failed: %s", exc)
+            messagebox.showerror(tr("project.open_error"), tr("project.open_failed"), parent=self.root)
             return False
         try:
             available = [record.record_id for record in load_feedback_records(self._feedback_store)]
@@ -752,8 +782,8 @@ class MotorCalculatorAppMixin:
         missing = missing_feedback_record_ids(document, available)
         if missing:
             messagebox.showwarning(
-                "Project validation references",
-                f"{len(missing)} linked local validation record(s) are unavailable. The project inputs were loaded normally.",
+                tr("project.references_title"),
+                tr("project.references_missing", count=len(missing)),
                 parent=self.root,
             )
         if previous is not None:
@@ -769,11 +799,11 @@ class MotorCalculatorAppMixin:
         current_path = self._project_manager.current_path
         selected = filedialog.asksaveasfilename(
             parent=self.root,
-            title="Save MotorCalculator project",
+            title=tr("project.save_title"),
             initialdir=str(current_path.parent if current_path else Path.home()),
-            initialfile=current_path.name if current_path else f"Untitled{PROJECT_FILE_EXTENSION}",
+            initialfile=current_path.name if current_path else f"{tr('project.untitled')}{PROJECT_FILE_EXTENSION}",
             defaultextension=PROJECT_FILE_EXTENSION,
-            filetypes=(("MotorCalculator project", f"*{PROJECT_FILE_EXTENSION}"),),
+            filetypes=((tr("project.file_type"), f"*{PROJECT_FILE_EXTENSION}"),),
         )
         return False if not selected else self._save_project_to_path(Path(selected), save_as=True)
 
@@ -786,21 +816,22 @@ class MotorCalculatorAppMixin:
             document = self._build_project_document(project_name=name)
             self._project_manager.save_as(document, target)
         except (ProjectSerializationError, ProjectValidationError, MotorValidationError) as exc:
-            messagebox.showerror("Save project", str(exc), parent=self.root)
+            logging.getLogger(__name__).warning("Project save failed: %s", exc)
+            messagebox.showerror(tr("project.save_error"), tr("project.save_failed"), parent=self.root)
             return False
         self._update_project_title()
         self._cleanup_project_recovery(
             document.metadata.project_uuid,
             saved_input_hash=project_inputs_hash(document.inputs),
         )
-        self._recovery_status_var.set("Project saved; recovery protection active")
+        self._recovery_status_var.set(tr("status.project_saved"))
         return True
 
     def _refresh_recent_projects_menu(self) -> None:
         self._recent_projects_menu.delete(0, tk.END)
         entries = self._project_manager.recent_store.entries(existing_only=True)
         if not entries:
-            self._recent_projects_menu.add_command(label="(No recent projects)", state=tk.DISABLED)
+            self._recent_projects_menu.add_command(label=tr("project.no_recent"), state=tk.DISABLED)
             return
         for entry in entries:
             self._recent_projects_menu.add_command(
@@ -810,8 +841,8 @@ class MotorCalculatorAppMixin:
 
     def _edit_project_notes(self) -> None:
         edited = simpledialog.askstring(
-            "Project Notes",
-            "Plain-text engineering notes:",
+            tr("project.notes_title"),
+            tr("project.notes_prompt"),
             initialvalue=self._project_notes,
             parent=self.root,
         )
@@ -827,7 +858,7 @@ class MotorCalculatorAppMixin:
             logging.getLogger(__name__).warning("; ".join(scan.warnings))
         self._recovery_candidates = scan.candidates
         if not scan.candidates:
-            messagebox.showinfo("Recover Unsaved Work", "No meaningful recovery snapshots are available.", parent=self.root)
+            messagebox.showinfo(tr("recovery.none_title"), tr("recovery.none"), parent=self.root)
             return None
         return RecoveryBrowserDialog(
             self.root,
@@ -845,16 +876,19 @@ class MotorCalculatorAppMixin:
         self._project_manager.mark_dirty()
         self._update_project_title()
         self._schedule_recovery_autosave()
-        self._recovery_status_var.set("Recovered project is unsaved; use Save or Save As")
+        self._recovery_status_var.set(tr("status.recovered_unsaved"))
         return True
 
     def _discard_recovery_candidate(self, candidate: RecoveryCandidate) -> bool:
         try:
             self._recovery_manager.discard(candidate)
         except OSError as exc:
-            messagebox.showerror("Discard recovery", str(exc), parent=self.root)
+            logging.getLogger(__name__).warning("Recovery discard failed: %s", exc)
+            messagebox.showerror(
+                tr("recovery.discard_title"), tr("recovery.discard_failed"), parent=self.root
+            )
             return False
-        self._recovery_status_var.set("Selected recovery snapshot discarded")
+        self._recovery_status_var.set(tr("status.recovery_discarded"))
         return True
 
     def _request_exit(self) -> bool:
@@ -875,7 +909,7 @@ class MotorCalculatorAppMixin:
 
     def _create_confidence_tab(self) -> None:
         self.confidence_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.confidence_tab, text="Confidence & Validation")
+        self.notebook.add(self.confidence_tab, text=tr("confidence.tab"))
         self.confidence_panel = ConfidencePanel(
             self.confidence_tab,
             on_estimate=self._estimate_controlled_reference_uncertainty,
@@ -899,18 +933,17 @@ class MotorCalculatorAppMixin:
         validation_summary, database_warning = self._load_local_validation_summary(
             topology="dual-rotor single-stator dual-air-gap AFPM"
         )
-        reason = (
-            "Uncertainty estimate not available for this result. Use the explicit controlled-reference action; "
-            "its result is not an error bound for this legacy calculation."
-        )
+        reason = tr("confidence.unavailable_reason")
         if database_warning:
-            reason += f" {database_warning}"
+            logging.getLogger(__name__).warning(database_warning)
+            reason += tr("confidence.database_unavailable")
         summary = build_unavailable_confidence_summary(
             metric_name="back_emf_phase_rms_v",
             nominal_value=nominal,
             unit="V",
             validation_summary=validation_summary,
             reason=reason,
+            source_label=tr("confidence.current_source"),
         )
         self._engineering_confidence_summary = summary
         self._latest_accuracy_envelope = None
@@ -924,7 +957,7 @@ class MotorCalculatorAppMixin:
         )
         return replace(
             base,
-            assumption_label="USER-SPECIFIED LOCAL CONTROLLED-REFERENCE ASSUMPTIONS",
+            assumption_label=tr("confidence.user_assumption"),
             parameters=self._user_uncertainty_parameters,
             assumptions=base.assumptions + (
                 "Phase 7K user-edited assumptions apply only to this local controlled-reference run.",
@@ -944,7 +977,7 @@ class MotorCalculatorAppMixin:
             summary = build_engineering_confidence_summary(
                 result.accuracy_envelope,
                 validation_summary,
-                source_label="CONTROLLED REFERENCE - not the current production calculation",
+                source_label=tr("confidence.controlled_source"),
             )
             if database_warning:
                 summary = replace(
@@ -952,9 +985,10 @@ class MotorCalculatorAppMixin:
                     warnings=summary.warnings + (database_warning,),
                 )
         except Exception as exc:
+            logging.getLogger(__name__).warning("Controlled-reference uncertainty unavailable: %s", exc)
             messagebox.showwarning(
-                "Confidence & Validation",
-                f"Uncertainty analysis is unavailable, but the main calculation remains usable.\n\n{exc}",
+                tr("confidence.tab"),
+                tr("confidence.analysis_unavailable"),
                 parent=self.root,
             )
             return
@@ -974,7 +1008,10 @@ class MotorCalculatorAppMixin:
                 parameters = self._user_uncertainty_parameters
             edited = UncertaintyAssumptionDialog(self.root, parameters).show()
         except Exception as exc:
-            messagebox.showwarning("Uncertainty assumptions", str(exc), parent=self.root)
+            logging.getLogger(__name__).warning("Uncertainty assumptions unavailable: %s", exc)
+            messagebox.showwarning(
+                tr("uncertainty.error_title"), tr("uncertainty.load_failed"), parent=self.root
+            )
             return
         if edited is not None:
             self._user_uncertainty_parameters = edited
@@ -982,8 +1019,8 @@ class MotorCalculatorAppMixin:
             self._update_project_title()
             self._schedule_recovery_autosave()
             messagebox.showinfo(
-                "Uncertainty assumptions",
-                "Local assumptions saved for the next explicit controlled-reference estimate.\nProduction defaults were not changed.",
+                tr("uncertainty.error_title"),
+                tr("uncertainty.saved"),
                 parent=self.root,
             )
 
@@ -1019,7 +1056,7 @@ class MotorCalculatorAppMixin:
 
     def _add_validation_feedback(self) -> None:
         if not getattr(self, "calc_results", None):
-            messagebox.showinfo("Validation feedback", "Run the calculator before adding a validation result.", parent=self.root)
+            messagebox.showinfo(tr("feedback.error_title"), tr("feedback.run_first"), parent=self.root)
             return
         options = self._feedback_metric_options()
         values = ValidationFeedbackDialog(
@@ -1076,13 +1113,14 @@ class MotorCalculatorAppMixin:
             )
             display = format_feedback_submission_result(result.record, envelope_comparison)
         except Exception as exc:
+            logging.getLogger(__name__).warning("Local validation feedback save failed: %s", exc)
             messagebox.showwarning(
-                "Validation feedback",
-                f"The local evidence database could not be updated. The main calculation is unchanged.\n\n{exc}",
+                tr("feedback.error_title"),
+                tr("feedback.save_failed"),
                 parent=self.root,
             )
             return
-        messagebox.showinfo("Validation feedback saved locally", display, parent=self.root)
+        messagebox.showinfo(tr("feedback.saved_title"), display, parent=self.root)
         if result.record.record_id not in self._project_validation_record_ids:
             self._project_validation_record_ids.append(result.record.record_id)
             self._project_manager.mark_dirty()
@@ -1093,14 +1131,14 @@ class MotorCalculatorAppMixin:
     def _export_confidence_summary(self) -> None:
         summary = self._engineering_confidence_summary
         if summary is None:
-            messagebox.showinfo("Confidence export", "No confidence summary is available.", parent=self.root)
+            messagebox.showinfo(tr("confidence.export_title"), tr("confidence.export_none"), parent=self.root)
             return
         path = filedialog.asksaveasfilename(
             parent=self.root,
-            title="Export confidence summary locally",
+            title=tr("confidence.export_dialog"),
             initialdir=str(self._runtime_paths.export_dir),
             defaultextension=".json",
-            filetypes=(("JSON", "*.json"), ("Text", "*.txt")),
+            filetypes=(("JSON", "*.json"), (tr("project.text_file_type"), "*.txt")),
         )
         if not path:
             return
@@ -1108,9 +1146,12 @@ class MotorCalculatorAppMixin:
         try:
             export_confidence_summary(summary, Path(path), format_name=format_name)
         except Exception as exc:
-            messagebox.showerror("Confidence export", str(exc), parent=self.root)
+            logging.getLogger(__name__).warning("Confidence export failed: %s", exc)
+            messagebox.showerror(
+                tr("confidence.export_title"), tr("confidence.export_failed"), parent=self.root
+            )
             return
-        messagebox.showinfo("Confidence export", "Summary exported locally. No data was uploaded.", parent=self.root)
+        messagebox.showinfo(tr("confidence.export_title"), tr("confidence.export_done"), parent=self.root)
 
     def _collect_raw_params(self) -> Dict[str, Any]:
         raw: Dict[str, Any] = {}
@@ -1128,11 +1169,11 @@ class MotorCalculatorAppMixin:
         metadata = self.calc_results.metadata
         summary_lines = [
             "",
-            "Phase 3A Electrical Semantics",
-            f"控制模式: {metadata.get('控制模式', 'N/A')}",
-            f"legacy控制模型: {metadata.get('legacy控制模型', 'N/A')}",
-            f"机械转速: {metadata.get('机械转速_rpm', 'N/A')} rpm",
-            f"电频率: {metadata.get('电频率_Hz', 'N/A')} Hz",
+            tr("report.phase3a_title"),
+            f"{tr('report.control_mode')}: {metadata.get('控制模式', 'N/A')}",
+            f"{tr('report.legacy_model')}: {metadata.get('legacy控制模型', 'N/A')}",
+            f"{tr('report.mechanical_speed')}: {metadata.get('机械转速_rpm', 'N/A')} rpm",
+            f"{tr('report.electrical_frequency')}: {metadata.get('电频率_Hz', 'N/A')} Hz",
             "-" * 70,
             "",
         ]
@@ -1159,11 +1200,13 @@ class MotorCalculatorAppMixin:
             self._draw_geometry()
             self._set_unavailable_current_summary()
             self.notebook.select(0)
-            messagebox.showinfo("分析完成", "电磁分析计算已完成。\n请查看各选项卡中的结果。")
+            messagebox.showinfo(tr("analysis.complete_title"), tr("analysis.complete"))
         except (MotorValidationError, MotorCalculationError) as exc:
-            messagebox.showerror("分析错误", str(exc))
+            logging.getLogger(__name__).warning("Calculation input rejected: %s", exc)
+            messagebox.showerror(tr("analysis.error_title"), tr("analysis.invalid"))
         except Exception as exc:
-            messagebox.showerror("分析错误", f"计算失败:\n{exc}")
+            logging.getLogger(__name__).exception("GUI calculation failed")
+            messagebox.showerror(tr("analysis.error_title"), tr("analysis.failed"))
 
 
 class MotorCalculatorApp:

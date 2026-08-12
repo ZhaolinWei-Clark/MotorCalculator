@@ -214,16 +214,16 @@ def test_user_specification_override_changes_only_controlled_sandbox_prediction(
 def test_blocked_feedback_display_never_shows_fake_error(tmp_path: Path):
     record = submit_feedback(_blocked_submission(), tmp_path / "feedback.jsonl").record
     display = format_feedback_submission_result(record)
-    assert "Compatibility: BLOCKED" in display
-    assert "Numerical error: not computed" in display
+    assert "可比性：暂不可比" in display
+    assert "数值误差：未计算" in display
     assert "APE:" not in display
     assert record.signed_error is None
 
 
 def test_evidence_type_ux_covers_all_backend_types():
     assert set(EVIDENCE_TYPE_LABELS.values()) == set(ValidationEvidenceType)
-    assert any("physical motor test" in label for label in EVIDENCE_TYPE_LABELS)
-    assert any("field solver" in label for label in EVIDENCE_TYPE_LABELS)
+    assert any("实体电机测试" in label for label in EVIDENCE_TYPE_LABELS)
+    assert any("场求解器" in label for label in EVIDENCE_TYPE_LABELS)
 
 
 def test_synthetic_demo_is_unverified_and_only_very_limited_coverage(phase7k_demo):

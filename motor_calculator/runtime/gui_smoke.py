@@ -90,6 +90,7 @@ def _submit_smoke_feedback(app, main_window_module) -> tuple[int, int]:
 
 
 def _exercise_dialogs(root, app, screenshot_base: Path) -> dict[str, Any]:
+    from motor_calculator.i18n import tr
     from motor_calculator.gui.feedback_dialog import ValidationFeedbackDialog
     from motor_calculator.gui.uncertainty_dialog import UncertaintyAssumptionDialog
     from motor_calculator.validation.uncertainty_models import load_uncertainty_specification
@@ -100,6 +101,7 @@ def _exercise_dialogs(root, app, screenshot_base: Path) -> dict[str, Any]:
         default_speed=float(app._get_params()["n_rated"]),
     )
     feedback.window.update()
+    feedback_title_chinese = feedback.window.title() == tr("feedback.add_title")
     feedback_fits = _window_fits_screen(feedback.window)
     feedback_screenshot = screenshot_base.with_name(screenshot_base.stem + "-feedback.png")
     feedback_screenshot_error = _capture_window(feedback.window, feedback_screenshot)
@@ -114,6 +116,7 @@ def _exercise_dialogs(root, app, screenshot_base: Path) -> dict[str, Any]:
     )
     uncertainty = UncertaintyAssumptionDialog(root, specification.parameters)
     uncertainty.window.update()
+    uncertainty_title_chinese = uncertainty.window.title() == tr("uncertainty.title")
     uncertainty_fits = _window_fits_screen(uncertainty.window)
     uncertainty_screenshot = screenshot_base.with_name(screenshot_base.stem + "-uncertainty.png")
     uncertainty_screenshot_error = _capture_window(uncertainty.window, uncertainty_screenshot)
@@ -121,10 +124,12 @@ def _exercise_dialogs(root, app, screenshot_base: Path) -> dict[str, Any]:
     root.update()
     return {
         "feedback_dialog_opened": True,
+        "feedback_dialog_title_chinese": feedback_title_chinese,
         "feedback_dialog_fits_screen": feedback_fits,
         "feedback_dialog_screenshot": str(feedback_screenshot),
         "feedback_dialog_screenshot_error": feedback_screenshot_error,
         "uncertainty_dialog_opened": True,
+        "uncertainty_dialog_title_chinese": uncertainty_title_chinese,
         "uncertainty_dialog_fits_screen": uncertainty_fits,
         "uncertainty_dialog_screenshot": str(uncertainty_screenshot),
         "uncertainty_dialog_screenshot_error": uncertainty_screenshot_error,
@@ -294,10 +299,10 @@ def _exercise_phase8d_input_ux(root, app, main_window_module, output: Path) -> d
     root.update_idletasks()
     out_of_range_preserved = (
         app._get_params()["g_side"] == exact_air_gap
-        and app._guided_input_panel.slider_status_vars["g_side"].get() == "Outside quick-adjust range"
+        and app._guided_input_panel.slider_status_vars["g_side"].get() == "超出快速调节范围"
     )
     app._refresh_input_guidance()
-    warning_rendered = "INFO/UNUSUAL" in app._guided_input_panel.guidance_var.get()
+    warning_rendered = "提示/非典型" in app._guided_input_panel.guidance_var.get()
     app._show_input_help()
     help_opened = True
     app._reset_input_field("g_side")
@@ -420,6 +425,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
     """Exercise the real GUI, persist evidence/export, write JSON, then exit."""
 
     from motor_calculator.gui import main_window as main_window_module
+    from motor_calculator.i18n import get_locale, tr
     from motor_calculator.validation.confidence_summary import export_confidence_summary
     from motor_calculator.validation.feedback_service import load_feedback_records
     from motor_calculator.runtime.display import windows_work_area
@@ -442,8 +448,15 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         tab_names = tuple(
             str(app.notebook.tab(index, "text")) for index in range(app.notebook.index("end"))
         )
-        if "Confidence & Validation" not in tab_names:
-            raise RuntimeError("Confidence & Validation tab is missing")
+        if tr("confidence.tab") not in tab_names:
+            raise RuntimeError("localized confidence tab is missing")
+        chinese_ui = {
+            "default_locale": get_locale(),
+            "main_title_chinese": tr("app.title") in root.title(),
+            "confidence_tab_chinese": tr("confidence.tab") in tab_names,
+            "file_menu_chinese": app._project_menu_bar.entrycget(1, "label") == tr("menu.file"),
+            "guided_title_chinese": app._guided_input_panel.frame.cget("text") == tr("guided.title"),
+        }
         app.run_analysis()
         root.update()
         if not getattr(app, "calc_results", None):
@@ -530,6 +543,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 **project_results,
                 **recovery_results,
                 **dialog_results,
+                **chinese_ui,
             }
         )
     except Exception as exc:

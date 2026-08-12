@@ -118,7 +118,7 @@ def test_runtime_health_reports_tk_failure_without_hiding_reason(tmp_path: Path)
     failure = next(check for check in report.checks if check.name == "tcl_tk_runtime")
     assert "init.tcl" in failure.message
     message = format_startup_failure(RuntimeError("init.tcl unavailable"), paths, report=report)
-    assert "Tkinter runtime could not be initialized" in message
+    assert "无法初始化 Tkinter 运行环境" in message
     assert str(paths.log_file) in message
 
 

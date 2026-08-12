@@ -12,6 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Callable
 
+from motor_calculator.i18n import localize_status, tr
 from motor_calculator.version import APPLICATION_VERSION, RUNTIME_SCHEMA_VERSION
 
 from .paths import RuntimePaths, check_packaged_resources, resolve_runtime_paths
@@ -245,16 +246,16 @@ def format_startup_failure(
         candidate = next((check for check in health.checks if check.name == "tcl_tk_runtime"), None)
         if candidate is not None:
             tcl_status = candidate.status.value
-    log_label = "Detailed local log" if paths.log_file.exists() else "Local log target (if writable)"
+    log_label = tr("runtime.log")
     return "\n".join(
         (
-            "GUI 启动失败：Tkinter runtime could not be initialized.",
-            f"Detected Python: {platform.python_version()} ({sys.executable})",
-            f"Detected Tcl/Tk status: {tcl_status}",
-            f"Original error: {error}",
-            "Remediation: install a complete Windows CPython with Tcl/Tk, recreate the virtual environment,",
-            "then run: .venv\\Scripts\\python.exe work\\check_tk_runtime.py",
-            "See README.md and docs/phase8a_windows_runtime_audit_zh.md for details.",
-            f"{log_label}: {paths.log_file}",
+            tr("runtime.startup_failed"),
+            f"{tr('runtime.detected_python')}：{platform.python_version()} ({sys.executable})",
+            f"{tr('runtime.detected_tcl')}：{localize_status(tcl_status)}",
+            f"{tr('runtime.original_error')}：{error}",
+            tr("runtime.remediation"),
+            tr("runtime.check_command"),
+            tr("runtime.more_info"),
+            f"{log_label}：{paths.log_file}",
         )
     )
