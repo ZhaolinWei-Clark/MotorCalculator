@@ -1,6 +1,28 @@
 """Versioned local project persistence API."""
 
 from .manager import ProjectManager, RecentProject, RecentProjectStore, UnsavedChangesDecision
+from .compatibility import (
+    CompatibilityReport,
+    CompatibilityStatus,
+    IntegrityStatus,
+    ProjectSourceOptions,
+    RecoveryPriority,
+    inspect_project,
+    inspect_project_sources,
+)
+from .recovery import (
+    DEFAULT_AUTOSAVE_INTERVAL_SECONDS,
+    RECOVERY_SCHEMA_VERSION,
+    RecoveryCandidate,
+    RecoveryManager,
+    RecoveryRecord,
+    RecoveryScanResult,
+    RecoveryStatus,
+    RecoveryWriteResult,
+    load_recovery,
+    recovery_to_payload,
+    serialize_recovery,
+)
 from .schema import (
     PROJECT_FILE_EXTENSION,
     PROJECT_INPUT_SPECS,
@@ -22,6 +44,7 @@ from .schema import (
     validate_project_document,
 )
 from .serializer import (
+    PROJECT_MIGRATIONS,
     ProjectIntegrityError,
     ProjectSerializationError,
     UnsupportedProjectVersionError,
@@ -34,9 +57,15 @@ from .serializer import (
 )
 
 __all__ = [
+    "CompatibilityReport",
+    "CompatibilityStatus",
+    "DEFAULT_AUTOSAVE_INTERVAL_SECONDS",
+    "IntegrityStatus",
     "PROJECT_FILE_EXTENSION",
     "PROJECT_INPUT_SPECS",
     "PROJECT_SCHEMA_VERSION",
+    "PROJECT_MIGRATIONS",
+    "RECOVERY_SCHEMA_VERSION",
     "ProjectDocument",
     "ProjectInputValue",
     "ProjectIntegrityError",
@@ -45,21 +74,34 @@ __all__ = [
     "ProjectModel",
     "ProjectSerializationError",
     "ProjectValidationError",
+    "ProjectSourceOptions",
     "RecentProject",
     "RecentProjectStore",
+    "RecoveryCandidate",
+    "RecoveryManager",
+    "RecoveryPriority",
+    "RecoveryRecord",
+    "RecoveryScanResult",
+    "RecoveryStatus",
+    "RecoveryWriteResult",
     "ResultSnapshot",
     "UnsupportedProjectVersionError",
     "UnsavedChangesDecision",
     "build_project_inputs",
     "create_project_document",
     "flatten_project_inputs",
+    "inspect_project",
+    "inspect_project_sources",
     "load_project",
+    "load_recovery",
     "migrate_project",
     "missing_feedback_record_ids",
     "project_inputs_hash",
     "project_to_payload",
+    "recovery_to_payload",
     "save_project",
     "serialize_project",
+    "serialize_recovery",
     "uncertainty_parameters_from_payload",
     "uncertainty_parameters_to_payload",
     "utc_now_iso",

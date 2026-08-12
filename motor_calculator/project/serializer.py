@@ -37,6 +37,10 @@ class ProjectIntegrityError(ProjectSerializationError):
 
 Migration = Callable[[Mapping[str, Any]], Mapping[str, Any]]
 
+# Production migrations are intentionally explicit. Schema v1 is current, so
+# the registry remains empty until a real, reviewed successor exists.
+PROJECT_MIGRATIONS: dict[int, Migration] = {}
+
 
 def _canonical_json(payload: Mapping[str, Any]) -> str:
     return json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -102,7 +106,7 @@ def migrate_project(
             f"Project schema version {raw_version} is newer than supported version {PROJECT_SCHEMA_VERSION}"
         )
     migrated = dict(payload)
-    migration_map = dict(migrations or {})
+    migration_map = dict(PROJECT_MIGRATIONS if migrations is None else migrations)
     version = raw_version
     while version < PROJECT_SCHEMA_VERSION:
         migration = migration_map.get(version)

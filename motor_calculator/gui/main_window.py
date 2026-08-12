@@ -23,15 +23,20 @@ from motor_calculator.motor_core import (
 )
 from motor_calculator.project import (
     PROJECT_FILE_EXTENSION,
+    CompatibilityStatus,
     ProjectDocument,
     ProjectManager,
     ProjectSerializationError,
     ProjectValidationError,
     RecentProjectStore,
+    RecoveryCandidate,
+    RecoveryManager,
     UnsavedChangesDecision,
     create_project_document,
     flatten_project_inputs,
+    inspect_project_sources,
     missing_feedback_record_ids,
+    project_inputs_hash,
     uncertainty_parameters_from_payload,
     utc_now_iso,
 )
@@ -42,6 +47,7 @@ from .feedback_dialog import (
     ValidationFeedbackDialog,
     format_feedback_submission_result,
 )
+from .recovery_dialog import RecoveryBrowserDialog
 from .uncertainty_dialog import UncertaintyAssumptionDialog
 
 from motor_calculator.validation.confidence_summary import (
@@ -139,6 +145,18 @@ class MotorCalculatorAppMixin:
         self._project_default_inputs = dict(self._get_params())
         recent_store = RecentProjectStore(self._runtime_paths.user_data_dir / "recent_projects.json")
         self._project_manager = ProjectManager(recent_store)
+        self._recovery_manager = RecoveryManager(self._runtime_paths.user_data_dir / "recovery")
+        initial_recovery_scan = self._recovery_manager.scan()
+        recovery_startup_warning = None
+        try:
+            self._recovery_manager.begin_session()
+        except (OSError, ProjectSerializationError, ValueError) as exc:
+            recovery_startup_warning = f"Recovery protection is unavailable: {exc}"
+        self._recovery_after_id = None
+        self._recovery_candidates = initial_recovery_scan.candidates
+        self._recovery_status_var = tk.StringVar(
+            value=recovery_startup_warning or "Recovery protection active"
+        )
         document = create_project_document("Untitled", self._project_default_inputs)
         self._project_manager.new_project(document)
         self._create_project_menu()
@@ -147,8 +165,24 @@ class MotorCalculatorAppMixin:
             for variable in (*self.vars.values(), self.coreless_var)
         ]
         self.root.protocol("WM_DELETE_WINDOW", self._request_exit)
+        self._recovery_status_label = ttk.Label(
+            self.root, textvariable=self._recovery_status_var, anchor=tk.E, padding=(8, 2)
+        )
+        packed_children = self.root.pack_slaves()
+        pack_options = {"side": tk.BOTTOM, "fill": tk.X}
+        if packed_children:
+            pack_options["before"] = packed_children[0]
+        self._recovery_status_label.pack(**pack_options)
         self._project_suppress_dirty = False
         self._update_project_title()
+        if initial_recovery_scan.warnings:
+            logging.getLogger(__name__).warning("; ".join(initial_recovery_scan.warnings))
+        if recovery_startup_warning:
+            logging.getLogger(__name__).warning(recovery_startup_warning)
+        elif self._recovery_candidates:
+            self._recovery_status_var.set(
+                f"Recovered work available ({len(self._recovery_candidates)}); use File > Recover Unsaved Work"
+            )
 
     def _create_project_menu(self) -> None:
         menu_bar = tk.Menu(self.root)
@@ -160,6 +194,7 @@ class MotorCalculatorAppMixin:
         file_menu.add_command(label="Save As...", command=self._save_project_as)
         self._recent_projects_menu = tk.Menu(file_menu, tearoff=False, postcommand=self._refresh_recent_projects_menu)
         file_menu.add_cascade(label="Recent Projects", menu=self._recent_projects_menu)
+        file_menu.add_command(label="Recover Unsaved Work...", command=self._recover_unsaved_work)
         file_menu.add_command(label="Project Notes...", command=self._edit_project_notes)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self._request_exit)
@@ -176,6 +211,46 @@ class MotorCalculatorAppMixin:
             return
         self._project_manager.mark_dirty()
         self._update_project_title()
+        self._schedule_recovery_autosave()
+
+    def _schedule_recovery_autosave(self) -> None:
+        if self._recovery_after_id is not None:
+            self.root.after_cancel(self._recovery_after_id)
+        delay_ms = self._recovery_manager.autosave_interval_seconds * 1000
+        self._recovery_after_id = self.root.after(delay_ms, self._perform_recovery_autosave)
+        self._recovery_status_var.set("Unsaved changes; recovery snapshot scheduled")
+
+    def _perform_recovery_autosave(self) -> bool:
+        self._recovery_after_id = None
+        if not self._project_manager.is_dirty:
+            self._recovery_status_var.set("Project saved; recovery protection active")
+            return False
+        try:
+            document = self._build_project_document()
+        except (ProjectValidationError, MotorValidationError, ValueError) as exc:
+            self._recovery_status_var.set(f"Recovery waiting for valid inputs: {exc}")
+            return False
+        current = self._project_manager.current_project
+        result = self._recovery_manager.try_write_recovery(
+            document,
+            original_project_path=self._project_manager.current_path,
+            dirty=True,
+            last_normal_save_timestamp=None if current is None else current.metadata.modified_at,
+        )
+        if not result.written:
+            self._recovery_status_var.set(result.warning or "Recovery autosave unavailable")
+            logging.getLogger(__name__).warning(result.warning)
+            return False
+        self._recovery_status_var.set(f"Recovery snapshot created {utc_now_iso()}")
+        return True
+
+    def _cleanup_project_recovery(self, project_uuid: str, *, saved_input_hash: str | None = None) -> None:
+        try:
+            self._recovery_manager.cleanup_project(project_uuid, saved_input_hash=saved_input_hash)
+        except OSError as exc:
+            warning = f"Recovery cleanup could not be completed: {exc}"
+            self._recovery_status_var.set(warning)
+            logging.getLogger(__name__).warning(warning)
 
     def _update_project_title(self) -> None:
         document = self._project_manager.current_project
@@ -272,14 +347,18 @@ class MotorCalculatorAppMixin:
         return self._project_manager.can_abandon(decision, save_callback=self._save_project)
 
     def _new_project(self) -> bool:
+        previous = self._project_manager.current_project
         if not self._confirm_abandon_changes():
             return False
+        if previous is not None:
+            self._cleanup_project_recovery(previous.metadata.project_uuid)
         document = create_project_document("Untitled", self._project_default_inputs)
         self._project_manager.new_project(document)
         self._apply_project_document(document)
         return True
 
     def _open_project(self) -> bool:
+        previous = self._project_manager.current_project
         if not self._confirm_abandon_changes():
             return False
         selected = filedialog.askopenfilename(
@@ -287,13 +366,45 @@ class MotorCalculatorAppMixin:
             title="Open MotorCalculator project",
             filetypes=(("MotorCalculator project", f"*{PROJECT_FILE_EXTENSION}"), ("All files", "*.*")),
         )
-        return False if not selected else self._open_project_path(Path(selected), prompt_for_unsaved=False)
+        if not selected:
+            return False
+        opened = self._open_project_path(Path(selected), prompt_for_unsaved=False)
+        if opened and previous is not None:
+            self._cleanup_project_recovery(previous.metadata.project_uuid)
+        return opened
 
     def _open_project_path(self, path: Path, *, prompt_for_unsaved: bool = True) -> bool:
+        previous = self._project_manager.current_project if prompt_for_unsaved else None
         if prompt_for_unsaved and not self._confirm_abandon_changes():
             return False
+        source_path = path
+        sources = inspect_project_sources(path)
+        report = sources.official
+        if report.status is CompatibilityStatus.NEWER_SCHEMA_UNSUPPORTED:
+            messagebox.showerror("Open project", report.message, parent=self.root)
+            return False
+        if report.status in {CompatibilityStatus.CORRUPT, CompatibilityStatus.INVALID}:
+            if sources.backup is not None and sources.backup.status is CompatibilityStatus.COMPATIBLE:
+                use_backup = messagebox.askyesno(
+                    "Open project backup",
+                    f"The official project is invalid or corrupt.\n\n{report.message}\n\nOpen its valid .bak copy without overwriting either file?",
+                    parent=self.root,
+                )
+                if not use_backup:
+                    return False
+                source_path = sources.backup.path
+            else:
+                messagebox.showerror("Open project", report.message, parent=self.root)
+                return False
+        elif report.status is CompatibilityStatus.MIGRATION_AVAILABLE:
+            if not messagebox.askokcancel(
+                "Project migration",
+                f"{report.message}. Open using the approved in-memory migration path?",
+                parent=self.root,
+            ):
+                return False
         try:
-            document = self._project_manager.open_project(path)
+            document = self._project_manager.open_project(source_path)
             self._apply_project_document(document)
         except ProjectSerializationError as exc:
             messagebox.showerror("Open project", str(exc), parent=self.root)
@@ -309,6 +420,8 @@ class MotorCalculatorAppMixin:
                 f"{len(missing)} linked local validation record(s) are unavailable. The project inputs were loaded normally.",
                 parent=self.root,
             )
+        if previous is not None:
+            self._cleanup_project_recovery(previous.metadata.project_uuid)
         return True
 
     def _save_project(self) -> bool:
@@ -340,6 +453,11 @@ class MotorCalculatorAppMixin:
             messagebox.showerror("Save project", str(exc), parent=self.root)
             return False
         self._update_project_title()
+        self._cleanup_project_recovery(
+            document.metadata.project_uuid,
+            saved_input_hash=project_inputs_hash(document.inputs),
+        )
+        self._recovery_status_var.set("Project saved; recovery protection active")
         return True
 
     def _refresh_recent_projects_menu(self) -> None:
@@ -365,10 +483,57 @@ class MotorCalculatorAppMixin:
             self._project_notes = edited
             self._project_manager.mark_dirty()
             self._update_project_title()
+            self._schedule_recovery_autosave()
+
+    def _recover_unsaved_work(self):
+        scan = self._recovery_manager.scan()
+        if scan.warnings:
+            logging.getLogger(__name__).warning("; ".join(scan.warnings))
+        self._recovery_candidates = scan.candidates
+        if not scan.candidates:
+            messagebox.showinfo("Recover Unsaved Work", "No meaningful recovery snapshots are available.", parent=self.root)
+            return None
+        return RecoveryBrowserDialog(
+            self.root,
+            scan.candidates,
+            on_restore=self._restore_recovery_candidate,
+            on_discard=self._discard_recovery_candidate,
+        )
+
+    def _restore_recovery_candidate(self, candidate: RecoveryCandidate) -> bool:
+        if not self._confirm_abandon_changes():
+            return False
+        document = self._recovery_manager.restore(candidate)
+        self._project_manager.new_project(document)
+        self._apply_project_document(document)
+        self._project_manager.mark_dirty()
+        self._update_project_title()
+        self._schedule_recovery_autosave()
+        self._recovery_status_var.set("Recovered project is unsaved; use Save or Save As")
+        return True
+
+    def _discard_recovery_candidate(self, candidate: RecoveryCandidate) -> bool:
+        try:
+            self._recovery_manager.discard(candidate)
+        except OSError as exc:
+            messagebox.showerror("Discard recovery", str(exc), parent=self.root)
+            return False
+        self._recovery_status_var.set("Selected recovery snapshot discarded")
+        return True
 
     def _request_exit(self) -> bool:
         if not self._confirm_abandon_changes():
             return False
+        if self._recovery_after_id is not None:
+            self.root.after_cancel(self._recovery_after_id)
+            self._recovery_after_id = None
+        current = self._project_manager.current_project
+        if current is not None:
+            self._cleanup_project_recovery(current.metadata.project_uuid)
+        try:
+            self._recovery_manager.mark_session_clean()
+        except OSError as exc:
+            logging.getLogger(__name__).warning("Clean-shutdown marker could not be written: %s", exc)
         self.root.destroy()
         return True
 
@@ -479,6 +644,7 @@ class MotorCalculatorAppMixin:
             self._user_uncertainty_parameters = edited
             self._project_manager.mark_dirty()
             self._update_project_title()
+            self._schedule_recovery_autosave()
             messagebox.showinfo(
                 "Uncertainty assumptions",
                 "Local assumptions saved for the next explicit controlled-reference estimate.\nProduction defaults were not changed.",
@@ -585,6 +751,7 @@ class MotorCalculatorAppMixin:
             self._project_validation_record_ids.append(result.record.record_id)
             self._project_manager.mark_dirty()
             self._update_project_title()
+            self._schedule_recovery_autosave()
         self._set_unavailable_current_summary()
 
     def _export_confidence_summary(self) -> None:

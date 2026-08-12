@@ -217,6 +217,52 @@ def _exercise_project_workflow(root, app, main_window_module, output: Path) -> d
     }
 
 
+def _exercise_recovery_workflow(root, app, main_window_module) -> dict[str, Any]:
+    """Exercise autosave, browser, restore, and selected-record discard."""
+
+    app.vars["n_rated"].set("2412.0")
+    app.vars["Br"].set("1.28")
+    root.update()
+    expected = dict(app._get_params())
+    autosave_written = app._perform_recovery_autosave()
+    scan = app._recovery_manager.scan()
+    if len(scan.candidates) != 1:
+        raise RuntimeError("recovery autosave did not produce one meaningful candidate")
+    candidate = scan.candidates[0]
+    recovery_path = candidate.path
+    browser = app._recover_unsaved_work()
+    browser_opened = browser is not None and bool(browser.window.winfo_exists())
+    if browser is not None:
+        browser.window.destroy()
+    original_prompt = main_window_module.messagebox.askyesnocancel
+    main_window_module.messagebox.askyesnocancel = lambda *_args, **_kwargs: False
+    try:
+        restored = app._restore_recovery_candidate(candidate)
+    finally:
+        main_window_module.messagebox.askyesnocancel = original_prompt
+    root.update()
+    restored_inputs = dict(app._get_params())
+    restored_dirty = (
+        app._project_manager.is_dirty
+        and app._project_manager.current_path is None
+        and app.root.title().endswith("Recovered Project *")
+    )
+    app.run_analysis()
+    root.update()
+    calculation_after_restore = bool(getattr(app, "calc_results", None))
+    discarded = app._discard_recovery_candidate(candidate)
+    return {
+        "recovery_autosave_written": bool(autosave_written and recovery_path.is_file() is False),
+        "recovery_browser_opened": browser_opened,
+        "recovery_restored": bool(restored),
+        "recovery_restored_inputs_exact": restored_inputs == expected,
+        "recovery_restored_dirty_without_path": restored_dirty,
+        "recovery_calculation_after_restore": calculation_after_restore,
+        "recovery_selected_discarded": bool(discarded and not recovery_path.exists()),
+        "recovery_path": str(recovery_path),
+    }
+
+
 def _capture_window(root, destination: Path) -> str | None:
     try:
         from PIL import ImageGrab
@@ -293,6 +339,20 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             )
         ):
             raise RuntimeError("project save/load GUI smoke did not pass every lifecycle gate")
+        recovery_results = _exercise_recovery_workflow(root, app, main_window_module)
+        if not all(
+            recovery_results[name]
+            for name in (
+                "recovery_autosave_written",
+                "recovery_browser_opened",
+                "recovery_restored",
+                "recovery_restored_inputs_exact",
+                "recovery_restored_dirty_without_path",
+                "recovery_calculation_after_restore",
+                "recovery_selected_discarded",
+            )
+        ):
+            raise RuntimeError("recovery GUI smoke did not pass every recovery gate")
         dialog_results = _exercise_dialogs(root, app, screenshot)
         records_before, records_after = _submit_smoke_feedback(app, main_window_module)
         confidence_export = app._runtime_paths.export_dir / "phase8a2_smoke_confidence.json"
@@ -333,6 +393,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "confidence_export_exists": confidence_export.is_file(),
                 "screenshot_error": screenshot_error,
                 **project_results,
+                **recovery_results,
                 **dialog_results,
             }
         )
@@ -340,6 +401,13 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         payload["error"] = str(exc)
         payload["traceback"] = traceback.format_exc()
     finally:
+        try:
+            current = app._project_manager.current_project
+            if current is not None:
+                app._recovery_manager.cleanup_project(current.metadata.project_uuid)
+            app._recovery_manager.mark_session_clean()
+        except Exception:
+            payload["recovery_cleanup_error"] = traceback.format_exc()
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(
             json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",

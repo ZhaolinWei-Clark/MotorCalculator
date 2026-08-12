@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import importlib
+import os
 import platform
 import sys
-import tempfile
+import uuid
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -128,12 +129,21 @@ def _tk_check(tk_probe: Callable[[], tuple[str, str, str]]) -> HealthCheck:
 
 
 def _writable_user_data_check(paths: RuntimePaths) -> HealthCheck:
+    probe = paths.user_data_dir / f".runtime-check-{uuid.uuid4().hex}.tmp"
     try:
         paths.user_data_dir.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(dir=paths.user_data_dir, prefix="runtime-check-", delete=True):
-            pass
+        with probe.open("xb") as stream:
+            stream.write(b"runtime-check")
+            stream.flush()
+            os.fsync(stream.fileno())
+        probe.unlink()
     except OSError as exc:
         return HealthCheck("user_data", HealthStatus.FAILED, f"User-data directory is not writable: {exc}", True)
+    finally:
+        try:
+            probe.unlink(missing_ok=True)
+        except OSError:
+            pass
     return HealthCheck(
         "user_data",
         HealthStatus.OK,
