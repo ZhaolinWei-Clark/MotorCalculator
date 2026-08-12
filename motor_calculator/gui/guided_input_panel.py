@@ -78,7 +78,9 @@ class GuidedInputPanel:
         self.mode_var = tk.StringVar(value="ADVANCED")
         self.length_unit_var = tk.StringVar(value=preferences.length)
         self.speed_unit_var = tk.StringVar(value=preferences.speed)
-        self.temperature_unit_var = tk.StringVar(value=preferences.temperature)
+        self.temperature_unit_var = tk.StringVar(
+            value="°C" if preferences.temperature == "degC" else preferences.temperature
+        )
         self.preset_var = tk.StringVar()
         self.magnet_var = tk.StringVar(value=str(field_vars["magnet_grade"].get()))
         self.guidance_var = tk.StringVar(value=tr("guided.not_evaluated"))
@@ -147,7 +149,14 @@ class GuidedInputPanel:
         units.pack(fill=tk.X, pady=(6, 2))
         self._unit_selector(units, tr("guided.length"), self.length_unit_var, ("mm", "m"), "length")
         self._unit_selector(units, tr("guided.speed"), self.speed_unit_var, ("rpm", "rad/s"), "speed")
-        self._unit_selector(units, tr("guided.temperature"), self.temperature_unit_var, ("degC", "K"), "temperature")
+        self._unit_selector(
+            units,
+            tr("guided.temperature"),
+            self.temperature_unit_var,
+            ("°C", "K"),
+            "temperature",
+            to_internal=lambda value: "degC" if value == "°C" else value,
+        )
 
         quick = ttk.LabelFrame(self.frame, text=tr("guided.quick_adjust"), padding=5)
         quick.pack(fill=tk.X, pady=(5, 0))
@@ -205,11 +214,26 @@ class GuidedInputPanel:
             foreground="#7A4D00", justify=tk.LEFT,
         ).pack(fill=tk.X, pady=(6, 0))
 
-    def _unit_selector(self, parent, label: str, variable: tk.StringVar, values, quantity: str) -> None:
+    def _unit_selector(
+        self,
+        parent,
+        label: str,
+        variable: tk.StringVar,
+        values,
+        quantity: str,
+        *,
+        to_internal: Callable[[str], str] | None = None,
+    ) -> None:
         ttk.Label(parent, text=f"{label}:").pack(side=tk.LEFT)
         combo = ttk.Combobox(parent, textvariable=variable, values=values, state="readonly", width=6)
         combo.pack(side=tk.LEFT, padx=(3, 8))
-        combo.bind("<<ComboboxSelected>>", lambda _event: self.on_unit_change(quantity, variable.get()))
+        combo.bind(
+            "<<ComboboxSelected>>",
+            lambda _event: self.on_unit_change(
+                quantity,
+                variable.get() if to_internal is None else to_internal(variable.get()),
+            ),
+        )
 
     def _selected_preset(self) -> PresetDefinition | None:
         return self._preset_by_label.get(self.preset_var.get())
@@ -261,7 +285,9 @@ class GuidedInputPanel:
         self.preferences = preferences
         self.length_unit_var.set(preferences.length)
         self.speed_unit_var.set(preferences.speed)
-        self.temperature_unit_var.set(preferences.temperature)
+        self.temperature_unit_var.set(
+            "°C" if preferences.temperature == "degC" else preferences.temperature
+        )
         self.refresh_all()
 
     def set_mode(self, mode: str) -> None:

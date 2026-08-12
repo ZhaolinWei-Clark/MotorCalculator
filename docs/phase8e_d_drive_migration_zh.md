@@ -26,7 +26,7 @@
 ### 测试与 GUI
 
 - Phase 8E 前基线：`564 passed`
-- 本地化与高 DPI 修复后：`575 passed`
+- 本地化、高 DPI 与温度单位显示修复后：`576 passed`
 - 常规 96 DPI source GUI smoke：`PASS`
 - 约 200% 的 192 DPI source GUI smoke：`PASS`
 - 192 DPI 窗口：`1824 x 980`，Windows 工作区：`1920 x 1032`

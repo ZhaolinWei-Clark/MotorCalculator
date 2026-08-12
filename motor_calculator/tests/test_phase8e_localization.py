@@ -111,3 +111,9 @@ def test_gui_smoke_checks_confidence_actions_remain_visible() -> None:
     assert '"confidence_actions_visible"' in source
     assert "_widget_fits_window(" in source
     assert "app.confidence_panel.actions" in source
+
+
+def test_temperature_selector_displays_degree_symbol_without_changing_internal_token() -> None:
+    source = (ROOT / "motor_calculator" / "gui" / "guided_input_panel.py").read_text(encoding="utf-8")
+    assert '("°C", "K")' in source
+    assert '"degC" if value == "°C" else value' in source
