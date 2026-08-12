@@ -34,6 +34,10 @@ data_files = [
         str(repository_root / "validation_data" / "fea_reference" / "phase7h_controlled_ssdr_machine.json"),
         "validation_data/fea_reference",
     ),
+    (
+        str(repository_root / "motor_calculator" / "presets" / "data" / "presets.json"),
+        "motor_calculator/presets/data",
+    ),
 ]
 
 analysis = Analysis(

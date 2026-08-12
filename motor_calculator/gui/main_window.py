@@ -21,6 +21,18 @@ from motor_calculator.motor_core import (
     MotorValidationError,
     parse_legacy_gui_params,
 )
+from motor_calculator.input_ux import (
+    APPLICATION_DEFAULTS,
+    BASIC_INPUT_FIELDS,
+    INPUT_DEFINITIONS,
+    DisplayUnitPreferences,
+    canonical_to_display_inputs,
+    convert_display_value,
+    display_to_canonical_inputs,
+    evaluate_input_guidance,
+    format_engineering_value,
+)
+from motor_calculator.presets import apply_preset, default_preset_registry, preview_preset
 from motor_calculator.project import (
     PROJECT_FILE_EXTENSION,
     CompatibilityStatus,
@@ -42,6 +54,7 @@ from motor_calculator.project import (
 )
 
 from .confidence_panel import ConfidencePanel
+from .guided_input_panel import GuidedInputPanel, ToolTip
 from .feedback_dialog import (
     FeedbackMetricOption,
     ValidationFeedbackDialog,
@@ -136,7 +149,322 @@ class MotorCalculatorAppMixin:
         self._engineering_confidence_summary = None
         self._user_uncertainty_parameters = None
         self._create_confidence_tab()
+        self._initialize_guided_input_ux()
         self._initialize_project_support()
+
+    def _initialize_guided_input_ux(self) -> None:
+        self._display_unit_preferences = DisplayUnitPreferences()
+        self._input_mode = "ADVANCED"
+        self._preset_registry = default_preset_registry()
+        self._last_preset_id: str | None = None
+        self._last_preset_version: int | None = None
+        self._guidance_after_id = None
+        self._input_row_widgets: dict[str, tuple[tk.Widget, ...]] = {}
+        self._input_unit_labels: dict[str, tk.Widget] = {}
+
+        legacy_frame = self.input_frame.scrollable_frame
+        for widget in legacy_frame.grid_slaves():
+            widget.grid_configure(row=int(widget.grid_info()["row"]) + 1)
+        self._index_legacy_input_widgets(legacy_frame)
+
+        # The legacy selector silently changed Br; Phase 8D requires preview/apply.
+        self.mag_combo.unbind("<<ComboboxSelected>>")
+        self.mag_combo.configure(state="disabled")
+        self._guided_input_panel = GuidedInputPanel(
+            legacy_frame,
+            self.vars,
+            self._preset_registry,
+            preferences=self._display_unit_preferences,
+            on_mode_change=self._set_input_mode,
+            on_unit_change=self._change_display_unit,
+            on_apply_preset=self._apply_preset_by_id,
+            on_preset_details=self._show_preset_details,
+            on_reset_field=self._reset_input_field,
+            on_reset_guided=self._reset_guided_fields,
+            on_help=self._show_input_help,
+        )
+        self._guided_input_panel.frame.grid(
+            row=0, column=0, columnspan=3, sticky="ew", padx=4, pady=(2, 8)
+        )
+        for name, entry in self.entries.items():
+            if name in INPUT_DEFINITIONS:
+                ToolTip(entry, INPUT_DEFINITIONS[name].tooltip)
+        self._apply_input_mode_visibility()
+
+    def _index_legacy_input_widgets(self, frame) -> None:
+        variable_to_field = {str(variable): name for name, variable in self.vars.items()}
+        variable_to_field[str(self.coreless_var)] = "coreless"
+        row_to_field: dict[int, str] = {}
+        for widget in frame.grid_slaves():
+            field = None
+            if "textvariable" in widget.keys():
+                field = variable_to_field.get(str(widget.cget("textvariable")))
+            if field is None and "variable" in widget.keys():
+                field = variable_to_field.get(str(widget.cget("variable")))
+            if field is not None:
+                row_to_field[int(widget.grid_info()["row"])] = field
+        for row, field in row_to_field.items():
+            widgets = tuple(
+                widget for widget in frame.grid_slaves()
+                if int(widget.grid_info()["row"]) == row
+            )
+            self._input_row_widgets[field] = widgets
+            for widget in widgets:
+                if int(widget.grid_info().get("column", -1)) == 2:
+                    self._input_unit_labels[field] = widget
+
+    def _set_input_mode(self, mode: str) -> None:
+        if mode not in {"BASIC", "ADVANCED"}:
+            raise ValueError(f"Unsupported input mode: {mode}")
+        if mode == self._input_mode:
+            return
+        self._input_mode = mode
+        self._apply_input_mode_visibility()
+        self._mark_ux_preference_changed()
+
+    def _apply_input_mode_visibility(self) -> None:
+        for field, widgets in self._input_row_widgets.items():
+            visible = self._input_mode == "ADVANCED" or field in BASIC_INPUT_FIELDS
+            for widget in widgets:
+                if visible:
+                    widget.grid()
+                else:
+                    widget.grid_remove()
+        if hasattr(self, "_guided_input_panel"):
+            self._guided_input_panel.set_mode(self._input_mode)
+
+    @staticmethod
+    def _field_quantity(field: str) -> str | None:
+        length_fields = {
+            "D_out", "D_in", "g_side", "D_stator_out", "D_stator_in", "h_stator",
+            "h_coil", "h_yoke", "h_slot", "w_slot_top", "w_slot_bottom",
+            "h_slot_opening", "w_slot_opening", "h_wedge", "h_mag", "w_magnet",
+            "L_magnet", "d_wire",
+        }
+        if field in length_fields:
+            return "length"
+        if field == "n_rated":
+            return "speed"
+        if field == "Temp_coil":
+            return "temperature"
+        return None
+
+    def _change_display_unit(self, quantity: str, new_unit: str) -> None:
+        old_unit = getattr(self._display_unit_preferences, quantity)
+        if old_unit == new_unit:
+            return
+        updated = replace(self._display_unit_preferences, **{quantity: new_unit})
+        converted_values: dict[str, str] = {}
+        try:
+            for field, variable in self.vars.items():
+                if self._field_quantity(field) == quantity:
+                    value = convert_display_value(float(variable.get()), quantity, old_unit, new_unit)
+                    converted_values[field] = format_engineering_value(value)
+        except (TypeError, ValueError) as exc:
+            self._guided_input_panel.set_preferences(self._display_unit_preferences)
+            messagebox.showwarning(
+                "Unit change not applied",
+                f"Correct the current numeric input before changing units:\n{exc}",
+                parent=self.root,
+            )
+            return
+        suppress = getattr(self, "_project_suppress_dirty", True)
+        self._project_suppress_dirty = True
+        try:
+            for field, displayed in converted_values.items():
+                self.vars[field].set(displayed)
+            self._display_unit_preferences = updated
+            self._update_input_unit_labels()
+            self._guided_input_panel.set_preferences(updated)
+        finally:
+            self._project_suppress_dirty = suppress
+        self._mark_ux_preference_changed()
+        self._schedule_input_guidance()
+
+    def _update_input_unit_labels(self) -> None:
+        units = {
+            "length": self._display_unit_preferences.length,
+            "speed": self._display_unit_preferences.speed,
+            "temperature": "°C" if self._display_unit_preferences.temperature == "degC" else "K",
+        }
+        for field, label in self._input_unit_labels.items():
+            quantity = self._field_quantity(field)
+            if quantity is not None:
+                label.configure(text=units[quantity])
+
+    def _mark_ux_preference_changed(self) -> None:
+        if not hasattr(self, "_project_manager") or self._project_suppress_dirty:
+            return
+        self._project_manager.mark_dirty()
+        self._update_project_title()
+        self._schedule_recovery_autosave()
+
+    def _ui_preferences_payload(self) -> dict[str, str | int | None]:
+        return {
+            "input_mode": self._input_mode,
+            "length_unit": self._display_unit_preferences.length,
+            "speed_unit": self._display_unit_preferences.speed,
+            "temperature_unit": self._display_unit_preferences.temperature,
+            "angle_unit": self._display_unit_preferences.angle,
+            "preset_id": self._last_preset_id,
+            "preset_version": self._last_preset_version,
+        }
+
+    def _restore_ui_preferences(self, preferences) -> None:
+        try:
+            restored = DisplayUnitPreferences(
+                length=str(preferences.get("length_unit", "mm")),
+                speed=str(preferences.get("speed_unit", "rpm")),
+                temperature=str(preferences.get("temperature_unit", "degC")),
+                angle=str(preferences.get("angle_unit", "degree")),
+            )
+        except ValueError:
+            restored = DisplayUnitPreferences()
+        mode = str(preferences.get("input_mode", "ADVANCED"))
+        self._display_unit_preferences = restored
+        self._input_mode = mode if mode in {"BASIC", "ADVANCED"} else "ADVANCED"
+        self._last_preset_id = preferences.get("preset_id")
+        version = preferences.get("preset_version")
+        self._last_preset_version = int(version) if version is not None else None
+        self._update_input_unit_labels()
+        self._guided_input_panel.set_preferences(restored)
+        self._apply_input_mode_visibility()
+
+    def _apply_preset_by_id(self, preset_id: str) -> bool:
+        preset = self._preset_registry.get(preset_id)
+        if not preset.available:
+            messagebox.showwarning("Preset unavailable", preset.unavailable_reason, parent=self.root)
+            return False
+        try:
+            current = self._get_params()
+            changes = preview_preset(current, preset)
+        except (MotorValidationError, TypeError, ValueError) as exc:
+            messagebox.showerror(
+                "Preset preview", f"Current inputs must be valid before preview:\n{exc}", parent=self.root
+            )
+            return False
+        if not changes:
+            messagebox.showinfo("Preset preview", "No input value would change.", parent=self.root)
+            return True
+        lines = [
+            f"{INPUT_DEFINITIONS[item.field_name].gui_label}: {item.current_value} -> {item.preset_value}"
+            for item in changes
+        ]
+        detail = (
+            f"{preset.display_name}\nEvidence: {preset.evidence_kind.value}\n"
+            f"Provenance: {preset.provenance}\nAssumptions: {'; '.join(preset.assumptions)}\n\n"
+            + "\n".join(lines)
+            + "\n\nApply only these fields?"
+        )
+        if not messagebox.askokcancel("Preset preview", detail, parent=self.root):
+            return False
+        updated = apply_preset(current, preset)
+        displayed = canonical_to_display_inputs(updated, self._display_unit_preferences)
+        self._project_suppress_dirty = True
+        try:
+            for change in changes:
+                value = displayed[change.field_name]
+                if change.field_name == "coreless":
+                    self.coreless_var.set(bool(value))
+                else:
+                    self.vars[change.field_name].set(
+                        format_engineering_value(value) if isinstance(value, float) else str(value)
+                    )
+            self._last_preset_id = preset.preset_id
+            self._last_preset_version = preset.version
+        finally:
+            self._project_suppress_dirty = False
+        self._mark_ux_preference_changed()
+        self._guided_input_panel.refresh_all()
+        self._schedule_input_guidance()
+        return True
+
+    def _show_preset_details(self, preset_id: str) -> None:
+        preset = self._preset_registry.get(preset_id)
+        values = ", ".join(f"{name}={value}" for name, value in preset.values.items()) or "None"
+        messagebox.showinfo(
+            "Preset details",
+            f"{preset.display_name}\nAvailable: {preset.available}\nValues: {values}\n"
+            f"Provenance: {preset.provenance}\nAssumptions: {'; '.join(preset.assumptions) or 'None'}\n"
+            f"Notes: {'; '.join(preset.notes) or 'None'}",
+            parent=self.root,
+        )
+
+    def _reset_input_field(self, field: str) -> None:
+        value = canonical_to_display_inputs(
+            {field: APPLICATION_DEFAULTS[field]}, self._display_unit_preferences
+        )[field]
+        variable = self.coreless_var if field == "coreless" else self.vars[field]
+        if field == "coreless":
+            variable.set(bool(value))
+        else:
+            variable.set(format_engineering_value(value) if isinstance(value, float) else str(value))
+
+    def _reset_guided_fields(self) -> None:
+        if messagebox.askokcancel(
+            "Reset quick fields",
+            "Reset air gap, speed, winding factor and pole pairs to application defaults?",
+            parent=self.root,
+        ):
+            for field in ("g_side", "n_rated", "k_w", "p"):
+                self._reset_input_field(field)
+
+    def reset_defaults(self):
+        if not messagebox.askokcancel(
+            "Reset all inputs", "Restore all 41 inputs to the frozen application defaults?", parent=self.root
+        ):
+            return False
+        displayed = canonical_to_display_inputs(APPLICATION_DEFAULTS, self._display_unit_preferences)
+        self._project_suppress_dirty = True
+        try:
+            for field, value in displayed.items():
+                if field == "coreless":
+                    self.coreless_var.set(bool(value))
+                else:
+                    self.vars[field].set(
+                        format_engineering_value(value) if isinstance(value, float) else str(value)
+                    )
+            self._last_preset_id = None
+            self._last_preset_version = None
+        finally:
+            self._project_suppress_dirty = False
+        self._mark_ux_preference_changed()
+        self._guided_input_panel.refresh_all()
+        self._schedule_input_guidance()
+        messagebox.showinfo(
+            "Reset complete", "All inputs were restored to application defaults.", parent=self.root
+        )
+        return True
+
+    def _show_input_help(self) -> None:
+        messagebox.showinfo(
+            "Engineering input help",
+            "Presets are transparent starting points, not optimized designs.\n\n"
+            "Br depends on supplier and temperature. Winding factor represents pitch/distribution. "
+            "Air gap is entered per side for the existing SSDR model. Pole pairs are half the total pole count.\n\n"
+            "Ke/Kt, RMS/peak and phase/line semantics depend on the selected PMSM/BLDC waveform. "
+            "DSSR cannot be represented by the current production schema. Slider ranges are quick-adjust "
+            "ranges only; exact values outside them are preserved.",
+            parent=self.root,
+        )
+
+    def _schedule_input_guidance(self) -> None:
+        if not hasattr(self, "_project_manager"):
+            return
+        if self._guidance_after_id is not None:
+            self.root.after_cancel(self._guidance_after_id)
+        self._guidance_after_id = self.root.after(250, self._refresh_input_guidance)
+
+    def _refresh_input_guidance(self) -> None:
+        self._guidance_after_id = None
+        try:
+            issues = evaluate_input_guidance(self._get_params())
+            text = " | ".join(
+                f"{item.severity.value}/{item.level.value}: {item.message}" for item in issues
+            )
+        except Exception as exc:
+            text = f"ERROR/INVALID: {exc}"
+        self._guided_input_panel.set_guidance(text)
 
     def _initialize_project_support(self) -> None:
         self._project_suppress_dirty = True
@@ -212,6 +540,7 @@ class MotorCalculatorAppMixin:
         self._project_manager.mark_dirty()
         self._update_project_title()
         self._schedule_recovery_autosave()
+        self._schedule_input_guidance()
 
     def _schedule_recovery_autosave(self) -> None:
         if self._recovery_after_id is not None:
@@ -273,6 +602,7 @@ class MotorCalculatorAppMixin:
             created_at=None if current is None else current.metadata.created_at,
             modified_at=utc_now_iso(),
             uncertainty_assumptions=self._user_uncertainty_parameters,
+            ui_preferences=self._ui_preferences_payload(),
             notes=self._project_notes,
             validation_record_ids=self._project_validation_record_ids,
         )
@@ -316,11 +646,15 @@ class MotorCalculatorAppMixin:
         restored = flatten_project_inputs(document.inputs)
         self._project_suppress_dirty = True
         try:
-            for name, value in restored.items():
+            self._restore_ui_preferences(document.ui_preferences)
+            displayed = canonical_to_display_inputs(restored, self._display_unit_preferences)
+            for name, value in displayed.items():
                 if name == "coreless":
                     self.coreless_var.set(bool(value))
                 else:
-                    self.vars[name].set(str(value))
+                    self.vars[name].set(
+                        format_engineering_value(value) if isinstance(value, float) else str(value)
+                    )
             self._user_uncertainty_parameters = self._restore_uncertainty_assumptions(document)
             self._project_notes = document.notes
             self._project_validation_record_ids = list(document.validation_record_ids)
@@ -329,6 +663,8 @@ class MotorCalculatorAppMixin:
             self._project_suppress_dirty = False
         self._project_manager.mark_clean(document)
         self._update_project_title()
+        self._guided_input_panel.refresh_all()
+        self._schedule_input_guidance()
 
     def _confirm_abandon_changes(self) -> bool:
         if not self._project_manager.is_dirty:
@@ -781,7 +1117,7 @@ class MotorCalculatorAppMixin:
         for key, var in self.vars.items():
             raw[key] = var.get()
         raw["coreless"] = self.coreless_var.get()
-        return raw
+        return display_to_canonical_inputs(raw, self._display_unit_preferences)
 
     def _get_params(self) -> Dict[str, Any]:
         return parse_legacy_gui_params(self._collect_raw_params())

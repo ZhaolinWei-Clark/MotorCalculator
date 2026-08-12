@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "presets": [
+    {
+      "preset_id": "template.afpm_ssdr.v1",
+      "version": 1,
+      "display_name": "AFPM SSDR Starting Template",
+      "category": "motor_topology",
+      "evidence_kind": "demonstration",
+      "values": {"coreless": true, "magnet_type": "表贴式", "waveform": "正弦波"},
+      "provenance": "Existing application-supported AFPM configuration fields; Phase 8D starting-template metadata.",
+      "assumptions": ["Uses the existing dual-rotor, single-stator, dual-air-gap production topology."],
+      "notes": ["Starting template only; not an optimized design."]
+    },
+    {
+      "preset_id": "template.afpm_dssr.unavailable.v1",
+      "version": 1,
+      "display_name": "AFPM DSSR (Not Representable)",
+      "category": "motor_topology",
+      "evidence_kind": "demonstration",
+      "values": {},
+      "provenance": "Phase 8D model-capability audit.",
+      "assumptions": [],
+      "notes": ["No values are applied."],
+      "available": false,
+      "unavailable_reason": "The current production input schema cannot represent dual-stator/single-rotor topology explicitly."
+    },
+    {
+      "preset_id": "template.pmsm.v1",
+      "version": 1,
+      "display_name": "PMSM Starting Template",
+      "category": "motor_topology",
+      "evidence_kind": "demonstration",
+      "values": {"waveform": "正弦波"},
+      "provenance": "Existing Phase 3 PMSM sinusoidal semantic selector.",
+      "assumptions": ["Changes waveform semantics only."],
+      "notes": ["Starting template only; geometry and winding remain unchanged."]
+    },
+    {
+      "preset_id": "template.bldc.v1",
+      "version": 1,
+      "display_name": "BLDC Starting Template",
+      "category": "motor_topology",
+      "evidence_kind": "demonstration",
+      "values": {"waveform": "梯形波"},
+      "provenance": "Existing Phase 3 BLDC trapezoidal semantic selector.",
+      "assumptions": ["Changes waveform semantics only."],
+      "notes": ["Starting template only; geometry and winding remain unchanged."]
+    },
+    {
+      "preset_id": "magnet.n35.v1",
+      "version": 1,
+      "display_name": "NdFeB N35 Typical Reference",
+      "category": "magnet_material",
+      "evidence_kind": "typical",
+      "values": {"magnet_grade": "N35", "Br": 1.17},
+      "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
+      "assumptions": ["Br is nominal and manufacturer-dependent."],
+      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "applicable_temperature_c": 20.0
+    },
+    {
+      "preset_id": "magnet.n42.v1",
+      "version": 1,
+      "display_name": "NdFeB N42 Typical Reference",
+      "category": "magnet_material",
+      "evidence_kind": "typical",
+      "values": {"magnet_grade": "N42", "Br": 1.28},
+      "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
+      "assumptions": ["Br is nominal and manufacturer-dependent."],
+      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "applicable_temperature_c": 20.0
+    },
+    {
+      "preset_id": "magnet.n48.v1",
+      "version": 1,
+      "display_name": "NdFeB N48 Typical Reference",
+      "category": "magnet_material",
+      "evidence_kind": "typical",
+      "values": {"magnet_grade": "N48", "Br": 1.38},
+      "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
+      "assumptions": ["Br is nominal and manufacturer-dependent."],
+      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "applicable_temperature_c": 20.0
+    },
+    {
+      "preset_id": "magnet.n52.v1",
+      "version": 1,
+      "display_name": "NdFeB N52 Typical Reference",
+      "category": "magnet_material",
+      "evidence_kind": "typical",
+      "values": {"magnet_grade": "N52", "Br": 1.43},
+      "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
+      "assumptions": ["Br is nominal and manufacturer-dependent."],
+      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "applicable_temperature_c": 20.0
+    },
+    {
+      "preset_id": "design.application_reference.v1",
+      "version": 1,
+      "display_name": "Application Default Example",
+      "category": "design_example",
+      "evidence_kind": "demonstration",
+      "values": {"D_out": 140.0, "D_in": 70.0, "g_side": 1.0, "h_mag": 5.0, "p": 8, "N_ph_turns": 50, "k_w": 0.93},
+      "provenance": "Current frozen application defaults, exposed only as an explicit starting example.",
+      "assumptions": ["Does not imply optimization or external validation."],
+      "notes": ["Only listed fields change after user confirmation."]
+    },
+    {
+      "preset_id": "operating.application_reference.v1",
+      "version": 1,
+      "display_name": "Application Operating Point",
+      "category": "operating_point",
+      "evidence_kind": "demonstration",
+      "values": {"V_dc": 48.0, "P_rated": 800.0, "n_rated": 2500.0, "Temp_coil": 80.0},
+      "provenance": "Current frozen application defaults, exposed only as an explicit demonstration operating point.",
+      "assumptions": ["Not a safe limit or recommended rating."],
+      "notes": ["Only operating-point fields change after user confirmation."]
+    }
+  ]
+}

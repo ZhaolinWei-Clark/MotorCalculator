@@ -222,6 +222,7 @@ def _exercise_recovery_workflow(root, app, main_window_module) -> dict[str, Any]
 
     app.vars["n_rated"].set("2412.0")
     app.vars["Br"].set("1.28")
+    app.vars["g_side"].set("7.123456789")
     root.update()
     expected = dict(app._get_params())
     autosave_written = app._perform_recovery_autosave()
@@ -260,6 +261,134 @@ def _exercise_recovery_workflow(root, app, main_window_module) -> dict[str, Any]
         "recovery_calculation_after_restore": calculation_after_restore,
         "recovery_selected_discarded": bool(discarded and not recovery_path.exists()),
         "recovery_path": str(recovery_path),
+    }
+
+
+def _exercise_phase8d_input_ux(root, app, main_window_module, output: Path) -> dict[str, Any]:
+    """Exercise interaction-first controls without bypassing exact numeric entry."""
+
+    from motor_calculator.input_ux import APPLICATION_DEFAULTS
+    from motor_calculator.project import load_project, save_project
+
+    baseline = dict(app._get_params())
+    app._set_input_mode("BASIC")
+    root.update_idletasks()
+    advanced_hidden = not any(
+        bool(widget.grid_info()) for widget in app._input_row_widgets["sigma_m"]
+    )
+    basic_preserved = dict(app._get_params()) == baseline
+    app._set_input_mode("ADVANCED")
+
+    recovery_files_before = tuple(app._recovery_manager.root.glob("*.recovery.json"))
+    for position in (0.95, 1.05, 1.15, 1.25):
+        app._guided_input_panel._slider_moved("g_side", str(position))
+    root.update_idletasks()
+    slider_synced = app.vars["g_side"].get() == "1.25" and app._get_params()["g_side"] == 1.25
+    slider_debounced = (
+        app._recovery_after_id is not None
+        and tuple(app._recovery_manager.root.glob("*.recovery.json")) == recovery_files_before
+    )
+
+    exact_air_gap = 7.123456789
+    app.vars["g_side"].set(str(exact_air_gap))
+    root.update_idletasks()
+    out_of_range_preserved = (
+        app._get_params()["g_side"] == exact_air_gap
+        and app._guided_input_panel.slider_status_vars["g_side"].get() == "Outside quick-adjust range"
+    )
+    app._refresh_input_guidance()
+    warning_rendered = "INFO/UNUSUAL" in app._guided_input_panel.guidance_var.get()
+    app._show_input_help()
+    help_opened = True
+    app._reset_input_field("g_side")
+    field_reset_worked = app._get_params()["g_side"] == APPLICATION_DEFAULTS["g_side"]
+    app.vars["g_side"].set(str(exact_air_gap))
+
+    app._guided_input_panel.pole_spinbox.set("9")
+    app._guided_input_panel.waveform_combo.set("梯形波")
+    root.update_idletasks()
+    discrete_controls_work = app._get_params()["p"] == 9 and app._get_params()["waveform"] == "梯形波"
+
+    unchanged_diameter = app._get_params()["D_out"]
+    original_confirm = main_window_module.messagebox.askokcancel
+    main_window_module.messagebox.askokcancel = lambda *_args, **_kwargs: True
+    try:
+        preset_applied = app._apply_preset_by_id("magnet.n35.v1")
+    finally:
+        main_window_module.messagebox.askokcancel = original_confirm
+    root.update_idletasks()
+    preset_is_partial = (
+        preset_applied
+        and app._get_params()["magnet_grade"] == "N35"
+        and app._get_params()["Br"] == 1.17
+        and app._get_params()["D_out"] == unchanged_diameter
+        and app._project_manager.is_dirty
+    )
+
+    canonical_before_units = dict(app._get_params())
+    app._change_display_unit("length", "m")
+    app._change_display_unit("speed", "rad/s")
+    root.update_idletasks()
+    unit_display_changed = (
+        app._display_unit_preferences.length == "m"
+        and app._display_unit_preferences.speed == "rad/s"
+        and float(app.vars["g_side"].get()) < 0.01
+    )
+    unit_canonical_preserved = all(
+        math.isclose(float(app._get_params()[name]), float(value), rel_tol=1e-12, abs_tol=1e-12)
+        if isinstance(value, (int, float)) and not isinstance(value, bool)
+        else app._get_params()[name] == value
+        for name, value in canonical_before_units.items()
+    )
+
+    project_path = output.with_name(output.stem + "-phase8d-inputs.motorproj")
+    project_path.unlink(missing_ok=True)
+    document = app._build_project_document(project_name="Phase 8D Input UX Smoke")
+    save_project(document, project_path)
+    restored_document = load_project(project_path)
+    app.vars["g_side"].set("0.001")
+    app._apply_project_document(restored_document)
+    root.update_idletasks()
+    project_exact_restored = app._get_params()["g_side"] == exact_air_gap
+    ui_preferences_restored = (
+        app._display_unit_preferences.length == "m"
+        and app._display_unit_preferences.speed == "rad/s"
+        and restored_document.ui_preferences["preset_id"] == "magnet.n35.v1"
+    )
+
+    app._project_suppress_dirty = True
+    try:
+        app._change_display_unit("length", "mm")
+        app._change_display_unit("speed", "rpm")
+        app._set_input_mode("ADVANCED")
+    finally:
+        app._project_suppress_dirty = False
+    original_confirm = main_window_module.messagebox.askokcancel
+    main_window_module.messagebox.askokcancel = lambda *_args, **_kwargs: True
+    try:
+        reset_confirmed = bool(app.reset_defaults())
+    finally:
+        main_window_module.messagebox.askokcancel = original_confirm
+    reset_all_worked = reset_confirmed and dict(app._get_params()) == APPLICATION_DEFAULTS
+    app._project_manager.mark_clean(app._build_project_document())
+    app._update_project_title()
+    return {
+        "phase8d_basic_advanced_preserves_values": basic_preserved,
+        "phase8d_advanced_fields_hidden_in_basic": advanced_hidden,
+        "phase8d_slider_exact_entry_synced": slider_synced,
+        "phase8d_slider_edits_debounced": slider_debounced,
+        "phase8d_out_of_range_preserved": out_of_range_preserved,
+        "phase8d_guidance_rendered": warning_rendered,
+        "phase8d_help_opened": help_opened,
+        "phase8d_field_reset_worked": field_reset_worked,
+        "phase8d_reset_all_confirmed": reset_all_worked,
+        "phase8d_spinbox_enum_work": discrete_controls_work,
+        "phase8d_partial_preset_applied": preset_is_partial,
+        "phase8d_unit_display_changed": unit_display_changed,
+        "phase8d_unit_canonical_preserved": unit_canonical_preserved,
+        "phase8d_project_exact_restored": project_exact_restored,
+        "phase8d_ui_preferences_restored": ui_preferences_restored,
+        "phase8d_project_file": str(project_path),
     }
 
 
@@ -322,6 +451,10 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         calculation = _calculation_snapshot(app.calc_results)
         if not all(math.isfinite(value) for value in calculation.values()):
             raise RuntimeError("GUI calculation produced non-finite output")
+        phase8d_results = _exercise_phase8d_input_ux(root, app, main_window_module, output)
+        payload.update(phase8d_results)
+        if not all(value for name, value in phase8d_results.items() if name != "phase8d_project_file"):
+            raise RuntimeError("Phase 8D guided input smoke did not pass every interaction gate")
         project_results = _exercise_project_workflow(root, app, main_window_module, output)
         if not all(
             project_results[name]
@@ -364,6 +497,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         if not confidence_export.is_file():
             raise RuntimeError("confidence export was not created")
         app.notebook.select(app.confidence_tab)
+        app.input_frame.canvas.yview_moveto(0.0)
         root.deiconify()
         root.lift()
         root.update_idletasks()
@@ -392,6 +526,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "confidence_export": str(confidence_export),
                 "confidence_export_exists": confidence_export.is_file(),
                 "screenshot_error": screenshot_error,
+                **phase8d_results,
                 **project_results,
                 **recovery_results,
                 **dialog_results,
