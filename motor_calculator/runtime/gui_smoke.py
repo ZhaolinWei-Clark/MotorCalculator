@@ -443,6 +443,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
     from motor_calculator.validation.confidence_summary import export_confidence_summary
     from motor_calculator.validation.feedback_service import load_feedback_records
     from motor_calculator.runtime.display import windows_work_area
+    from motor_calculator.version import APPLICATION_VERSION
 
     output = Path(output_path).resolve()
     screenshot = output.with_suffix(".png")
@@ -478,6 +479,17 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         calculation = _calculation_snapshot(app.calc_results)
         if not all(math.isfinite(value) for value in calculation.values()):
             raise RuntimeError("GUI calculation produced non-finite output")
+        app._show_about()
+        diagnostic_export = output.with_name(output.stem + "-diagnostics.json")
+        original_diagnostic_dialog = main_window_module.filedialog.asksaveasfilename
+        main_window_module.filedialog.asksaveasfilename = lambda **_kwargs: str(diagnostic_export)
+        try:
+            diagnostic_exported = app._export_runtime_diagnostics()
+        finally:
+            main_window_module.filedialog.asksaveasfilename = original_diagnostic_dialog
+        diagnostic_payload = json.loads(diagnostic_export.read_text(encoding="utf-8"))
+        if not diagnostic_exported or diagnostic_payload["application_version"] != APPLICATION_VERSION:
+            raise RuntimeError("versioned local diagnostic export failed")
         phase8d_results = _exercise_phase8d_input_ux(root, app, main_window_module, output)
         payload.update(phase8d_results)
         if not all(value for name, value in phase8d_results.items() if name != "phase8d_project_file"):
@@ -540,6 +552,10 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "status": "PASS",
                 "tabs": tab_names,
                 "calculation": calculation,
+                "about_dialog_opened": True,
+                "diagnostic_export": str(diagnostic_export),
+                "diagnostic_export_exists": diagnostic_export.is_file(),
+                "diagnostic_application_version": diagnostic_payload["application_version"],
                 "root_size": [root.winfo_width(), root.winfo_height()],
                 "screen_size": [root.winfo_screenwidth(), root.winfo_screenheight()],
                 "work_area": list(

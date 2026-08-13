@@ -94,10 +94,12 @@ from motor_calculator.validation.uncertainty_models import (
 )
 from motor_calculator.runtime import (
     bounded_window_size,
+    build_diagnostics,
     check_runtime_health,
     create_runtime_directories,
     dpi_scaled_window_size,
     enable_windows_dpi_awareness,
+    export_diagnostics,
     format_startup_failure,
     initialize_local_logging,
     resolve_runtime_paths,
@@ -549,12 +551,61 @@ class MotorCalculatorAppMixin:
         file_menu.add_separator()
         file_menu.add_command(label=tr("menu.exit"), command=self._request_exit)
         menu_bar.add_cascade(label=tr("menu.file"), menu=file_menu)
+        help_menu = tk.Menu(menu_bar, tearoff=False)
+        help_menu.add_command(label=tr("menu.diagnostics"), command=self._export_runtime_diagnostics)
+        help_menu.add_separator()
+        help_menu.add_command(label=tr("menu.about"), command=self._show_about)
+        menu_bar.add_cascade(label=tr("menu.help"), menu=help_menu)
         self.root.configure(menu=menu_bar)
         self._project_menu_bar = menu_bar
         self._project_file_menu = file_menu
+        self._project_help_menu = help_menu
         self.root.bind_all("<Control-n>", lambda _event: self._new_project())
         self.root.bind_all("<Control-o>", lambda _event: self._open_project())
         self.root.bind_all("<Control-s>", lambda _event: self._save_project())
+
+    def _show_about(self) -> None:
+        diagnostics = build_diagnostics(self._runtime_paths)
+        commit = diagnostics.get("build_commit") or tr("common.unavailable")
+        messagebox.showinfo(
+            tr("about.title"),
+            tr(
+                "about.body",
+                version=application_version_label(),
+                commit=commit,
+                locale_name=diagnostics["locale"],
+                runtime=diagnostics["runtime_mode"],
+            ),
+            parent=self.root,
+        )
+
+    def _export_runtime_diagnostics(self) -> bool:
+        destination = filedialog.asksaveasfilename(
+            parent=self.root,
+            title=tr("diagnostics.export_title"),
+            defaultextension=".json",
+            filetypes=((tr("diagnostics.file_type"), "*.json"),),
+            initialdir=str(self._runtime_paths.export_dir),
+            initialfile="MotorCalculator-diagnostics.json",
+        )
+        if not destination:
+            return False
+        try:
+            export_diagnostics(destination, self._runtime_paths)
+        except OSError as exc:
+            logging.getLogger(__name__).exception("Diagnostic export failed: %s", exc)
+            messagebox.showerror(
+                tr("diagnostics.error_title"),
+                tr("diagnostics.export_failed"),
+                parent=self.root,
+            )
+            return False
+        messagebox.showinfo(
+            tr("diagnostics.complete_title"),
+            tr("diagnostics.export_complete"),
+            parent=self.root,
+        )
+        return True
 
     def _on_project_input_changed(self, *_args) -> None:
         if self._project_suppress_dirty:

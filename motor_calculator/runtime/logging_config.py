@@ -6,6 +6,9 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+from motor_calculator.i18n import get_locale
+from motor_calculator.version import APPLICATION_VERSION, RELEASE_CHANNEL
+
 from .paths import RuntimePaths, create_runtime_directories, resolve_runtime_paths
 
 
@@ -31,5 +34,11 @@ def initialize_local_logging(paths: RuntimePaths | None = None) -> logging.Logge
     )
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
     logger.addHandler(handler)
-    logger.info("Local runtime logging initialized")
+    logger.info(
+        "Local runtime logging initialized; app_version=%s channel=%s locale=%s mode=%s",
+        APPLICATION_VERSION,
+        RELEASE_CHANNEL,
+        get_locale(),
+        runtime_paths.mode,
+    )
     return logger

@@ -4,5 +4,8 @@ __pycache__/
 .pytest_cache/
 /build/
 /dist/
+/release/
+/packaging/build_info.json
+/packaging/windows_version_info.txt
 *.log
 /validation_data/user_feedback/feedback_records.jsonl

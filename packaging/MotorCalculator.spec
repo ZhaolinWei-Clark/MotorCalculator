@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""PyInstaller one-folder engineering-preview build."""
+"""PyInstaller one-folder release-candidate build."""
 
 import importlib.util
 from pathlib import Path
@@ -39,6 +39,11 @@ data_files = [
         "motor_calculator/presets/data",
     ),
 ]
+build_info = repository_root / "packaging" / "build_info.json"
+if build_info.is_file():
+    data_files.append((str(build_info), "."))
+
+version_file = repository_root / "packaging" / "windows_version_info.txt"
 
 analysis = Analysis(
     [str(repository_root / "motor_calculator" / "app.py")],
@@ -66,6 +71,7 @@ executable = EXE(
     upx=False,
     console=False,
     disable_windowed_traceback=False,
+    version=str(version_file) if version_file.is_file() else None,
 )
 
 collection = COLLECT(

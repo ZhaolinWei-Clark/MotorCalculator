@@ -7,10 +7,14 @@ import sys
 from pathlib import Path
 
 
-APPLICATION_NAME = "Motor Calculator"
-APPLICATION_VERSION = "0.8.0"
+APPLICATION_NAME = "MotorCalculator"
+APPLICATION_DISPLAY_NAME_ZH_CN = "电机设计计算器"
+APPLICATION_PUBLISHER = "MotorCalculator Project"
+APPLICATION_ID = "{A5F90D43-686B-4DDB-9F67-CF96B7A4A33D}"
+APPLICATION_VERSION = "0.9.0"
 RELEASE_CHANNEL = "engineering-preview"
 RUNTIME_SCHEMA_VERSION = "phase8a.runtime.v1"
+RELEASE_MANIFEST_SCHEMA_VERSION = 1
 
 
 def get_git_commit(repository_root: Path | None = None) -> str | None:

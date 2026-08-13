@@ -6,6 +6,7 @@ from .display import (
     enable_windows_dpi_awareness,
     windows_work_area,
 )
+from .diagnostics import build_diagnostics, export_diagnostics
 from .health import (
     HealthCheck,
     HealthStatus,
@@ -28,11 +29,13 @@ __all__ = [
     "RuntimeHealthReport",
     "RuntimePaths",
     "bounded_window_size",
+    "build_diagnostics",
     "check_packaged_resources",
     "check_runtime_health",
     "create_runtime_directories",
     "dpi_scaled_window_size",
     "enable_windows_dpi_awareness",
+    "export_diagnostics",
     "format_startup_failure",
     "initialize_local_logging",
     "probe_tk_runtime",
