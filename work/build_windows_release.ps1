@@ -33,7 +33,8 @@ try {
     }
 
     $Version = & $PythonPath -c "from motor_calculator.version import APPLICATION_VERSION; print(APPLICATION_VERSION)"
-    $AppId = & $PythonPath -c "from motor_calculator.version import APPLICATION_ID; print(APPLICATION_ID.strip('{}'))"
+    # Inno Setup requires a doubled opening brace to encode a literal GUID brace.
+    $AppId = & $PythonPath -c "from motor_calculator.version import APPLICATION_ID; print('{' + APPLICATION_ID)"
     $Publisher = & $PythonPath -c "from motor_calculator.version import APPLICATION_PUBLISHER; print(APPLICATION_PUBLISHER)"
     $Commit = git rev-parse HEAD
     Invoke-Checked { & $PythonPath -c "from motor_calculator.deployment import verify_protected_files; verify_protected_files(r'$RepositoryRoot')" } "Protected-file hash gate failed."
@@ -78,7 +79,9 @@ try {
         }
     }
     $InstallerStatus = "BLOCKED_BY_INSTALLER_COMPILER"
+    $InstallerVersion = "unknown"
     if ($InstallerCompiler -and (Test-Path -LiteralPath $InstallerCompiler -PathType Leaf)) {
+        $InstallerVersion = (Get-Item -LiteralPath $InstallerCompiler).VersionInfo.ProductVersion
         New-Item -ItemType Directory -Path $ReleaseDir -Force | Out-Null
         Invoke-Checked {
             & $InstallerCompiler "/DAppVersion=$Version" "/DAppId=$AppId" "/DAppPublisher=$Publisher" "installer\MotorCalculator.iss"
@@ -99,6 +102,7 @@ try {
         "--git-commit", $Commit, "--tkinter-version", $TkVersion,
         "--installer-status", $InstallerStatus, "--clean-machine-status", $CleanMachineStatus,
         "--isolated-local-status", $IsolatedLocalStatus,
+        "--installer-technology", "Inno Setup", "--installer-version", $InstallerVersion,
         "--full-test-count", "$FullTestCount", "--deployment-test-count", "$DeploymentTestCount"
     )
     if ($Signed) { $finalize += "--signed" }

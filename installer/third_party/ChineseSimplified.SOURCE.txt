@@ -1,0 +1,4 @@
+Source: https://github.com/kira-96/Inno-Setup-Chinese-Simplified-Translation
+Commit: 1ff90acc4ed4aee82b1cda43253243deee3daed4
+Files: ChineseSimplified.isl, LICENSE
+Purpose: Inno Setup Simplified Chinese installer UI

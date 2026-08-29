@@ -14,7 +14,7 @@
 #define AppExeName "MotorCalculator.exe"
 
 [Setup]
-AppId={{#AppId}
+AppId={#AppId}
 AppName={#AppDisplayName}
 AppVerName={#AppDisplayName} {#AppVersion}
 AppVersion={#AppVersion}
@@ -44,7 +44,7 @@ UsePreviousAppDir=yes
 UsePreviousGroup=yes
 
 [Languages]
-Name: "chinesesimplified"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+Name: "chinesesimplified"; MessagesFile: ".\third_party\ChineseSimplified.isl"
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]

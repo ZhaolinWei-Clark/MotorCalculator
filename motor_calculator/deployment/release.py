@@ -101,6 +101,24 @@ def build_release_manifest(
     installer_status: str,
     clean_machine_status: str,
     isolated_local_status: str,
+    installer_technology: str = "unknown",
+    installer_version: str = "unknown",
+    defender_status: str = "NOT_PERFORMED",
+    smartscreen_observation: str = "NOT_OBSERVED",
+    local_install_status: str = "NOT_RUN",
+    start_menu_status: str = "NOT_RUN",
+    desktop_shortcut_status: str = "NOT_RUN",
+    installed_application_status: str = "NOT_RUN",
+    project_save_load_status: str = "NOT_RUN",
+    recovery_status: str = "NOT_RUN",
+    uninstall_status: str = "NOT_RUN",
+    user_data_preservation_status: str = "NOT_RUN",
+    reinstall_status: str = "NOT_RUN",
+    upgrade_status: str = "NOT_RUN",
+    portable_status: str = "NOT_RUN",
+    source_gui_status: str = "NOT_RUN",
+    packaged_gui_status: str = "NOT_RUN",
+    strict_no_source_venv_status: str = "NOT_RUN",
     signed: bool = False,
     build_timestamp: str | None = None,
 ) -> dict[str, object]:
@@ -125,9 +143,76 @@ def build_release_manifest(
         "test_counts": dict(test_counts),
         "signed": bool(signed),
         "installer_status": installer_status,
+        "installer_technology": installer_technology,
+        "installer_version": installer_version,
         "clean_machine_status": clean_machine_status,
         "isolated_local_status": isolated_local_status,
+        "defender_status": defender_status,
+        "smartscreen_observation": smartscreen_observation,
+        "local_install_status": local_install_status,
+        "start_menu_status": start_menu_status,
+        "desktop_shortcut_status": desktop_shortcut_status,
+        "installed_application_status": installed_application_status,
+        "project_save_load_status": project_save_load_status,
+        "recovery_status": recovery_status,
+        "uninstall_status": uninstall_status,
+        "user_data_preservation_status": user_data_preservation_status,
+        "reinstall_status": reinstall_status,
+        "upgrade_status": upgrade_status,
+        "portable_status": portable_status,
+        "source_gui_status": source_gui_status,
+        "packaged_gui_status": packaged_gui_status,
+        "strict_no_source_venv_status": strict_no_source_venv_status,
     }
+
+
+def validate_release_manifest_artifacts(
+    manifest: Mapping[str, object], release_dir: str | Path
+) -> dict[str, str]:
+    """Verify that the manifest describes the exact local release artifacts."""
+
+    if manifest.get("version") != APPLICATION_VERSION:
+        raise ValueError("Release manifest version does not match the application version")
+    if manifest.get("application_id") != APPLICATION_ID:
+        raise ValueError("Release manifest application identity is not stable")
+
+    artifacts = manifest.get("artifacts")
+    if not isinstance(artifacts, list):
+        raise ValueError("Release manifest artifacts must be a list")
+    installer_name = f"MotorCalculator-{APPLICATION_VERSION}-win64-setup.exe"
+    installer_records = [
+        item
+        for item in artifacts
+        if isinstance(item, dict) and item.get("kind") == "installer"
+    ]
+    if len(installer_records) != 1 or installer_records[0].get("filename") != installer_name:
+        raise ValueError("Release manifest must contain the versioned installer artifact")
+
+    root = Path(release_dir)
+    verified: dict[str, str] = {}
+    for item in artifacts:
+        if not isinstance(item, dict):
+            raise ValueError("Release manifest contains an invalid artifact record")
+        filename = item.get("filename")
+        expected_size = item.get("size_bytes")
+        expected_hash = item.get("sha256")
+        if not isinstance(filename, str) or not isinstance(expected_size, int):
+            raise ValueError("Release artifact filename or size is invalid")
+        if not isinstance(expected_hash, str):
+            raise ValueError("Release artifact hash is invalid")
+        if item.get("kind") == "packaged_executable":
+            path = root.parent / "dist" / "MotorCalculator" / filename
+        else:
+            path = root / filename
+        if not path.is_file():
+            raise FileNotFoundError(f"Release artifact is missing: {filename}")
+        if path.stat().st_size != expected_size:
+            raise ValueError(f"Release artifact size mismatch: {filename}")
+        actual_hash = sha256_file(path)
+        if actual_hash != expected_hash:
+            raise ValueError(f"Release artifact hash mismatch: {filename}")
+        verified[filename] = actual_hash
+    return verified
 
 
 def write_release_manifest(path: str | Path, manifest: Mapping[str, object]) -> Path:

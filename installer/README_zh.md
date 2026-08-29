@@ -16,6 +16,8 @@ Phase 8F 选择 Inno Setup 6 作为轻量 Windows 安装器方案。它直接封
 
 安装器源文件为 `installer/MotorCalculator.iss`。版本、发布者和稳定 AppId 由 `work/build_windows_release.ps1` 从 `motor_calculator/version.py` 注入，禁止手工复制版本号。
 
+简体中文安装界面使用 `installer/third_party/ChineseSimplified.isl`。该文件固定自 `kira-96/Inno-Setup-Chinese-Simplified-Translation` 的明确提交；来源与提交记录在同目录 `ChineseSimplified.SOURCE.txt`，MIT 许可证保存在 `ChineseSimplified.LICENSE.txt`。构建不修改 Inno Setup 系统安装目录，也不依赖开发机额外安装语言文件。
+
 当前构建机若未安装 Inno Setup，可以继续生成 one-folder 和便携 ZIP，但安装器状态必须记录为 `BLOCKED_BY_INSTALLER_COMPILER`。安装 Inno Setup 属于系统级外部软件操作，不由脚本静默执行。
 
 ## 签名

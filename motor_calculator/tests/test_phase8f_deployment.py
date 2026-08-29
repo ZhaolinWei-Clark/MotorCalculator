@@ -12,6 +12,7 @@ from motor_calculator.deployment.release import (
     build_release_manifest,
     create_portable_zip,
     sha256_file,
+    validate_release_manifest_artifacts,
     verify_protected_files,
     write_release_manifest,
     write_sha256s,
@@ -50,7 +51,7 @@ def test_installer_metadata_is_injected_without_duplicate_version() -> None:
     assert "#ifndef AppVersion" in source
     assert "AppVersion={#AppVersion}" in source
     assert APPLICATION_VERSION not in source
-    assert "AppId={{#AppId}" in source
+    assert "AppId={#AppId}" in source
 
 
 def test_installer_source_has_no_absolute_repository_path() -> None:
@@ -74,6 +75,8 @@ def test_per_user_shortcut_and_desktop_opt_in_policy() -> None:
     assert "PrivilegesRequired=lowest" in source
     assert 'Name: "desktopicon"' in source and "Flags: unchecked" in source
     assert 'Name: "{group}\\{#AppDisplayName}"' in source
+    assert 'MessagesFile: ".\\third_party\\ChineseSimplified.isl"' in source
+    assert (REPOSITORY_ROOT / "installer" / "third_party" / "ChineseSimplified.isl").is_file()
 
 
 def test_uninstall_policy_preserves_user_data_and_project_documents() -> None:
@@ -120,12 +123,61 @@ def test_release_manifest_schema_and_status_are_deterministic(tmp_path: Path) ->
         installer_status="BLOCKED_BY_INSTALLER_COMPILER",
         clean_machine_status="BLOCKED_BY_ENVIRONMENT",
         isolated_local_status="ISOLATED_LOCAL_PASS",
+        installer_technology="Inno Setup",
+        installer_version="6.7.3",
+        defender_status="PASS_NO_THREATS",
+        local_install_status="PASS",
+        uninstall_status="PASS",
+        reinstall_status="PASS",
         build_timestamp="2026-08-13T00:00:00Z",
     )
     path = write_release_manifest(tmp_path / "manifest.json", manifest)
     assert json.loads(path.read_text(encoding="utf-8")) == manifest
     assert manifest["schema_version"] == RELEASE_MANIFEST_SCHEMA_VERSION
     assert manifest["signed"] is False
+    assert manifest["installer_version"] == "6.7.3"
+    assert manifest["defender_status"] == "PASS_NO_THREATS"
+    assert manifest["local_install_status"] == "PASS"
+
+
+def test_release_manifest_requires_versioned_installer_and_valid_checksums(tmp_path: Path) -> None:
+    release_dir = tmp_path / "release"
+    dist_dir = tmp_path / "dist" / "MotorCalculator"
+    release_dir.mkdir()
+    dist_dir.mkdir(parents=True)
+    installer = release_dir / f"MotorCalculator-{APPLICATION_VERSION}-win64-setup.exe"
+    portable = release_dir / f"MotorCalculator-{APPLICATION_VERSION}-win64-portable.zip"
+    executable = dist_dir / "MotorCalculator.exe"
+    installer.write_bytes(b"installer")
+    portable.write_bytes(b"portable")
+    executable.write_bytes(b"packaged executable")
+    artifacts = [
+        ReleaseArtifact("installer", installer.name, installer.stat().st_size, sha256_file(installer)),
+        ReleaseArtifact("portable_zip", portable.name, portable.stat().st_size, sha256_file(portable)),
+        ReleaseArtifact(
+            "packaged_executable",
+            executable.name,
+            executable.stat().st_size,
+            sha256_file(executable),
+        ),
+    ]
+    manifest = build_release_manifest(
+        git_commit="b" * 40,
+        python_version="3.12.10",
+        pyinstaller_version="6.16.0",
+        tkinter_version="8.6.15",
+        artifacts=artifacts,
+        protected_hashes=PROTECTED_FILE_HASHES,
+        test_counts={"full_regression": 589, "deployment_specific": 14},
+        installer_status="PASS",
+        clean_machine_status="BLOCKED_BY_ENVIRONMENT",
+        isolated_local_status="ISOLATED_LOCAL_PASS",
+    )
+    assert validate_release_manifest_artifacts(manifest, release_dir) == {
+        installer.name: sha256_file(installer),
+        portable.name: sha256_file(portable),
+        executable.name: sha256_file(executable),
+    }
 
 
 def test_artifact_sha256_and_checksum_file(tmp_path: Path) -> None:
