@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from motor_core.rated_torque_models import calculate_revised_rated_torque_nm
+from motor_calculator.motor_core.rated_torque_models import calculate_revised_rated_torque_nm
 
 from .external_metric_comparison import (
     ComparabilityStatus,

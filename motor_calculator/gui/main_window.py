@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import math
 import sys
 import tkinter as tk
 from dataclasses import replace
@@ -53,6 +54,7 @@ from motor_calculator.project import (
     RecoveryManager,
     UnsavedChangesDecision,
     create_project_document,
+    build_project_inputs,
     flatten_project_inputs,
     inspect_project_sources,
     missing_feedback_record_ids,
@@ -61,8 +63,15 @@ from motor_calculator.project import (
     utc_now_iso,
 )
 
+from motor_calculator.plots import (
+    assess_result_snapshot,
+    build_dashboard_data,
+    build_result_snapshot,
+)
+
 from .confidence_panel import ConfidencePanel
 from .guided_input_panel import GuidedInputPanel, ToolTip
+from .results_dashboard import ResultsDashboard
 from .feedback_dialog import (
     FeedbackMetricOption,
     ValidationFeedbackDialog,
@@ -109,7 +118,7 @@ from motor_calculator.runtime import (
     resolve_runtime_paths,
     windows_work_area,
 )
-from motor_calculator.version import application_version_label
+from motor_calculator.version import APPLICATION_VERSION, application_version_label
 
 
 _RUNTIME_PATHS = resolve_runtime_paths()
@@ -161,8 +170,10 @@ class MotorCalculatorAppMixin:
         self.root.title(f"{tr('app.title')} {application_version_label()}")
         self._latest_accuracy_envelope = None
         self._latest_feasibility_assessment = None
+        self._latest_result_snapshot = None
         self._engineering_confidence_summary = None
         self._user_uncertainty_parameters = None
+        self._create_results_dashboard()
         self._create_confidence_tab()
         self._initialize_guided_input_ux()
         self._initialize_project_support()
@@ -615,6 +626,7 @@ class MotorCalculatorAppMixin:
     def _on_project_input_changed(self, *_args) -> None:
         if self._project_suppress_dirty:
             return
+        self.results_dashboard.mark_input_stale()
         self._project_manager.mark_dirty()
         self._update_project_title()
         self._schedule_recovery_autosave()
@@ -678,9 +690,19 @@ class MotorCalculatorAppMixin:
     def _build_project_document(self, *, project_name: str | None = None) -> ProjectDocument:
         current = self._project_manager.current_project
         name = project_name or (current.metadata.project_name if current else "Untitled")
+        parameters = self._get_params()
+        snapshot = self._latest_result_snapshot
+        if snapshot is not None:
+            snapshot_state = assess_result_snapshot(
+                snapshot,
+                build_project_inputs(parameters),
+                snapshot.result_model_version,
+            )
+            if not snapshot_state.is_current:
+                snapshot = None
         return create_project_document(
             name,
-            self._get_params(),
+            parameters,
             project_uuid=None if current is None else current.metadata.project_uuid,
             created_at=None if current is None else current.metadata.created_at,
             modified_at=utc_now_iso(),
@@ -688,6 +710,7 @@ class MotorCalculatorAppMixin:
             ui_preferences=self._ui_preferences_payload(),
             notes=self._project_notes,
             validation_record_ids=self._project_validation_record_ids,
+            result_snapshot=snapshot,
         )
 
     @staticmethod
@@ -714,6 +737,8 @@ class MotorCalculatorAppMixin:
 
     def _clear_project_results(self) -> None:
         self.calc_results = None
+        self._latest_result_snapshot = None
+        self.results_dashboard.clear()
         self.result_text.delete("1.0", tk.END)
         for tab, title in (
             (self.curves_tab, tr("chart.performance")),
@@ -742,6 +767,14 @@ class MotorCalculatorAppMixin:
             self._project_notes = document.notes
             self._project_validation_record_ids = list(document.validation_record_ids)
             self._clear_project_results()
+            self._latest_result_snapshot = document.result_snapshot
+            snapshot_state = assess_result_snapshot(
+                document.result_snapshot,
+                document.inputs,
+                APPLICATION_VERSION,
+            )
+            if document.result_snapshot is not None:
+                self.results_dashboard.show_snapshot(snapshot_state)
         finally:
             self._project_suppress_dirty = False
         self._project_manager.mark_clean(document)
@@ -976,6 +1009,16 @@ class MotorCalculatorAppMixin:
         self.confidence_panel.pack(fill=tk.BOTH, expand=True)
         self._set_unavailable_current_summary()
 
+    def _create_results_dashboard(self) -> None:
+        self.dashboard_tab = ttk.Frame(self.notebook)
+        self.notebook.insert(0, self.dashboard_tab, text="结果仪表板")
+        self.results_dashboard = ResultsDashboard(
+            self.dashboard_tab,
+            input_provider=self._get_params,
+            export_directory=self._runtime_paths.export_dir,
+        )
+        self.results_dashboard.pack(fill=tk.BOTH, expand=True)
+
     def _load_local_validation_summary(self, *, metric_name: str | None = None, topology: str | None = None):
         return load_validation_summary_safely(
             self._feedback_store,
@@ -1004,6 +1047,8 @@ class MotorCalculatorAppMixin:
         self._engineering_confidence_summary = summary
         self._latest_accuracy_envelope = None
         self.confidence_panel.set_summary(summary)
+        if hasattr(self, "results_dashboard"):
+            self.results_dashboard.set_uncertainty_result(None)
 
     def _controlled_uncertainty_specification(self) -> UncertaintySpecification | None:
         if self._user_uncertainty_parameters is None:
@@ -1051,6 +1096,7 @@ class MotorCalculatorAppMixin:
         self._latest_accuracy_envelope = result.accuracy_envelope
         self._engineering_confidence_summary = summary
         self.confidence_panel.set_summary(summary)
+        self.results_dashboard.set_uncertainty_result(result.accuracy_envelope)
         self.notebook.select(self.confidence_tab)
 
     def _edit_uncertainty_assumptions(self) -> None:
@@ -1255,13 +1301,29 @@ class MotorCalculatorAppMixin:
             self._plot_flux_distribution()
             self._draw_geometry()
             self._set_unavailable_current_summary()
+            assessment = self._latest_feasibility_assessment
+            if assessment is None:
+                assessment = evaluate_design_feasibility(params, self.calc_results)
+                self._latest_feasibility_assessment = assessment
+            dashboard_data = build_dashboard_data(params, self.calc_results, assessment)
+            self.results_dashboard.set_result(
+                dashboard_data,
+                rated_speed_rpm=float(params["n_rated"]),
+            )
+            self._latest_result_snapshot = build_result_snapshot(
+                params,
+                self.calc_results.to_dict(),
+                APPLICATION_VERSION,
+            )
             self.notebook.select(0)
             messagebox.showinfo(tr("analysis.complete_title"), tr("analysis.complete"))
         except (MotorValidationError, MotorCalculationError) as exc:
             logging.getLogger(__name__).warning("Calculation input rejected: %s", exc)
+            self.results_dashboard.mark_calculation_failed()
             messagebox.showerror(tr("analysis.error_title"), tr("analysis.invalid"))
         except Exception as exc:
             logging.getLogger(__name__).exception("GUI calculation failed")
+            self.results_dashboard.mark_calculation_failed()
             messagebox.showerror(tr("analysis.error_title"), tr("analysis.failed"))
 
     def _check_design_validity(self, result):
@@ -1296,7 +1358,24 @@ def _smoke_output_argument(arguments: list[str]) -> Path | None:
     return Path(arguments[index + 1])
 
 
+def _smoke_tk_scaling_argument(arguments: list[str]) -> float | None:
+    if "--smoke-tk-scaling" not in arguments:
+        return None
+    index = arguments.index("--smoke-tk-scaling")
+    if index + 1 >= len(arguments):
+        raise SystemExit("--smoke-tk-scaling requires a positive numeric value")
+    try:
+        scaling = float(arguments[index + 1])
+    except ValueError:
+        raise SystemExit("--smoke-tk-scaling requires a positive numeric value") from None
+    if not math.isfinite(scaling) or scaling <= 0.0:
+        raise SystemExit("--smoke-tk-scaling requires a positive numeric value")
+    return scaling
+
+
 def main():
+    arguments = sys.argv[1:]
+    smoke_output = _smoke_output_argument(arguments)
     user_data_error = None
     try:
         runtime_paths = create_runtime_directories(_RUNTIME_PATHS)
@@ -1310,6 +1389,9 @@ def main():
     dpi_status = enable_windows_dpi_awareness()
     logger.info("Application startup requested; mode=%s dpi=%s", runtime_paths.mode, dpi_status)
     root = _create_root_or_exit(runtime_paths, logger)
+    smoke_scaling = _smoke_tk_scaling_argument(arguments) if smoke_output is not None else None
+    if smoke_scaling is not None:
+        root.tk.call("tk", "scaling", smoke_scaling)
     if user_data_error is not None:
         root.destroy()
         raise SystemExit(
@@ -1351,7 +1433,6 @@ def main():
     y_pos = work_top + (work_height - height) // 2
     root.geometry(f"{width}x{height}+{x_pos}+{y_pos}")
     logger.info("Main window initialized at %sx%s", width, height)
-    smoke_output = _smoke_output_argument(sys.argv[1:])
     if smoke_output is not None:
         from motor_calculator.runtime.gui_smoke import run_real_gui_smoke
 

@@ -174,6 +174,8 @@ def _exercise_project_workflow(root, app, main_window_module, output: Path) -> d
     if not app._save_project_to_path(primary, save_as=True):
         raise RuntimeError("direct project save failed")
     clean_after_save = not app._project_manager.is_dirty and primary.is_file()
+    primary_document = load_project(primary)
+    snapshot_saved = primary_document.result_snapshot is not None
 
     if not app._new_project():
         raise RuntimeError("new project reset failed")
@@ -187,6 +189,10 @@ def _exercise_project_workflow(root, app, main_window_module, output: Path) -> d
         main_window_module.filedialog.askopenfilename = original_open_dialog
     restored_inputs = dict(app._get_params())
     exact_inputs_restored = restored_inputs == expected_inputs
+    snapshot_current_on_open = (
+        app._latest_result_snapshot is not None
+        and "输入哈希与模型版本匹配" in app.results_dashboard._source_var.get()
+    )
     app.run_analysis()
     root.update()
     restored_calculation = _calculation_snapshot(app.calc_results)
@@ -229,6 +235,8 @@ def _exercise_project_workflow(root, app, main_window_module, output: Path) -> d
         "project_saved_as_through_file_dialog": bool(saved_as_through_dialog),
         "project_exact_inputs_restored": exact_inputs_restored,
         "project_calculation_reproduced": calculation_reproduced,
+        "project_result_snapshot_saved": snapshot_saved,
+        "project_result_snapshot_current_on_open": snapshot_current_on_open,
         "project_exit_cancel_protected": cancel_protected and dirty_before_cancel and dirty_after_cancel,
         "project_recent_entry_present": any(
             entry.path == save_as for entry in app._project_manager.recent_store.entries()
@@ -479,6 +487,93 @@ def _exercise_phase8g_feasibility(root, app, main_window_module) -> dict[str, An
     }
 
 
+def _exercise_phase8h_dashboard(root, app, output: Path) -> dict[str, Any]:
+    """Exercise the real dashboard, opt-in sweep, exports, and visible plot."""
+
+    dashboard = app.results_dashboard
+    data = dashboard.data
+    if data is None:
+        raise RuntimeError("Phase 8H dashboard did not receive calculation data")
+    metrics = data.metric_by_key
+    dashboard._point_count_var.set("7")
+    app.notebook.select(app.dashboard_tab)
+    dashboard.tabs.select(dashboard.overview_tab)
+    dashboard.overview_canvas.yview_moveto(0.0)
+    root.update()
+    overview_screenshot = output.with_name(output.stem + "-phase8h-overview.png")
+    overview_screenshot_error = _capture_window(root, overview_screenshot)
+    card_widgets = tuple(widgets[0] for widgets in dashboard._metric_widgets.values())
+    top_cards_fit = all(
+        _widget_fits_window(widgets[0], root)
+        for widgets in tuple(dashboard._metric_widgets.values())[:8]
+    )
+    dashboard.overview_canvas.yview_moveto(1.0)
+    root.update()
+    overview_bottom_screenshot = output.with_name(output.stem + "-phase8h-overview-bottom.png")
+    overview_bottom_screenshot_error = _capture_window(root, overview_bottom_screenshot)
+    bottom_cards_fit = all(_widget_fits_window(widget, root) for widget in card_widgets[-4:])
+    range_bars_fit = all(
+        _widget_fits_window(widget, root)
+        for widget in (
+            dashboard.current_density_bar,
+            dashboard.voltage_margin_bar,
+            dashboard.slot_fill_bar,
+        )
+    )
+    cards_fit = top_cards_fit and bottom_cards_fit and range_bars_fit
+    dashboard.tabs.select(dashboard.performance_tab)
+    root.update()
+    sweep_ran = dashboard.run_performance_sweep()
+    root.update()
+    series = {item.key: item for item in dashboard.sweep_series}
+    figure_export = output.with_name(output.stem + "-phase8h-performance.png")
+    csv_export = output.with_name(output.stem + "-phase8h-performance.csv")
+    dashboard_screenshot = output.with_name(output.stem + "-phase8h-dashboard.png")
+    exported_figure = dashboard.export_current_figure(figure_export)
+    exported_csv = dashboard.export_current_csv(csv_export)
+    screenshot_error = _capture_window(root, dashboard_screenshot)
+    return {
+        "phase8h_dashboard_tab_present": bool(app.notebook.index(app.dashboard_tab) == 0),
+        "phase8h_dashboard_data_present": data is not None,
+        "phase8h_dashboard_no_severe": data.design_status.severe_count == 0,
+        "phase8h_dashboard_no_warning": data.design_status.warning_count == 0,
+        "phase8h_torque_nm": metrics["rated_torque_nm"].value,
+        "phase8h_power_w": metrics["output_power_w"].value,
+        "phase8h_efficiency_percent": metrics["efficiency_percent"].value,
+        "phase8h_current_density": metrics["current_density_a_per_mm2"].value,
+        "phase8h_slot_fill": metrics["slot_fill_factor"].value,
+        "phase8h_voltage_margin": metrics["voltage_margin_percent"].value,
+        "phase8h_loss_rows": len(dashboard.loss_tree.get_children()),
+        "phase8h_static_thermal_explicit": "无可信温升预测" in dashboard._thermal_var.get(),
+        "phase8h_dynamic_not_run_explicit": "尚未运行动态仿真" in dashboard._availability_rows.get("dynamic", ""),
+        "phase8h_uncertainty_not_run_explicit": "尚未执行不确定性分析" in dashboard._availability_rows.get("uncertainty", ""),
+        "phase8h_sweep_ran": bool(sweep_ran),
+        "phase8h_sweep_point_count": 0 if dashboard.last_speed_sweep is None else len(dashboard.last_speed_sweep.points),
+        "phase8h_torque_curve_available": series["torque_speed"].availability.value == "AVAILABLE",
+        "phase8h_power_curve_available": series["power_speed"].availability.value == "AVAILABLE",
+        "phase8h_voltage_margin_curve_available": series["voltage_margin"].availability.value == "AVAILABLE",
+        "phase8h_figure_export": str(figure_export),
+        "phase8h_figure_exported": exported_figure == figure_export and figure_export.stat().st_size > 1000,
+        "phase8h_csv_export": str(csv_export),
+        "phase8h_csv_exported": exported_csv == csv_export and csv_export.stat().st_size > 100,
+        "phase8h_chinese_font": dashboard.chinese_font_name,
+        "phase8h_dashboard_screenshot": str(dashboard_screenshot),
+        "phase8h_dashboard_screenshot_error": screenshot_error,
+        "phase8h_overview_screenshot": str(overview_screenshot),
+        "phase8h_overview_screenshot_error": overview_screenshot_error,
+        "phase8h_overview_bottom_screenshot": str(overview_bottom_screenshot),
+        "phase8h_overview_bottom_screenshot_error": overview_bottom_screenshot_error,
+        "phase8h_top_cards_fit_window": top_cards_fit,
+        "phase8h_bottom_cards_fit_window": bottom_cards_fit,
+        "phase8h_range_bars_fit_window": range_bars_fit,
+        "phase8h_cards_fit_window": cards_fit,
+        "phase8h_dashboard_fits_window": _widget_fits_window(dashboard, root),
+        "phase8h_initial_render_seconds": dashboard.last_initial_render_seconds,
+        "phase8h_plot_render_seconds": dashboard.last_plot_render_seconds,
+        "phase8h_sweep_seconds": dashboard.last_speed_sweep.elapsed_seconds,
+    }
+
+
 def _capture_window(root, destination: Path) -> str | None:
     try:
         from PIL import ImageGrab
@@ -575,6 +670,29 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         ):
             raise RuntimeError("Phase 8G feasibility GUI smoke did not pass every gate")
         payload.update(phase8g_results)
+        phase8h_results = _exercise_phase8h_dashboard(root, app, output)
+        if not all(
+            phase8h_results[name]
+            for name in (
+                "phase8h_dashboard_tab_present",
+                "phase8h_dashboard_data_present",
+                "phase8h_dashboard_no_severe",
+                "phase8h_dashboard_no_warning",
+                "phase8h_static_thermal_explicit",
+                "phase8h_dynamic_not_run_explicit",
+                "phase8h_uncertainty_not_run_explicit",
+                "phase8h_sweep_ran",
+                "phase8h_torque_curve_available",
+                "phase8h_power_curve_available",
+                "phase8h_voltage_margin_curve_available",
+                "phase8h_figure_exported",
+                "phase8h_csv_exported",
+                "phase8h_dashboard_fits_window",
+                "phase8h_cards_fit_window",
+            )
+        ):
+            raise RuntimeError("Phase 8H dashboard GUI smoke did not pass every gate")
+        payload.update(phase8h_results)
         project_results = _exercise_project_workflow(root, app, main_window_module, output)
         if not all(
             project_results[name]
@@ -587,6 +705,8 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "project_saved_as_through_file_dialog",
                 "project_exact_inputs_restored",
                 "project_calculation_reproduced",
+                "project_result_snapshot_saved",
+                "project_result_snapshot_current_on_open",
                 "project_exit_cancel_protected",
                 "project_recent_entry_present",
             )
@@ -655,6 +775,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "screenshot_error": screenshot_error,
                 **phase8d_results,
                 **phase8g_results,
+                **phase8h_results,
                 **project_results,
                 **recovery_results,
                 **dialog_results,

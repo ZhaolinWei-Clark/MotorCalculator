@@ -8,14 +8,14 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from motor_core.bldc_ke_kt_models import (
+from motor_calculator.motor_core.bldc_ke_kt_models import (
     calculate_bldc_average_electromagnetic_power_w,
     calculate_bldc_line_to_line_back_emf_rms_from_phase_flat_top_v,
     calculate_bldc_phase_back_emf_rms_from_flat_top_v,
     calculate_bldc_phase_current_rms_from_conduction_current,
 )
-from motor_core.electrical_semantics import MotorControlMode
-from motor_core.pmsm_ke_kt_models import (
+from motor_calculator.motor_core.electrical_semantics import MotorControlMode
+from motor_calculator.motor_core.pmsm_ke_kt_models import (
     calculate_revised_pmsm_back_emf_constants_from_phase_rms_and_angular_speed,
     derive_revised_pmsm_torque_constants_from_power_balance,
 )

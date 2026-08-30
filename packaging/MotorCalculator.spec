@@ -8,6 +8,10 @@ from pathlib import Path
 repository_root = Path(SPECPATH).resolve().parent
 hidden_imports = [
     "motor_calculator.gui.main_window",
+    "motor_calculator.gui.results_dashboard",
+    "motor_calculator.plots",
+    "motor_calculator.plots.performance",
+    "motor_calculator.plots.export",
     "motor_calculator.validation.feedback_service",
     "motor_calculator.validation.phase7i_uncertainty_report",
     "tkinter.scrolledtext",
