@@ -411,6 +411,74 @@ def _exercise_phase8d_input_ux(root, app, main_window_module, output: Path) -> d
     }
 
 
+def _exercise_phase8g_feasibility(root, app, main_window_module) -> dict[str, Any]:
+    from motor_calculator.input_ux import APPLICATION_DEFAULTS
+
+    original_confirm = main_window_module.messagebox.askokcancel
+    main_window_module.messagebox.askokcancel = lambda *_args, **_kwargs: True
+    try:
+        preset_applied = app._apply_preset_by_id("design.manufacturability_start.v1")
+    finally:
+        main_window_module.messagebox.askokcancel = original_confirm
+    app.run_analysis()
+    root.update()
+    feasible = app._latest_feasibility_assessment
+    if feasible is None:
+        raise RuntimeError("Phase 8G feasible assessment was not produced")
+    report = app.result_text.get("1.0", "end")
+
+    bad_values = {
+        "V_dc": 48.0,
+        "P_rated": 10000.0,
+        "n_rated": 2500.0,
+        "N_ph_turns": 200,
+        "d_wire": 1.2,
+        "slot_type": "半闭口槽",
+    }
+    for name, value in bad_values.items():
+        app.vars[name].set(str(value))
+    app.coreless_var.set(False)
+    app.run_analysis()
+    root.update()
+    bad = app._latest_feasibility_assessment
+    if bad is None:
+        raise RuntimeError("Phase 8G bad-design assessment was not produced")
+
+    app._project_suppress_dirty = True
+    try:
+        for name, value in APPLICATION_DEFAULTS.items():
+            if name == "coreless":
+                app.coreless_var.set(bool(value))
+            else:
+                app.vars[name].set(str(value))
+        original_confirm = main_window_module.messagebox.askokcancel
+        main_window_module.messagebox.askokcancel = lambda *_args, **_kwargs: True
+        try:
+            app._apply_preset_by_id("design.manufacturability_start.v1")
+        finally:
+            main_window_module.messagebox.askokcancel = original_confirm
+    finally:
+        app._project_suppress_dirty = False
+    app.run_analysis()
+    root.update()
+    app._project_manager.mark_clean(app._build_project_document())
+    app._update_project_title()
+
+    return {
+        "phase8g_feasible_preset_applied": bool(preset_applied),
+        "phase8g_feasible_no_error": not feasible.has_error,
+        "phase8g_feasible_no_severe": not feasible.has_severe_design_risk,
+        "phase8g_feasible_current_density": feasible.current_density_a_per_mm2,
+        "phase8g_feasible_slot_fill": feasible.slot_fill_factor,
+        "phase8g_feasible_voltage_margin": feasible.voltage_margin_percent,
+        "phase8g_report_shows_engineering_numbers": (
+            "当前电流密度" in report and "可用/所需线电压 RMS" in report
+        ),
+        "phase8g_bad_design_triggers_severe": bad.has_severe_design_risk,
+        "phase8g_bad_issue_codes": [issue.code for issue in bad.issues],
+    }
+
+
 def _capture_window(root, destination: Path) -> str | None:
     try:
         from PIL import ImageGrab
@@ -494,6 +562,19 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         payload.update(phase8d_results)
         if not all(value for name, value in phase8d_results.items() if name != "phase8d_project_file"):
             raise RuntimeError("Phase 8D guided input smoke did not pass every interaction gate")
+        phase8g_results = _exercise_phase8g_feasibility(root, app, main_window_module)
+        if not all(
+            phase8g_results[name]
+            for name in (
+                "phase8g_feasible_preset_applied",
+                "phase8g_feasible_no_error",
+                "phase8g_feasible_no_severe",
+                "phase8g_report_shows_engineering_numbers",
+                "phase8g_bad_design_triggers_severe",
+            )
+        ):
+            raise RuntimeError("Phase 8G feasibility GUI smoke did not pass every gate")
+        payload.update(phase8g_results)
         project_results = _exercise_project_workflow(root, app, main_window_module, output)
         if not all(
             project_results[name]
@@ -573,6 +654,7 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "confidence_export_exists": confidence_export.is_file(),
                 "screenshot_error": screenshot_error,
                 **phase8d_results,
+                **phase8g_results,
                 **project_results,
                 **recovery_results,
                 **dialog_results,

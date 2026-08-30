@@ -92,6 +92,10 @@ from motor_calculator.validation.uncertainty_models import (
     UncertaintySpecification,
     load_uncertainty_specification,
 )
+from motor_calculator.validation.design_feasibility import (
+    evaluate_design_feasibility,
+    format_feasibility_messages_zh,
+)
 from motor_calculator.runtime import (
     bounded_window_size,
     build_diagnostics,
@@ -156,6 +160,7 @@ class MotorCalculatorAppMixin:
         self._feedback_store = self._runtime_paths.feedback_store
         self.root.title(f"{tr('app.title')} {application_version_label()}")
         self._latest_accuracy_envelope = None
+        self._latest_feasibility_assessment = None
         self._engineering_confidence_summary = None
         self._user_uncertainty_parameters = None
         self._create_confidence_tab()
@@ -1258,6 +1263,11 @@ class MotorCalculatorAppMixin:
         except Exception as exc:
             logging.getLogger(__name__).exception("GUI calculation failed")
             messagebox.showerror(tr("analysis.error_title"), tr("analysis.failed"))
+
+    def _check_design_validity(self, result):
+        assessment = evaluate_design_feasibility(self._get_params(), result)
+        self._latest_feasibility_assessment = assessment
+        return list(format_feasibility_messages_zh(assessment))
 
 
 class MotorCalculatorApp:

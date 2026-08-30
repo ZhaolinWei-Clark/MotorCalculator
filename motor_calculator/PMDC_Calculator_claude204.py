@@ -1326,7 +1326,7 @@ class MotorCalculatorApp:
         # 设计验证
         warnings = self._check_design_validity(r)
         if warnings:
-            report.append(">>> 设计验证警告 <<<")
+            report.append(">>> 设计可行性检查 <<<")
             report.append("-" * 50)
             for w in warnings:
                 report.append(f"  {w}")
@@ -1427,8 +1427,8 @@ class MotorCalculatorApp:
         report.append(f"   相电流有效值          : {perf.I_phase_rms:.2f} A")
         report.append(f"   电流密度 (J)          : {perf.J_current:.2f} A/mm²")
         report.append(f"   所需电压              : {perf.V_required:.1f} V")
-        report.append(f"   电压裕量              : {perf.V_margin:.1f} %")
-        report.append(f"   绕组填充系数          : {perf.K_fill:.3f}")
+        report.append(f"   Legacy 直流母线差额   : {perf.V_margin:.1f} %")
+        report.append(f"   Legacy 线性绕组占比   : {perf.K_fill:.3f}")
         report.append("")
         
         # 8. 损耗分析

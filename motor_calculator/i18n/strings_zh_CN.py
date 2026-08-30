@@ -277,6 +277,7 @@ PRESET_NAMES = {
     "magnet.n48.v1": "NdFeB N48 典型参考值",
     "magnet.n52.v1": "NdFeB N52 典型参考值",
     "design.application_reference.v1": "应用默认值示例",
+    "design.manufacturability_start.v1": "可制造性起始示例",
     "operating.application_reference.v1": "应用工作点示例",
 }
 
@@ -358,6 +359,9 @@ MESSAGE_TRANSLATIONS = {
     "Current frozen application defaults, exposed only as an explicit demonstration operating point.": "来自当前冻结的应用默认值，仅作为显式演示工作点提供。",
     "Not a safe limit or recommended rating.": "不代表安全极限或推荐额定值。",
     "Only operating-point fields change after user confirmation.": "用户确认后仅修改工作点字段。",
+    "Phase 8G internally consistent conservative starting example using only the current production input schema.": "Phase 8G 使用当前 production 输入 schema 构造的内部一致、保守起始示例。",
+    "Uses a slotted SSDR AFPM PMSM starting point and an SVPWM-compatible voltage-envelope check.": "采用有槽 SSDR AFPM PMSM 起始点，并使用 SVPWM-compatible 电压包络检查。",
+    "Starting example only; not optimized, calibrated, or externally validated for manufacturing.": "仅作为起始示例；未经优化、校准或外部制造验证。",
 }
 
 PARAMETER_LABELS = {

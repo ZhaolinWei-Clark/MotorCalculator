@@ -96,6 +96,17 @@
       "applicable_temperature_c": 20.0
     },
     {
+      "preset_id": "design.manufacturability_start.v1",
+      "version": 1,
+      "display_name": "Manufacturability Starting Example",
+      "category": "design_example",
+      "evidence_kind": "demonstration",
+      "values": {"V_dc": 72.0, "P_rated": 600.0, "n_rated": 2200.0, "d_wire": 1.2, "slot_type": "半闭口槽", "coreless": false},
+      "provenance": "Phase 8G internally consistent conservative starting example using only the current production input schema.",
+      "assumptions": ["Uses a slotted SSDR AFPM PMSM starting point and an SVPWM-compatible voltage-envelope check."],
+      "notes": ["Starting example only; not optimized, calibrated, or externally validated for manufacturing."]
+    },
+    {
       "preset_id": "design.application_reference.v1",
       "version": 1,
       "display_name": "Application Default Example",

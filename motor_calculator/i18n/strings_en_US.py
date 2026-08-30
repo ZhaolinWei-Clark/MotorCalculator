@@ -274,6 +274,7 @@ PRESET_NAMES = {
     "magnet.n48.v1": "NdFeB N48 Typical Reference",
     "magnet.n52.v1": "NdFeB N52 Typical Reference",
     "design.application_reference.v1": "Application Default Example",
+    "design.manufacturability_start.v1": "Manufacturability Starting Example",
     "operating.application_reference.v1": "Application Operating Point",
 }
 

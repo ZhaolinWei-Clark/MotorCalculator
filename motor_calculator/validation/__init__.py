@@ -2,6 +2,16 @@
 
 from .accuracy_metrics import AccuracyMetricStatus, AccuracyMetrics, compute_accuracy_metrics
 from .confidence_explanation import build_confidence_reasons
+from .design_feasibility import (
+    FEASIBLE_STARTING_OVERRIDES,
+    DesignFeasibilityAssessment,
+    FeasibilityCalculability,
+    FeasibilityIssue,
+    FeasibilitySeverity,
+    evaluate_design_feasibility,
+    feasible_starting_inputs,
+    format_feasibility_messages_zh,
+)
 from .confidence_summary import (
     EngineeringConfidenceSummary,
     UncertaintyDimensionStatus,
@@ -154,11 +164,13 @@ __all__ = [
     "EvidenceQuality",
     "ExternalValidationCoverage",
     "DeterministicSweepResult",
+    "DesignFeasibilityAssessment",
     "ExternalFEAImportAdapter",
     "ExternalMetricComparison",
     "ExternalMetricEvidence",
     "ExternalValidationCampaignResult",
     "FEADimensionality",
+    "FEASIBLE_STARTING_OVERRIDES",
     "FEAEvidenceClassification",
     "FEAExecutionStatus",
     "FEAImportedMeshMetadata",
@@ -169,6 +181,9 @@ __all__ = [
     "FEASolverMetadata",
     "FEAWaveformMetrics",
     "FEAWaveformSample",
+    "FeasibilityCalculability",
+    "FeasibilityIssue",
+    "FeasibilitySeverity",
     "FEEDBACK_SCHEMA_VERSION",
     "DEFAULT_FEEDBACK_STORE",
     "BiasCandidate",
@@ -257,4 +272,7 @@ __all__ = [
     "synchronous_reactance_to_inductance_h",
     "validate_feedback",
     "export_confidence_summary",
+    "evaluate_design_feasibility",
+    "feasible_starting_inputs",
+    "format_feasibility_messages_zh",
 ]
