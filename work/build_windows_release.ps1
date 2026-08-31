@@ -36,6 +36,7 @@ try {
     # Inno Setup requires a doubled opening brace to encode a literal GUID brace.
     $AppId = & $PythonPath -c "from motor_calculator.version import APPLICATION_ID; print('{' + APPLICATION_ID)"
     $Publisher = & $PythonPath -c "from motor_calculator.version import APPLICATION_PUBLISHER; print(APPLICATION_PUBLISHER)"
+    $FileVersion = & $PythonPath -c "from motor_calculator.version import windows_version_tuple; print('.'.join(str(item) for item in windows_version_tuple()))"
     $Commit = git rev-parse HEAD
     Invoke-Checked { & $PythonPath -c "from motor_calculator.deployment import verify_protected_files; verify_protected_files(r'$RepositoryRoot')" } "Protected-file hash gate failed."
 
@@ -84,7 +85,7 @@ try {
         $InstallerVersion = (Get-Item -LiteralPath $InstallerCompiler).VersionInfo.ProductVersion
         New-Item -ItemType Directory -Path $ReleaseDir -Force | Out-Null
         Invoke-Checked {
-            & $InstallerCompiler "/DAppVersion=$Version" "/DAppId=$AppId" "/DAppPublisher=$Publisher" "installer\MotorCalculator.iss"
+            & $InstallerCompiler "/DAppVersion=$Version" "/DAppFileVersion=$FileVersion" "/DAppId=$AppId" "/DAppPublisher=$Publisher" "installer\MotorCalculator.iss"
         } "Inno Setup compilation failed."
         $Installer = Join-Path $ReleaseDir "MotorCalculator-$Version-win64-setup.exe"
         if (-not (Test-Path -LiteralPath $Installer -PathType Leaf)) {

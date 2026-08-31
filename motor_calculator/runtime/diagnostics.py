@@ -52,6 +52,14 @@ def build_diagnostics(
         "runtime_mode": runtime_paths.mode,
         "log_path": str(runtime_paths.log_file),
         "project_schema_version": PROJECT_SCHEMA_VERSION,
+        "model_availability": {
+            "pmsm_static": "SUPPORTED",
+            "bldc_static": "SUPPORTED_VALIDATION_LIMITED",
+            "pmsm_dynamic_sandbox": "EXPERIMENTAL",
+            "bldc_dynamic": "UNAVAILABLE",
+            "sensitivity_sandbox": "SUPPORTED_OPT_IN",
+            "controlled_reference_uncertainty": "EXPERIMENTAL_OPT_IN",
+        },
         "recent_non_sensitive_errors": [str(item) for item in recent_errors],
     }
 

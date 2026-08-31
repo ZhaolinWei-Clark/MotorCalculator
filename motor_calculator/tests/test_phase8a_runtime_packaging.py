@@ -138,7 +138,7 @@ def test_local_logging_is_rotating_and_stays_in_user_data(tmp_path: Path):
 
 
 def test_version_metadata_and_repository_commit_are_truthful():
-    assert re.fullmatch(r"\d+\.\d+\.\d+", APPLICATION_VERSION)
+    assert re.fullmatch(r"\d+\.\d+\.\d+(?:-rc\d+)?", APPLICATION_VERSION)
     commit = get_git_commit(ROOT)
     assert commit is None or re.fullmatch(r"[0-9a-f]{40}", commit)
 

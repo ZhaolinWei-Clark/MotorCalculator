@@ -9,9 +9,12 @@ repository_root = Path(SPECPATH).resolve().parent
 hidden_imports = [
     "motor_calculator.gui.main_window",
     "motor_calculator.gui.results_dashboard",
+    "motor_calculator.gui.analysis_dialogs",
+    "motor_calculator.analysis_service",
     "motor_calculator.plots",
     "motor_calculator.plots.performance",
     "motor_calculator.plots.export",
+    "motor_calculator.plots.analysis",
     "motor_calculator.validation.feedback_service",
     "motor_calculator.validation.phase7i_uncertainty_report",
     "tkinter.scrolledtext",

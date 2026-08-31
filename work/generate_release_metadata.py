@@ -16,12 +16,12 @@ from motor_calculator.version import (
     APPLICATION_NAME,
     APPLICATION_PUBLISHER,
     APPLICATION_VERSION,
+    windows_version_tuple,
 )
 
 
 def render_windows_version_info() -> str:
-    major, minor, patch = (int(part) for part in APPLICATION_VERSION.split("."))
-    tuple_version = f"({major}, {minor}, {patch}, 0)"
+    tuple_version = str(windows_version_tuple())
     return f"""VSVersionInfo(
   ffi=FixedFileInfo(filevers={tuple_version}, prodvers={tuple_version}, mask=0x3f, flags=0x0, OS=0x40004, fileType=0x1, subtype=0x0, date=(0, 0)),
   kids=[StringFileInfo([StringTable('080404b0', [

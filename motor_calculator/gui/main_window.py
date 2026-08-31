@@ -79,6 +79,7 @@ from .feedback_dialog import (
 )
 from .recovery_dialog import RecoveryBrowserDialog
 from .uncertainty_dialog import UncertaintyAssumptionDialog
+from .analysis_dialogs import AnalysisCenterDialog
 
 from motor_calculator.validation.confidence_summary import (
     build_engineering_confidence_summary,
@@ -173,6 +174,7 @@ class MotorCalculatorAppMixin:
         self._latest_result_snapshot = None
         self._engineering_confidence_summary = None
         self._user_uncertainty_parameters = None
+        self._analysis_center = None
         self._create_results_dashboard()
         self._create_confidence_tab()
         self._initialize_guided_input_ux()
@@ -192,6 +194,7 @@ class MotorCalculatorAppMixin:
         for widget in legacy_frame.grid_slaves():
             widget.grid_configure(row=int(widget.grid_info()["row"]) + 1)
         self._index_legacy_input_widgets(legacy_frame)
+        self._configure_legacy_input_grid(legacy_frame)
 
         # The legacy selector silently changed Br; Phase 8D requires preview/apply.
         self.mag_combo.unbind("<<ComboboxSelected>>")
@@ -238,6 +241,29 @@ class MotorCalculatorAppMixin:
             for widget in widgets:
                 if int(widget.grid_info().get("column", -1)) == 2:
                     self._input_unit_labels[field] = widget
+
+    def _configure_legacy_input_grid(self, frame) -> None:
+        """Keep older input labels readable without changing control behavior."""
+
+        frame.columnconfigure(0, weight=3, minsize=145)
+        frame.columnconfigure(1, weight=2, minsize=105)
+        frame.columnconfigure(2, weight=0, minsize=52)
+        self._legacy_input_labels = tuple(
+            widget
+            for widget in frame.grid_slaves()
+            if isinstance(widget, ttk.Label)
+            and int(widget.grid_info().get("column", -1)) == 0
+        )
+        for label in self._legacy_input_labels:
+            label.configure(justify=tk.LEFT, anchor=tk.W)
+            label.grid_configure(sticky="ew", padx=(2, 6))
+
+        def update_wrap(event) -> None:
+            wraplength = max(130, min(230, int(event.width * 0.46)))
+            for label in self._legacy_input_labels:
+                label.configure(wraplength=wraplength)
+
+        frame.bind("<Configure>", update_wrap, add="+")
 
     def _set_input_mode(self, mode: str) -> None:
         if mode not in {"BASIC", "ADVANCED"}:
@@ -567,6 +593,17 @@ class MotorCalculatorAppMixin:
         file_menu.add_separator()
         file_menu.add_command(label=tr("menu.exit"), command=self._request_exit)
         menu_bar.add_cascade(label=tr("menu.file"), menu=file_menu)
+        analysis_menu = tk.Menu(menu_bar, tearoff=False)
+        analysis_menu.add_command(
+            label="动态仿真...", command=lambda: self._open_analysis_center("dynamic")
+        )
+        analysis_menu.add_command(
+            label="不确定性分析...", command=lambda: self._open_analysis_center("uncertainty")
+        )
+        analysis_menu.add_command(
+            label="敏感性分析...", command=lambda: self._open_analysis_center("sensitivity")
+        )
+        menu_bar.add_cascade(label="分析", menu=analysis_menu)
         help_menu = tk.Menu(menu_bar, tearoff=False)
         help_menu.add_command(label=tr("menu.diagnostics"), command=self._export_runtime_diagnostics)
         help_menu.add_separator()
@@ -576,6 +613,7 @@ class MotorCalculatorAppMixin:
         self._project_menu_bar = menu_bar
         self._project_file_menu = file_menu
         self._project_help_menu = help_menu
+        self._project_analysis_menu = analysis_menu
         self.root.bind_all("<Control-n>", lambda _event: self._new_project())
         self.root.bind_all("<Control-o>", lambda _event: self._open_project())
         self.root.bind_all("<Control-s>", lambda _event: self._save_project())
@@ -594,6 +632,31 @@ class MotorCalculatorAppMixin:
             ),
             parent=self.root,
         )
+
+    def _open_analysis_center(self, analysis_name: str) -> AnalysisCenterDialog:
+        if self._analysis_center is None or not self._analysis_center.window.winfo_exists():
+            self._analysis_center = AnalysisCenterDialog(
+                self.root,
+                inputs_provider=self._get_params,
+                result_provider=self._current_analysis_result,
+                repository_root=self._repository_root,
+                uncertainty_specification_provider=self._controlled_uncertainty_specification,
+                on_uncertainty_complete=self._apply_uncertainty_analysis_result,
+            )
+        self._analysis_center.select_analysis(analysis_name)
+        return self._analysis_center
+
+    def _current_analysis_result(self):
+        result = getattr(self, "calc_results", None)
+        snapshot = self._latest_result_snapshot
+        if result is None or snapshot is None:
+            return None
+        try:
+            project_inputs = build_project_inputs(self._get_params())
+            assessment = assess_result_snapshot(snapshot, project_inputs, APPLICATION_VERSION)
+        except (TypeError, ValueError):
+            return None
+        return result if assessment.is_current else None
 
     def _export_runtime_diagnostics(self) -> bool:
         destination = filedialog.asksaveasfilename(
@@ -1093,11 +1156,26 @@ class MotorCalculatorAppMixin:
                 parent=self.root,
             )
             return
+        self._apply_uncertainty_analysis_result(result, summary=summary)
+        self.notebook.select(self.confidence_tab)
+
+    def _apply_uncertainty_analysis_result(self, result, *, summary=None) -> None:
+        if summary is None:
+            validation_summary, database_warning = self._load_local_validation_summary(
+                metric_name=result.accuracy_envelope.metric_name,
+                topology="SSDR controlled AFPM reference",
+            )
+            summary = build_engineering_confidence_summary(
+                result.accuracy_envelope,
+                validation_summary,
+                source_label=tr("confidence.controlled_source"),
+            )
+            if database_warning:
+                summary = replace(summary, warnings=summary.warnings + (database_warning,))
         self._latest_accuracy_envelope = result.accuracy_envelope
         self._engineering_confidence_summary = summary
         self.confidence_panel.set_summary(summary)
         self.results_dashboard.set_uncertainty_result(result.accuracy_envelope)
-        self.notebook.select(self.confidence_tab)
 
     def _edit_uncertainty_assumptions(self) -> None:
         try:

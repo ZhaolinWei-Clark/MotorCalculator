@@ -574,6 +574,63 @@ def _exercise_phase8h_dashboard(root, app, output: Path) -> dict[str, Any]:
     }
 
 
+def _exercise_phase8i_analysis(root, app, output: Path) -> dict[str, Any]:
+    """Run all three new opt-in analysis entries through their real GUI controls."""
+
+    center = app._open_analysis_center("dynamic")
+    center.dynamic_time_var.set("0.05")
+    center.dynamic_speed_var.set("200")
+    center.dynamic_load_var.set("0")
+    center.dynamic_accuracy_var.set("FAST")
+    dynamic_ran = center.run_dynamic()
+    root.update()
+    center.window.update()
+    dynamic_screenshot = output.with_name(output.stem + "-phase8i-dynamic.png")
+    dynamic_screenshot_error = _capture_window(center.window, dynamic_screenshot)
+
+    center.select_analysis("uncertainty")
+    center.uncertainty_samples_var.set("100")
+    center.uncertainty_seed_var.set("20260830")
+    uncertainty_ran = center.run_uncertainty()
+    root.update()
+    center.window.update()
+    uncertainty_screenshot = output.with_name(output.stem + "-phase8i-uncertainty.png")
+    uncertainty_screenshot_error = _capture_window(center.window, uncertainty_screenshot)
+
+    center.select_analysis("sensitivity")
+    sensitivity_ran = center.run_sensitivity()
+    root.update()
+    center.window.update()
+    sensitivity_screenshot = output.with_name(output.stem + "-phase8i-sensitivity.png")
+    sensitivity_screenshot_error = _capture_window(center.window, sensitivity_screenshot)
+    window_fits = _window_fits_screen(center.window)
+    center.window.destroy()
+    app._analysis_center = None
+    root.update()
+
+    dynamic_result = None if center.last_dynamic_outcome is None else center.last_dynamic_outcome.result
+    uncertainty_result = center.last_uncertainty_result
+    sensitivity_summary = center.last_sensitivity_summary
+    return {
+        "phase8i_analysis_menu_present": app._project_menu_bar.entrycget(2, "label") == "分析",
+        "phase8i_dynamic_ran": bool(dynamic_ran),
+        "phase8i_dynamic_points": 0 if dynamic_result is None else len(dynamic_result.time),
+        "phase8i_dynamic_voltage_series": bool(dynamic_result and dynamic_result.vd_actual and dynamic_result.vq_actual),
+        "phase8i_uncertainty_ran": bool(uncertainty_ran),
+        "phase8i_uncertainty_valid_samples": 0 if uncertainty_result is None else uncertainty_result.monte_carlo.valid_sample_count,
+        "phase8i_uncertainty_dashboard_updated": "参数边界" in app.results_dashboard._uncertainty_var.get(),
+        "phase8i_sensitivity_ran": bool(sensitivity_ran),
+        "phase8i_sensitivity_run_count": 0 if sensitivity_summary is None else len(sensitivity_summary.run_results),
+        "phase8i_analysis_window_fits_screen": window_fits,
+        "phase8i_dynamic_screenshot": str(dynamic_screenshot),
+        "phase8i_dynamic_screenshot_error": dynamic_screenshot_error,
+        "phase8i_uncertainty_screenshot": str(uncertainty_screenshot),
+        "phase8i_uncertainty_screenshot_error": uncertainty_screenshot_error,
+        "phase8i_sensitivity_screenshot": str(sensitivity_screenshot),
+        "phase8i_sensitivity_screenshot_error": sensitivity_screenshot_error,
+    }
+
+
 def _capture_window(root, destination: Path) -> str | None:
     try:
         from PIL import ImageGrab
@@ -693,6 +750,21 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         ):
             raise RuntimeError("Phase 8H dashboard GUI smoke did not pass every gate")
         payload.update(phase8h_results)
+        phase8i_results = _exercise_phase8i_analysis(root, app, output)
+        payload.update(phase8i_results)
+        if not all(
+            phase8i_results[name]
+            for name in (
+                "phase8i_analysis_menu_present",
+                "phase8i_dynamic_ran",
+                "phase8i_dynamic_voltage_series",
+                "phase8i_uncertainty_ran",
+                "phase8i_uncertainty_dashboard_updated",
+                "phase8i_sensitivity_ran",
+                "phase8i_analysis_window_fits_screen",
+            )
+        ):
+            raise RuntimeError("Phase 8I analysis GUI smoke did not pass every gate")
         project_results = _exercise_project_workflow(root, app, main_window_module, output)
         if not all(
             project_results[name]

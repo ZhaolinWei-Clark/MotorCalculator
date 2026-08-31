@@ -6,6 +6,7 @@ from .adapters import (
     sensitivity_results_to_plot_data,
     uncertainty_result_to_plot_data,
 )
+from .analysis import render_dynamic_figure, render_sensitivity_figure, render_uncertainty_figure
 from .dashboard import build_dashboard_data, format_dashboard_value, mark_dashboard_as_previous
 from .export import export_figure, export_speed_sweep_csv
 from .font_config import configure_chinese_matplotlib
@@ -64,6 +65,9 @@ __all__ = [
     "inventory_by_key",
     "mark_dashboard_as_previous",
     "render_speed_sweep_figure",
+    "render_dynamic_figure",
+    "render_sensitivity_figure",
+    "render_uncertainty_figure",
     "run_speed_sweep",
     "sensitivity_results_to_plot_data",
     "uncertainty_result_to_plot_data",

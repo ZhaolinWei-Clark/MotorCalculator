@@ -8,6 +8,9 @@
 #ifndef AppPublisher
   #error AppPublisher must be supplied by the release pipeline
 #endif
+#ifndef AppFileVersion
+  #error AppFileVersion must be supplied by the release pipeline
+#endif
 
 #define AppName "MotorCalculator"
 #define AppDisplayName "电机设计计算器"
@@ -19,7 +22,7 @@ AppName={#AppDisplayName}
 AppVerName={#AppDisplayName} {#AppVersion}
 AppVersion={#AppVersion}
 AppPublisher={#AppPublisher}
-VersionInfoVersion={#AppVersion}
+VersionInfoVersion={#AppFileVersion}
 VersionInfoCompany={#AppPublisher}
 VersionInfoDescription={#AppDisplayName} 安装程序
 VersionInfoProductName={#AppName}

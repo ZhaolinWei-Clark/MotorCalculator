@@ -17,7 +17,12 @@ def dynamic_result_to_plot_data(result: Any | None) -> DynamicPlotData:
     if result is None:
         return DynamicPlotData((), "NOT_RUN", ("尚未运行动态仿真。",))
     electrical = getattr(result, "electrical_result", result)
-    if not getattr(electrical, "transient_response_available", False):
+    transient_available = getattr(
+        electrical,
+        "transient_response_available",
+        bool(getattr(electrical, "time", ())),
+    )
+    if not transient_available:
         reason = getattr(electrical, "fallback_reason", None) or "动态瞬态结果不可用。"
         return DynamicPlotData((), str(getattr(electrical, "status", "UNAVAILABLE")), (reason,))
     time_values = tuple(float(value) for value in electrical.time)
@@ -31,6 +36,27 @@ def dynamic_result_to_plot_data(result: Any | None) -> DynamicPlotData:
         PlotSeries(key, label, time_values, values, "时间 (s)", y_label, unit, AvailabilityStatus.AVAILABLE, source_label_zh="Phase 6 动态仿真结果")
         for key, label, values, y_label, unit in definitions
     ]
+    optional_definitions = (
+        ("dynamic_speed_reference", "目标转速", "speed_reference", "机械角速度 (rad/s)", "rad/s"),
+        ("dynamic_vd", "Vd 实际", "vd_actual", "电压 (V)", "V"),
+        ("dynamic_vq", "Vq 实际", "vq_actual", "电压 (V)", "V"),
+    )
+    for key, label, attribute, y_label, unit in optional_definitions:
+        values = getattr(electrical, attribute, None)
+        if values is not None and len(values) == len(time_values):
+            series.append(
+                PlotSeries(
+                    key,
+                    label,
+                    time_values,
+                    tuple(float(value) for value in values),
+                    "时间 (s)",
+                    y_label,
+                    unit,
+                    AvailabilityStatus.AVAILABLE,
+                    source_label_zh="Phase 6 动态控制沙盒结果",
+                )
+            )
     temperature = getattr(result, "winding_temperature_c", None)
     if temperature is not None:
         series.append(
@@ -38,7 +64,7 @@ def dynamic_result_to_plot_data(result: Any | None) -> DynamicPlotData:
         )
     return DynamicPlotData(
         tuple(series),
-        str(getattr(electrical.status, "value", electrical.status)),
+        str(getattr(getattr(electrical, "status", "success"), "value", getattr(electrical, "status", "success"))),
         tuple(getattr(electrical, "warning_messages", ())),
     )
 

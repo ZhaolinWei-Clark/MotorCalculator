@@ -25,6 +25,7 @@ from motor_calculator.version import (
     APPLICATION_NAME,
     APPLICATION_VERSION,
     RELEASE_MANIFEST_SCHEMA_VERSION,
+    windows_version_tuple,
 )
 
 
@@ -33,9 +34,10 @@ INSTALLER_SOURCE = REPOSITORY_ROOT / "installer" / "MotorCalculator.iss"
 
 
 def test_authoritative_version_and_stable_application_identity() -> None:
-    assert APPLICATION_VERSION == "0.9.0"
+    assert APPLICATION_VERSION == "1.0.0-rc1"
     assert APPLICATION_NAME == "MotorCalculator"
-    assert re.fullmatch(r"\d+\.\d+\.\d+", APPLICATION_VERSION)
+    assert re.fullmatch(r"\d+\.\d+\.\d+(?:-rc\d+)?", APPLICATION_VERSION)
+    assert windows_version_tuple() == (1, 0, 0, 1)
     assert str(uuid.UUID(APPLICATION_ID.strip("{}"))).upper() in APPLICATION_ID
 
 
@@ -50,6 +52,7 @@ def test_installer_metadata_is_injected_without_duplicate_version() -> None:
     source = INSTALLER_SOURCE.read_text(encoding="utf-8")
     assert "#ifndef AppVersion" in source
     assert "AppVersion={#AppVersion}" in source
+    assert "VersionInfoVersion={#AppFileVersion}" in source
     assert APPLICATION_VERSION not in source
     assert "AppId={#AppId}" in source
 
