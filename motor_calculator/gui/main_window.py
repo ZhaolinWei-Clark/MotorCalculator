@@ -22,6 +22,17 @@ from motor_calculator.motor_core import (
     MotorValidationError,
     parse_legacy_gui_params,
 )
+from motor_calculator.motor_core.winding_factor import (
+    COIL_SPAN_TOOLTIP_ZH,
+    SKEW_TOOLTIP_ZH,
+    WINDING_FACTOR_MODE_LABELS_ZH,
+    WINDING_FACTOR_TOOLTIP_ZH,
+    WindingFactorMode,
+    WindingFactorProvenance,
+    format_winding_factor_report_lines_zh,
+    format_winding_factor_summary_zh,
+    resolve_winding_factor,
+)
 from motor_calculator.input_ux import (
     APPLICATION_DEFAULTS,
     BASIC_INPUT_FIELDS,
@@ -178,7 +189,51 @@ class MotorCalculatorAppMixin:
         self._create_results_dashboard()
         self._create_confidence_tab()
         self._initialize_guided_input_ux()
+        self._apply_startup_example()
         self._initialize_project_support()
+
+    STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v1"
+
+    def _apply_startup_example(self) -> bool:
+        """RC2: open on the audited manufacturability starting example.
+
+        The frozen `APPLICATION_DEFAULTS` and `legacy_baseline.json` are
+        unchanged; only the initial GUI field values differ. The previous
+        first-launch state simultaneously tripped current density, the
+        same-basis voltage envelope and the legacy occupancy proxy, which made
+        it impossible for a new user to tell a bad design from a broken tool.
+        """
+
+        preset = self._preset_registry.get(self.STARTUP_EXAMPLE_PRESET_ID)
+        if not preset.available:
+            return False
+        self._project_suppress_dirty = True
+        try:
+            displayed = canonical_to_display_inputs(
+                apply_preset(parse_legacy_gui_params(self._collect_raw_params()), preset),
+                self._display_unit_preferences,
+            )
+            for field_name in preset.values:
+                value = displayed[field_name]
+                if field_name == "coreless":
+                    self.coreless_var.set(bool(value))
+                elif field_name in self.vars:
+                    self.vars[field_name].set(
+                        format_engineering_value(value) if isinstance(value, float) else str(value)
+                    )
+            self._last_preset_id = preset.preset_id
+            self._last_preset_version = preset.version
+        except (MotorValidationError, MotorCalculationError, KeyError, TypeError, ValueError):
+            logging.getLogger(__name__).warning(
+                "Startup example could not be applied; keeping frozen application defaults",
+                exc_info=True,
+            )
+            return False
+        finally:
+            self._project_suppress_dirty = False
+        self._guided_input_panel.refresh_all()
+        self._refresh_winding_factor_summary()
+        return True
 
     def _initialize_guided_input_ux(self) -> None:
         self._display_unit_preferences = DisplayUnitPreferences()
@@ -218,7 +273,132 @@ class MotorCalculatorAppMixin:
         for name, entry in self.entries.items():
             if name in INPUT_DEFINITIONS:
                 ToolTip(entry, input_tooltip(name))
+        self._initialize_winding_factor_ux(legacy_frame)
         self._apply_input_mode_visibility()
+
+    # ------------------------------------------------------------------
+    # RC2: winding-factor auto/manual provenance
+    # ------------------------------------------------------------------
+
+    def _initialize_winding_factor_ux(self, legacy_frame) -> None:
+        self._winding_factor_mode_var = tk.StringVar(value=WINDING_FACTOR_MODE_LABELS_ZH[
+            WindingFactorMode.MANUAL
+        ])
+        self._coil_span_slots_var = tk.StringVar(value="")
+        self._skew_slots_var = tk.StringVar(value="0")
+        self._winding_factor_resolution = None
+        self._winding_factor_manual_provenance = WindingFactorProvenance.MANUAL_USER
+
+        used_rows = [
+            int(widget.grid_info().get("row", 0)) for widget in legacy_frame.grid_slaves()
+        ]
+        target_row = (max(used_rows) + 1) if used_rows else 1
+
+        panel = ttk.LabelFrame(legacy_frame, text="绕组系数 k_w1", padding=(6, 4))
+        panel.grid(row=target_row, column=0, columnspan=3, sticky="ew", padx=4, pady=(8, 4))
+        panel.columnconfigure(1, weight=1)
+        self._winding_factor_panel = panel
+
+        ttk.Label(panel, text="模式").grid(row=0, column=0, sticky="w", padx=(0, 4))
+        mode_combo = ttk.Combobox(
+            panel,
+            textvariable=self._winding_factor_mode_var,
+            values=list(WINDING_FACTOR_MODE_LABELS_ZH.values()),
+            state="readonly",
+            width=10,
+        )
+        mode_combo.grid(row=0, column=1, sticky="ew")
+        mode_combo.bind("<<ComboboxSelected>>", lambda _event: self._refresh_winding_factor_summary())
+        self._winding_factor_mode_combo = mode_combo
+
+        ttk.Label(panel, text="线圈节距 (槽)").grid(row=1, column=0, sticky="w", padx=(0, 4))
+        span_entry = ttk.Entry(panel, textvariable=self._coil_span_slots_var, width=10)
+        span_entry.grid(row=1, column=1, sticky="ew")
+        self._coil_span_entry = span_entry
+
+        ttk.Label(panel, text="斜槽 (槽距)").grid(row=2, column=0, sticky="w", padx=(0, 4))
+        skew_entry = ttk.Entry(panel, textvariable=self._skew_slots_var, width=10)
+        skew_entry.grid(row=2, column=1, sticky="ew")
+        self._skew_slots_entry = skew_entry
+
+        self._winding_factor_summary_var = tk.StringVar(value="尚未解析")
+        summary = ttk.Label(
+            panel,
+            textvariable=self._winding_factor_summary_var,
+            wraplength=250,
+            justify=tk.LEFT,
+            foreground="#333333",
+        )
+        summary.grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 0))
+        self._winding_factor_summary_label = summary
+
+        ToolTip(mode_combo, WINDING_FACTOR_TOOLTIP_ZH)
+        ToolTip(span_entry, COIL_SPAN_TOOLTIP_ZH)
+        ToolTip(skew_entry, SKEW_TOOLTIP_ZH)
+        for variable in (self._coil_span_slots_var, self._skew_slots_var):
+            variable.trace_add("write", lambda *_args: self._refresh_winding_factor_summary())
+        self._refresh_winding_factor_summary()
+
+    def _selected_winding_factor_mode(self) -> WindingFactorMode:
+        label = str(self._winding_factor_mode_var.get()).strip()
+        for mode, mode_label in WINDING_FACTOR_MODE_LABELS_ZH.items():
+            if mode_label == label:
+                return mode
+        return WindingFactorMode.MANUAL
+
+    def _resolve_winding_factor_for(self, parsed_params) -> object:
+        return resolve_winding_factor(
+            parsed_params,
+            mode=self._selected_winding_factor_mode(),
+            coil_span_slots=self._coil_span_slots_var.get(),
+            skew_slots=self._skew_slots_var.get(),
+            manual_provenance=self._winding_factor_manual_provenance,
+        )
+
+    def _refresh_winding_factor_summary(self) -> None:
+        try:
+            parsed = parse_legacy_gui_params(self._collect_raw_params())
+        except (MotorValidationError, MotorCalculationError, KeyError, ValueError):
+            self._winding_factor_summary_var.set("当前输入无效，暂时无法解析绕组系数。")
+            return
+        resolution = self._resolve_winding_factor_for(parsed)
+        self._winding_factor_resolution = resolution
+        self._winding_factor_summary_var.set(format_winding_factor_summary_zh(resolution))
+
+    def _latest_winding_factor_resolution(self):
+        if getattr(self, "_winding_factor_resolution", None) is None:
+            self._refresh_winding_factor_summary()
+        return getattr(self, "_winding_factor_resolution", None)
+
+    def _restore_winding_factor_preferences(self, preferences) -> None:
+        """Restore winding-factor settings without reinterpreting old projects.
+
+        A project saved before RC2 carries no winding-factor metadata. Such a
+        project keeps its stored `k_w` verbatim and is marked LEGACY_PROJECT, so
+        a manually chosen value is never presented as model-derived.
+        """
+
+        if not hasattr(self, "_winding_factor_mode_var"):
+            return
+        stored_mode = preferences.get("winding_factor_mode")
+        if stored_mode is None:
+            self._winding_factor_mode_var.set(
+                WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.MANUAL]
+            )
+            self._coil_span_slots_var.set("")
+            self._skew_slots_var.set("0")
+            self._winding_factor_manual_provenance = WindingFactorProvenance.LEGACY_PROJECT
+            self._refresh_winding_factor_summary()
+            return
+        try:
+            mode = WindingFactorMode(str(stored_mode).strip().lower())
+        except ValueError:
+            mode = WindingFactorMode.MANUAL
+        self._winding_factor_mode_var.set(WINDING_FACTOR_MODE_LABELS_ZH[mode])
+        self._coil_span_slots_var.set(str(preferences.get("coil_span_slots", "") or ""))
+        self._skew_slots_var.set(str(preferences.get("skew_slots", "0") or "0"))
+        self._winding_factor_manual_provenance = WindingFactorProvenance.MANUAL_USER
+        self._refresh_winding_factor_summary()
 
     def _index_legacy_input_widgets(self, frame) -> None:
         variable_to_field = {str(variable): name for name, variable in self.vars.items()}
@@ -361,6 +541,13 @@ class MotorCalculatorAppMixin:
             "angle_unit": self._display_unit_preferences.angle,
             "preset_id": self._last_preset_id,
             "preset_version": self._last_preset_version,
+            # RC2 winding-factor provenance metadata. These live in the optional
+            # schema v1 ui_preferences map on purpose: `k_w` remains the single
+            # authoritative physics input, so no PROJECT_INPUT_SPECS change and
+            # no project-hash change is required, and older projects still load.
+            "winding_factor_mode": self._selected_winding_factor_mode().value,
+            "coil_span_slots": str(self._coil_span_slots_var.get()).strip(),
+            "skew_slots": str(self._skew_slots_var.get()).strip(),
         }
 
     def _restore_ui_preferences(self, preferences) -> None:
@@ -379,6 +566,7 @@ class MotorCalculatorAppMixin:
         self._last_preset_id = preferences.get("preset_id")
         version = preferences.get("preset_version")
         self._last_preset_version = int(version) if version is not None else None
+        self._restore_winding_factor_preferences(preferences)
         self._update_input_unit_labels()
         self._guided_input_panel.set_preferences(restored)
         self._apply_input_mode_visibility()
@@ -1341,7 +1529,18 @@ class MotorCalculatorAppMixin:
         return display_to_canonical_inputs(raw, self._display_unit_preferences)
 
     def _get_params(self) -> Dict[str, Any]:
-        return parse_legacy_gui_params(self._collect_raw_params())
+        parsed = parse_legacy_gui_params(self._collect_raw_params())
+        if not hasattr(self, "_winding_factor_mode_var"):
+            return parsed
+        # RC2: AUTO replaces the manual `k_w` only when the geometry genuinely
+        # supports the derivation. Every other case preserves the manual value,
+        # so existing projects and presets are never reinterpreted silently.
+        resolution = self._resolve_winding_factor_for(parsed)
+        self._winding_factor_resolution = resolution
+        if resolution.is_auto and resolution.value is not None:
+            parsed = dict(parsed)
+            parsed["k_w"] = float(resolution.value)
+        return parsed
 
     def _inject_phase3a_report_summary(self) -> None:
         if not getattr(self, "calc_results", None):
@@ -1358,6 +1557,59 @@ class MotorCalculatorAppMixin:
             "",
         ]
         self.result_text.insert("1.0", "\n".join(summary_lines))
+
+    def _inject_rc2_engineering_summary(self, params, assessment) -> None:
+        """Lead the detailed report with the modern, same-basis conclusions."""
+
+        if not getattr(self, "calc_results", None):
+            return
+        performance = self.calc_results.performance
+        resolution = self._latest_winding_factor_resolution()
+
+        if assessment.slot_fill_factor is None:
+            occupancy_line = (
+                f"   近似裸铜槽占比        : 信息不足（{assessment.slot_fill_status.value}）"
+            )
+        else:
+            occupancy_line = (
+                f"   近似裸铜槽占比        : {assessment.slot_fill_factor:.4f}"
+                f" ({assessment.slot_fill_factor * 100.0:.1f} %)"
+            )
+        if assessment.voltage_margin_percent is None:
+            voltage_line = (
+                f"   同基电压裕量          : 信息不足（{assessment.voltage_status.value}）"
+            )
+        else:
+            voltage_line = (
+                f"   同基电压裕量          : {assessment.voltage_margin_percent:.2f} %"
+                f" (可用/所需线电压 RMS {assessment.available_voltage_line_rms_v:.2f}"
+                f"/{assessment.required_voltage_line_rms_v:.2f} V)"
+            )
+
+        lines = [
+            "",
+            "RC2 工程结论摘要（同基口径）",
+            "-" * 70,
+            f"   额定转矩              : {performance.rated_torque_nm:.4f} Nm",
+            f"   输出功率              : {performance.output_power_w:.2f} W",
+            f"   当前模型估算效率      : {performance.efficiency_percent:.2f} %",
+            f"   电流密度              : {assessment.current_density_a_per_mm2:.4f} A/mm²",
+            voltage_line,
+            occupancy_line,
+        ]
+        if resolution is not None:
+            lines.extend(format_winding_factor_report_lines_zh(resolution))
+        lines.extend(
+            [
+                "   说明                  : 槽占比仅为裸铜截面积近似占比，未包含导线绝缘、"
+                "槽绝缘、排布和绕制工艺；",
+                "                           电压裕量使用统一 line-RMS 基准，不等同于完整"
+                "逆变器瞬态动态裕量。",
+                "-" * 70,
+                "",
+            ]
+        )
+        self.result_text.insert("1.0", "\n".join(lines))
 
     def run_analysis(self):
         try:
@@ -1383,6 +1635,7 @@ class MotorCalculatorAppMixin:
             if assessment is None:
                 assessment = evaluate_design_feasibility(params, self.calc_results)
                 self._latest_feasibility_assessment = assessment
+            self._inject_rc2_engineering_summary(params, assessment)
             dashboard_data = build_dashboard_data(params, self.calc_results, assessment)
             self.results_dashboard.set_result(
                 dashboard_data,

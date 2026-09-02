@@ -655,6 +655,97 @@ def _capture_window(root, destination: Path) -> str | None:
     return None
 
 
+def _exercise_rc2_winding_factor_and_occupancy(root, app) -> dict[str, Any]:
+    """RC2: slot occupancy and winding-factor provenance must be user-visible."""
+
+    from motor_calculator.motor_core.winding_factor import (
+        WINDING_FACTOR_MODE_LABELS_ZH,
+        WindingFactorMode,
+        WindingFactorProvenance,
+    )
+
+    results: dict[str, Any] = {}
+    manual_label = WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.MANUAL]
+    auto_label = WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.AUTO]
+
+    app._winding_factor_mode_var.set(manual_label)
+    app._coil_span_slots_var.set("")
+    app._skew_slots_var.set("0")
+    root.update()
+    app.run_analysis()
+    root.update()
+    manual_resolution = app._latest_winding_factor_resolution()
+    manual_report = app.result_text.get("1.0", "end")
+    manual_kw = float(app._get_params()["k_w"])
+    results["rc2_manual_provenance"] = manual_resolution.provenance.value
+    results["rc2_manual_k_w"] = manual_kw
+    results["rc2_manual_matches_input"] = math.isclose(
+        manual_kw, float(app.vars["k_w"].get()), rel_tol=1e-12
+    )
+    results["rc2_manual_label_visible"] = manual_label in manual_report
+    results["rc2_report_shows_occupancy"] = "近似裸铜槽占比" in manual_report
+    results["rc2_report_shows_same_basis_voltage"] = "同基电压裕量" in manual_report
+    results["rc2_report_shows_winding_factor"] = "基波绕组系数 k_w1" in manual_report
+    results["rc2_summary_caption_present"] = bool(
+        str(app._winding_factor_summary_var.get()).strip()
+    )
+
+    # AUTO without a coil span must not invent full pitch.
+    app._winding_factor_mode_var.set(auto_label)
+    app._coil_span_slots_var.set("")
+    root.update()
+    app.run_analysis()
+    root.update()
+    without_span = app._latest_winding_factor_resolution()
+    results["rc2_auto_without_span_provenance"] = without_span.provenance.value
+    results["rc2_auto_without_span_preserves_manual"] = math.isclose(
+        float(app._get_params()["k_w"]), manual_kw, rel_tol=1e-12
+    )
+
+    # AUTO with an explicit coil span derives k_w1 and shows k_d / k_p / k_s.
+    app._coil_span_slots_var.set("1")
+    root.update()
+    app.run_analysis()
+    root.update()
+    auto_resolution = app._latest_winding_factor_resolution()
+    auto_report = app.result_text.get("1.0", "end")
+    results["rc2_auto_provenance"] = auto_resolution.provenance.value
+    results["rc2_auto_k_w"] = auto_resolution.value
+    results["rc2_auto_used_in_params"] = math.isclose(
+        float(app._get_params()["k_w"]), float(auto_resolution.value), rel_tol=1e-12
+    )
+    results["rc2_auto_report_shows_kd"] = "分布系数 k_d" in auto_report
+    results["rc2_auto_report_shows_kp"] = "节距系数 k_p" in auto_report
+    results["rc2_auto_report_shows_ks"] = "偏斜系数 k_s" in auto_report
+    results["rc2_auto_label_visible"] = auto_label in auto_report
+    results["rc2_auto_breakdown_present"] = auto_resolution.breakdown is not None
+    if auto_resolution.breakdown is not None:
+        results["rc2_auto_k_d"] = auto_resolution.breakdown.distribution_factor
+        results["rc2_auto_k_p"] = auto_resolution.breakdown.pitch_factor
+        results["rc2_auto_k_s"] = auto_resolution.breakdown.skew_factor
+
+    # Switching back must restore the manual value exactly.
+    app._winding_factor_mode_var.set(manual_label)
+    root.update()
+    app.run_analysis()
+    root.update()
+    results["rc2_switch_back_restores_manual"] = math.isclose(
+        float(app._get_params()["k_w"]), manual_kw, rel_tol=1e-12
+    )
+    results["rc2_switch_back_provenance"] = (
+        app._latest_winding_factor_resolution().provenance.value
+    )
+    app._coil_span_slots_var.set("")
+    root.update()
+    results["rc2_provenance_states_distinct"] = (
+        results["rc2_manual_provenance"] == WindingFactorProvenance.MANUAL_USER.value
+        and results["rc2_auto_provenance"] == WindingFactorProvenance.AUTO_GEOMETRY.value
+        and results["rc2_auto_without_span_provenance"]
+        == WindingFactorProvenance.NOT_ENOUGH_GEOMETRY.value
+    )
+    return results
+
+
 def run_real_gui_smoke(root, app, output_path: Path) -> None:
     """Exercise the real GUI, persist evidence/export, write JSON, then exit."""
 
@@ -692,6 +783,39 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             "file_menu_chinese": app._project_menu_bar.entrycget(1, "label") == tr("menu.file"),
             "guided_title_chinese": app._guided_input_panel.frame.cget("text") == tr("guided.title"),
         }
+        # RC2 first-launch policy: the application must open on the audited
+        # manufacturability starting example, not on a design that trips every
+        # feasibility gate before the user has changed anything.
+        from motor_calculator.validation.design_feasibility import (
+            FeasibilitySeverity,
+            evaluate_design_feasibility,
+        )
+
+        first_launch_params = app._get_params()
+        first_launch_result = main_window_module.LegacyGuiMotorModelBridge(
+            first_launch_params
+        ).run_full_analysis()
+        first_launch_assessment = evaluate_design_feasibility(
+            first_launch_params, first_launch_result
+        )
+        payload["rc2_first_launch_preset_id"] = app._last_preset_id
+        payload["rc2_first_launch_no_severe"] = not any(
+            issue.severity is FeasibilitySeverity.SEVERE_DESIGN_RISK
+            for issue in first_launch_assessment.issues
+        )
+        payload["rc2_first_launch_no_error"] = not first_launch_assessment.has_error
+        payload["rc2_first_launch_voltage_margin"] = (
+            first_launch_assessment.voltage_margin_percent
+        )
+        payload["rc2_first_launch_slot_occupancy"] = first_launch_assessment.slot_fill_factor
+        payload["rc2_first_launch_current_density"] = (
+            first_launch_assessment.current_density_a_per_mm2
+        )
+        if not (payload["rc2_first_launch_no_severe"] and payload["rc2_first_launch_no_error"]):
+            raise RuntimeError(
+                "RC2 first-launch state must not present a severely infeasible design"
+            )
+
         app.run_analysis()
         root.update()
         if not getattr(app, "calc_results", None):
@@ -765,6 +889,29 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             )
         ):
             raise RuntimeError("Phase 8I analysis GUI smoke did not pass every gate")
+        rc2_results = _exercise_rc2_winding_factor_and_occupancy(root, app)
+        payload.update(rc2_results)
+        if not all(
+            rc2_results[name]
+            for name in (
+                "rc2_manual_matches_input",
+                "rc2_manual_label_visible",
+                "rc2_report_shows_occupancy",
+                "rc2_report_shows_same_basis_voltage",
+                "rc2_report_shows_winding_factor",
+                "rc2_summary_caption_present",
+                "rc2_auto_without_span_preserves_manual",
+                "rc2_auto_used_in_params",
+                "rc2_auto_report_shows_kd",
+                "rc2_auto_report_shows_kp",
+                "rc2_auto_report_shows_ks",
+                "rc2_auto_label_visible",
+                "rc2_auto_breakdown_present",
+                "rc2_switch_back_restores_manual",
+                "rc2_provenance_states_distinct",
+            )
+        ):
+            raise RuntimeError("RC2 winding-factor / slot-occupancy GUI smoke did not pass every gate")
         project_results = _exercise_project_workflow(root, app, main_window_module, output)
         if not all(
             project_results[name]
