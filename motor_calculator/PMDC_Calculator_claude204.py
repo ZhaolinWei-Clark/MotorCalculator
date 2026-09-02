@@ -2177,8 +2177,13 @@ class MotorCalculatorApp:
         )
         
         if filepath:
+            # RC2 STEP 22: the legacy kernel keys keep their historical meaning,
+            # so an explicit, unambiguously named section carries the
+            # authoritative same-basis metrics instead of renaming them.
+            rc2_payload = getattr(self, "rc2_export_payload", None)
             data = {
                 "输入参数": self._get_params(),
+                "RC2工程结论": rc2_payload() if callable(rc2_payload) else None,
                 "计算结果": self.calc_results.to_dict(),
                 "波形数据": {
                     "反电动势": {k: v.tolist() if isinstance(v, np.ndarray) else v 
@@ -2249,6 +2254,27 @@ class MotorCalculatorApp:
                 writer.writerow(["电流密度 (A/mm²)", r.performance.J_current])
                 writer.writerow(["铜损 (W)", r.performance.P_cu])
                 writer.writerow(["涡流损耗 (W)", r.performance.P_eddy])
+                writer.writerow([])
+
+                # RC2 STEP 22: authoritative same-basis metrics with
+                # unambiguous names.
+                writer.writerow(["RC2 工程结论（同基口径）"])
+                rc2_payload = getattr(self, "rc2_export_payload", None)
+                rc2 = rc2_payload() if callable(rc2_payload) else {}
+                for key in (
+                    "slot_occupancy_ratio",
+                    "slot_occupancy_percent",
+                    "slot_occupancy_status",
+                    "voltage_margin_same_basis_percent",
+                    "voltage_available_line_rms_v",
+                    "voltage_required_line_rms_v",
+                    "winding_factor",
+                    "winding_factor_mode",
+                    "winding_factor_provenance",
+                    "legacy_linear_winding_proxy",
+                    "legacy_dc_bus_difference_percent",
+                ):
+                    writer.writerow([key, rc2.get(key)])
                 
             messagebox.showinfo("导出完成", f"数据已保存至:\n{filepath}")
     

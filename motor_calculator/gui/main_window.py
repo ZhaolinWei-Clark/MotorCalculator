@@ -366,6 +366,10 @@ class MotorCalculatorAppMixin:
         self._winding_factor_summary_var.set(format_winding_factor_summary_zh(resolution))
 
     def _latest_winding_factor_resolution(self):
+        # The panel does not exist while the legacy base class is still being
+        # constructed, and export paths must never depend on widget lifetime.
+        if not hasattr(self, "_winding_factor_mode_var"):
+            return None
         if getattr(self, "_winding_factor_resolution", None) is None:
             self._refresh_winding_factor_summary()
         return getattr(self, "_winding_factor_resolution", None)
@@ -1557,6 +1561,53 @@ class MotorCalculatorAppMixin:
             "",
         ]
         self.result_text.insert("1.0", "\n".join(summary_lines))
+
+    def rc2_export_payload(self, result=None) -> Dict[str, Any]:
+        """Authoritative, unambiguously named metrics for machine-readable export.
+
+        The legacy kernel keys `性能指标.voltage_margin_percent` and
+        `性能指标.fill_factor` keep their historical meaning and are therefore
+        not renamed. This payload is what consumers should read instead.
+        """
+
+        target = result if result is not None else getattr(self, "calc_results", None)
+        payload: Dict[str, Any] = {
+            "schema": "rc2.engineering_metrics.v1",
+            "note_zh": (
+                "本节为权威同基口径指标。计算结果节中的 voltage_margin_percent 与 "
+                "fill_factor 为 legacy 兼容值，不得按现代语义解读。"
+            ),
+        }
+        if target is None:
+            return payload
+        try:
+            params = self._get_params()
+            assessment = evaluate_design_feasibility(params, target)
+        except Exception:  # pragma: no cover - export must never crash the GUI
+            logging.getLogger(__name__).warning("RC2 export payload unavailable", exc_info=True)
+            return payload
+
+        occupancy = assessment.slot_fill_factor
+        payload.update(
+            {
+                "slot_occupancy_ratio": occupancy,
+                "slot_occupancy_percent": None if occupancy is None else occupancy * 100.0,
+                "slot_occupancy_status": assessment.slot_fill_status.value,
+                "voltage_margin_same_basis_percent": assessment.voltage_margin_percent,
+                "voltage_available_line_rms_v": assessment.available_voltage_line_rms_v,
+                "voltage_required_line_rms_v": assessment.required_voltage_line_rms_v,
+                "voltage_status": assessment.voltage_status.value,
+                "current_density_a_per_mm2": assessment.current_density_a_per_mm2,
+                "legacy_linear_winding_proxy": assessment.legacy_fill_proxy,
+                "legacy_dc_bus_difference_percent": float(
+                    target.performance.voltage_margin_percent
+                ),
+            }
+        )
+        resolution = self._latest_winding_factor_resolution()
+        if resolution is not None:
+            payload.update(resolution.to_dict())
+        return payload
 
     def _inject_rc2_engineering_summary(self, params, assessment) -> None:
         """Lead the detailed report with the modern, same-basis conclusions."""

@@ -176,3 +176,66 @@ def test_parsed_params_still_match_the_project_schema_key_set():
 
     parsed = parse_legacy_gui_params(build_sample_legacy_params())
     assert set(parsed) == set(PROJECT_INPUT_SPECS)
+
+
+# ---------------------------------------------------------------------------
+# STEP 22: machine-readable export must not expose legacy metrics under modern
+# names.
+# ---------------------------------------------------------------------------
+
+
+def test_rc2_export_payload_uses_unambiguous_metric_names():
+    import importlib
+
+    mixin = importlib.import_module("gui.main_window").MotorCalculatorAppMixin
+    raw = dict(_application_defaults())
+    raw.update(SLOTTED_DESIGN)
+    parsed, result, assessment = _evaluate(raw)
+
+    class _Stub(mixin):
+        def _collect_raw_params(self):
+            return dict(raw)
+
+    # The mixin builds Tk widgets in __init__, which a headless test must skip.
+    payload = mixin.rc2_export_payload(object.__new__(_Stub), result)
+
+    assert payload["schema"] == "rc2.engineering_metrics.v1"
+    assert payload["slot_occupancy_ratio"] == pytest.approx(assessment.slot_fill_factor)
+    assert payload["slot_occupancy_percent"] == pytest.approx(
+        assessment.slot_fill_factor * 100.0
+    )
+    assert payload["slot_occupancy_status"] == assessment.slot_fill_status.value
+    assert payload["voltage_margin_same_basis_percent"] == pytest.approx(
+        assessment.voltage_margin_percent
+    )
+    # Without the winding-factor panel the export omits those keys rather than
+    # guessing a provenance.
+    assert "winding_factor_provenance" not in payload
+
+    # Legacy values are present but only under explicitly legacy names.
+    assert payload["legacy_linear_winding_proxy"] == pytest.approx(
+        result.performance.fill_factor
+    )
+    assert payload["legacy_dc_bus_difference_percent"] == pytest.approx(
+        result.performance.voltage_margin_percent
+    )
+    assert "slot_fill_factor" not in payload
+    assert payload["voltage_margin_same_basis_percent"] != pytest.approx(
+        payload["legacy_dc_bus_difference_percent"]
+    )
+
+
+def test_rc2_export_payload_is_safe_without_results():
+    import importlib
+
+    mixin = importlib.import_module("gui.main_window").MotorCalculatorAppMixin
+
+    class _Stub(mixin):
+        calc_results = None
+
+        def _collect_raw_params(self):
+            return dict(_application_defaults())
+
+    payload = mixin.rc2_export_payload(object.__new__(_Stub))
+    assert payload["schema"] == "rc2.engineering_metrics.v1"
+    assert "slot_occupancy_ratio" not in payload
