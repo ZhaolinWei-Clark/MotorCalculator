@@ -88,6 +88,32 @@ def feasible_starting_inputs(base: Mapping[str, Any]) -> dict[str, Any]:
     return values
 
 
+# Phase 6F uses the linear SVPWM-compatible dq phase-peak envelope Vdc/sqrt(3).
+# Its balanced sinusoidal line-line RMS equivalent is Vdc/sqrt(2). Every
+# user-facing voltage comparison must use this same basis, because
+# `required_voltage_v` is a line-to-line RMS quantity.
+SVPWM_LINE_RMS_ENVELOPE_RATIO = 1.0 / math.sqrt(2.0)
+
+
+def same_basis_available_line_rms_v(dc_bus_voltage_v: float) -> float:
+    """Linear SVPWM-compatible line-to-line RMS envelope of the inverter.
+
+    This is the only voltage that may be compared against
+    `AnalysisResult.performance.required_voltage_v`. Comparing that requirement
+    against the raw DC bus voltage overstates the available headroom by
+    `sqrt(2)` and is the RC1 P0-2 defect.
+    """
+
+    return float(dc_bus_voltage_v) * SVPWM_LINE_RMS_ENVELOPE_RATIO
+
+
+def same_basis_voltage_margin_percent(
+    dc_bus_voltage_v: float, required_line_rms_v: float
+) -> float:
+    available = same_basis_available_line_rms_v(dc_bus_voltage_v)
+    return (available - float(required_line_rms_v)) / available * 100.0
+
+
 def _current_density(
     parameters: Mapping[str, Any], result: AnalysisResult
 ) -> tuple[float, float, float]:
@@ -144,12 +170,10 @@ def _voltage_margin(
     if waveform not in {"正弦波", "PMSM", "pmsm"}:
         return None, None, FeasibilityCalculability.NOT_ENOUGH_SEMANTICS
 
-    # Phase 6F uses the linear SVPWM-compatible dq phase-peak envelope Vdc/sqrt(3).
-    # Its balanced sinusoidal line-line RMS equivalent is Vdc/sqrt(2).
-    available_line_rms_v = float(parameters["V_dc"]) / math.sqrt(2.0)
+    available_line_rms_v = same_basis_available_line_rms_v(parameters["V_dc"])
     required_line_rms_v = float(result.performance.required_voltage_v)
-    margin_percent = (
-        (available_line_rms_v - required_line_rms_v) / available_line_rms_v * 100.0
+    margin_percent = same_basis_voltage_margin_percent(
+        parameters["V_dc"], required_line_rms_v
     )
     return available_line_rms_v, margin_percent, FeasibilityCalculability.APPROXIMATE
 

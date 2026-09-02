@@ -1996,6 +1996,14 @@ class MotorCalculatorApp:
     
     def run_optimization(self):
         """运行自动设计优化"""
+        # RC2 P0-2: `V_required` 是线电压 RMS 需求，必须与同基的线性 SVPWM 电压
+        # 包络 Vdc/sqrt(2) 比较，而不是直接与直流母线电压 Vdc 比较。旧口径会高估
+        # 约 sqrt(2) 倍可用电压，从而接受并推荐无法实现的设计。
+        from motor_calculator.validation.design_feasibility import (
+            evaluate_design_feasibility,
+            same_basis_available_line_rms_v,
+        )
+
         try:
             params = self._get_params()
             
@@ -2010,7 +2018,10 @@ class MotorCalculatorApp:
             best_params = None
             best_results = None
             
-            target_V = params["V_dc"] * 0.85  # 目标85%电压利用率
+            # RC2 P0-2: 电压利用率目标同样必须落在同基包络内。旧实现以 0.85*Vdc
+            # 为目标线电压 RMS，该目标本身已超出 Vdc/sqrt(2) 包络。
+            available_line_rms_V = same_basis_available_line_rms_v(params["V_dc"])
+            target_V = available_line_rms_V * 0.85  # 目标：同基可用线电压 RMS 的 85%
             
             optimization_log = []
             
@@ -2048,9 +2059,15 @@ class MotorCalculatorApp:
                 perf = results.performance
                 
                 # 硬约束（重罚）
-                if perf.V_required > params["V_dc"]:
+                if perf.V_required > available_line_rms_V:
                     score -= 10000
-                if perf.K_fill > params["fill_limit"]:
+                # RC2 P0-1: legacy K_fill 是内圆周线宽比例，不是槽满率，且对任何
+                # 现实设计都远大于 1，因此旧约束恒定命中、不携带任何信息。改为使用
+                # Phase 8G 的近似裸铜槽占比；槽几何不足时不施加槽面积惩罚。
+                candidate_occupancy = evaluate_design_feasibility(
+                    params, results
+                ).slot_fill_factor
+                if candidate_occupancy is not None and candidate_occupancy > params["fill_limit"]:
                     score -= 5000
                 if perf.J_current > 8:
                     score -= 2000
@@ -2068,7 +2085,8 @@ class MotorCalculatorApp:
                     "V_req": perf.V_required,
                     "J": perf.J_current,
                     "Eff": perf.Efficiency,
-                    "K_fill": perf.K_fill,
+                    "legacy_K_fill": perf.K_fill,
+                    "slot_occupancy": candidate_occupancy,
                     "Score": score
                 })
                 
@@ -2092,12 +2110,43 @@ class MotorCalculatorApp:
                 self.result_text.insert(tk.END, f"  • 并联根数: {int(best_params['n_parallel'])}\n\n")
                 
                 perf = best_results.performance
+                # RC2 P0-1/P0-2: 面向用户的可行性结论一律来自 Phase 8G 同基评估，
+                # legacy V_margin / K_fill 仅作为兼容值显式标注保留。
+                best_assessment = evaluate_design_feasibility(best_params, best_results)
                 self.result_text.insert(tk.END, "优化后性能:\n")
                 self.result_text.insert(tk.END, f"  • 效率: {perf.Efficiency:.2f}%\n")
-                self.result_text.insert(tk.END, f"  • 电压裕量: {perf.V_margin:.1f}%\n")
                 self.result_text.insert(tk.END, f"  • 电流密度: {perf.J_current:.2f} A/mm²\n")
-                self.result_text.insert(tk.END, f"  • 填充系数: {perf.K_fill:.3f}\n")
-                self.result_text.insert(tk.END, f"  • 转矩脉动: {perf.T_ripple:.2f}%\n\n")
+                if best_assessment.voltage_margin_percent is None:
+                    self.result_text.insert(
+                        tk.END,
+                        f"  • 同基电压裕量: 信息不足（{best_assessment.voltage_status.value}）\n",
+                    )
+                else:
+                    self.result_text.insert(
+                        tk.END,
+                        f"  • 同基电压裕量: {best_assessment.voltage_margin_percent:.1f}%"
+                        f"（可用线电压 RMS {best_assessment.available_voltage_line_rms_v:.2f} V）\n",
+                    )
+                if best_assessment.slot_fill_factor is None:
+                    self.result_text.insert(
+                        tk.END,
+                        f"  • 近似裸铜槽占比: 信息不足（{best_assessment.slot_fill_status.value}）\n",
+                    )
+                else:
+                    self.result_text.insert(
+                        tk.END,
+                        f"  • 近似裸铜槽占比: {best_assessment.slot_fill_factor:.4f}"
+                        f"（{best_assessment.slot_fill_factor * 100.0:.1f}%）\n",
+                    )
+                self.result_text.insert(tk.END, f"  • 转矩脉动: {perf.T_ripple:.2f}%\n")
+                self.result_text.insert(
+                    tk.END,
+                    f"  • Legacy 直流母线差额: {perf.V_margin:.1f}%（兼容值，非工程结论）\n",
+                )
+                self.result_text.insert(
+                    tk.END,
+                    f"  • Legacy 线性绕组占比: {perf.K_fill:.3f}（兼容值，非槽满率）\n\n",
+                )
                 
                 # 显示完整报告
                 self._display_report()
@@ -2328,8 +2377,33 @@ class MotorCalculatorApp:
                 f.write(f"   铁损: {r.performance.P_core:.2f} W\n")
                 f.write(f"   效率: {r.performance.Efficiency:.4f} %\n")
                 f.write(f"   所需电压: {r.performance.V_required:.2f} V\n")
-                f.write(f"   电压裕量: {r.performance.V_margin:.2f} %\n")
-                f.write(f"   填充系数: {r.performance.K_fill:.4f}\n")
+                # RC2 P0-1/P0-2: 导出必须使用同基 Phase 8G 语义；legacy 指标保留
+                # 但显式标注，不得以 slot_fill_factor / 电压裕量 之名导出。
+                try:
+                    from motor_calculator.validation.design_feasibility import (
+                        evaluate_design_feasibility as _evaluate_feasibility,
+                    )
+
+                    _fa = _evaluate_feasibility(self._get_params(), r)
+                except Exception:
+                    _fa = None
+                if _fa is None or _fa.voltage_margin_percent is None:
+                    f.write("   同基电压裕量: 信息不足\n")
+                else:
+                    f.write(
+                        f"   同基电压裕量: {_fa.voltage_margin_percent:.2f} %"
+                        f" (可用线电压 RMS {_fa.available_voltage_line_rms_v:.4f} V)\n"
+                    )
+                if _fa is None or _fa.slot_fill_factor is None:
+                    _status = "NOT_ENOUGH_GEOMETRY" if _fa is None else _fa.slot_fill_status.value
+                    f.write(f"   近似裸铜槽占比: 信息不足 ({_status})\n")
+                else:
+                    f.write(
+                        f"   近似裸铜槽占比: {_fa.slot_fill_factor:.4f}"
+                        f" ({_fa.slot_fill_factor * 100.0:.2f} %)\n"
+                    )
+                f.write(f"   Legacy 直流母线差额: {r.performance.V_margin:.2f} % (兼容值，非工程结论)\n")
+                f.write(f"   Legacy 线性绕组占比: {r.performance.K_fill:.4f} (兼容值，非槽满率)\n")
                 f.write("\n")
                 
                 # 第八部分：波形数据
