@@ -74,6 +74,8 @@ def evaluate_speed_points(
                     required_voltage_line_rms_v=None,
                     available_voltage_line_rms_v=None,
                     voltage_margin_percent=None,
+                    legacy_required_voltage_line_rms_v=None,
+                    legacy_voltage_margin_percent=None,
                     efficiency_percent=None,
                     current_density_a_per_mm2=None,
                     availability=AvailabilityStatus.INVALID,
@@ -88,9 +90,13 @@ def evaluate_speed_points(
                 speed_rpm=float(speed),
                 torque_nm=float(performance.rated_torque_nm),
                 output_power_w=float(performance.output_power_w),
-                required_voltage_line_rms_v=float(performance.required_voltage_v),
+                # Phase 9C: the authoritative curve is the corrected same-basis
+                # requirement; the legacy value is carried only for comparison.
+                required_voltage_line_rms_v=assessment.required_voltage_line_rms_v,
                 available_voltage_line_rms_v=assessment.available_voltage_line_rms_v,
                 voltage_margin_percent=assessment.voltage_margin_percent,
+                legacy_required_voltage_line_rms_v=float(performance.required_voltage_v),
+                legacy_voltage_margin_percent=assessment.legacy_voltage_margin_percent,
                 efficiency_percent=float(performance.efficiency_percent),
                 current_density_a_per_mm2=float(assessment.current_density_a_per_mm2),
                 availability=AvailabilityStatus.AVAILABLE,
@@ -138,6 +144,7 @@ def build_speed_sweep_series(result: SpeedSweepResult) -> tuple[PlotSeries, ...]
         unit: str,
         *,
         unavailable_reason: str = "",
+        default_visible: bool = True,
     ) -> PlotSeries:
         values = tuple(
             getattr(point, attribute)
@@ -157,16 +164,27 @@ def build_speed_sweep_series(result: SpeedSweepResult) -> tuple[PlotSeries, ...]
             availability=AvailabilityStatus.AVAILABLE if available else AvailabilityStatus.UNAVAILABLE,
             unavailable_reason_zh="" if available else unavailable_reason,
             source_label_zh=result.source_label_zh,
+            default_visible=default_visible,
         )
 
     voltage_reason = "当前 BLDC 模型语义不足，无法生成同基电压裕量曲线。"
     return (
         series("torque_speed", "转矩", "torque_nm", "转矩 (Nm)", "Nm"),
         series("power_speed", "输出功率", "output_power_w", "输出功率 (W)", "W"),
-        series("required_voltage", "所需线电压 RMS", "required_voltage_line_rms_v", "线电压 RMS (V)", "V"),
+        series("required_voltage", "所需线电压 RMS", "required_voltage_line_rms_v", "线电压 RMS (V)", "V", unavailable_reason=voltage_reason),
         series("available_voltage", "可用线电压 RMS", "available_voltage_line_rms_v", "线电压 RMS (V)", "V", unavailable_reason=voltage_reason),
         series("voltage_margin", "同基电压裕量", "voltage_margin_percent", "电压裕量 (%)", "%", unavailable_reason=voltage_reason),
         series("efficiency", "当前模型估算效率", "efficiency_percent", "效率 (%)", "%"),
+        # Phase 9C: legacy comparison curve, available but not drawn by default.
+        series(
+            "legacy_required_voltage",
+            "兼容值：legacy 所需线电压 RMS",
+            "legacy_required_voltage_line_rms_v",
+            "线电压 RMS (V)",
+            "V",
+            unavailable_reason=voltage_reason,
+            default_visible=False,
+        ),
     )
 
 

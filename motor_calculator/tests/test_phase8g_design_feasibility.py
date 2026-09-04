@@ -117,7 +117,9 @@ def test_voltage_comparison_uses_consistent_svpwm_line_rms_basis() -> None:
     assert assessment.available_voltage_line_rms_v == pytest.approx(
         parameters["V_dc"] / math.sqrt(2.0)
     )
-    assert assessment.required_voltage_line_rms_v == pytest.approx(
+    # Phase 9C: the authoritative requirement is the corrected same-basis value;
+    # the legacy mixed-basis number is now exposed under its own explicit name.
+    assert assessment.legacy_required_voltage_line_rms_v == pytest.approx(
         result.performance.required_voltage_v
     )
     assert assessment.voltage_status is FeasibilityCalculability.APPROXIMATE
@@ -132,16 +134,34 @@ def test_bldc_voltage_basis_remains_unavailable_without_waveform_assumption() ->
     assert "VOLTAGE_BASIS_UNAVAILABLE" in {issue.code for issue in assessment.issues}
 
 
-def test_feasible_starting_example_has_no_error_warning_or_severe_risk() -> None:
-    parameters = _feasible_inputs()
+def test_feasible_starting_example_v2_has_no_error_warning_or_severe_risk() -> None:
+    """Phase 9C: v1 is infeasible on the authoritative corrected basis, so the
+    accepted starting example is now v2."""
+
+    parameters = dict(
+        _feasible_inputs(),
+        n_rated=1800.0,
+        N_ph_turns=42,
+        n_parallel=3,
+    )
     result, assessment = _run(parameters)
     assert not assessment.has_error
     assert not assessment.has_severe_design_risk
     assert all(issue.severity is FeasibilitySeverity.INFO for issue in assessment.issues)
     assert assessment.current_density_a_per_mm2 <= 5.0
-    assert assessment.slot_fill_factor == pytest.approx(0.31768914474503523)
-    assert assessment.voltage_margin_percent == pytest.approx(15.62548387156598)
+    assert assessment.slot_fill_factor == pytest.approx(0.40028832237874445)
+    assert assessment.voltage_margin_percent == pytest.approx(19.281523849990723)
+    assert assessment.legacy_voltage_margin_percent == pytest.approx(38.45859350010581)
     assert result.performance.output_power_w == 600.0
+
+
+def test_previous_v1_starting_example_is_now_voltage_limited() -> None:
+    """Regression anchor for why the startup preset had to move to v2."""
+
+    _result, assessment = _run(_feasible_inputs())
+    assert assessment.legacy_voltage_margin_percent == pytest.approx(15.62548387156598)
+    assert assessment.voltage_margin_percent == pytest.approx(-5.102538786591522)
+    assert assessment.has_severe_design_risk
 
 
 def test_intentionally_bad_design_still_triggers_multiple_severe_risks() -> None:

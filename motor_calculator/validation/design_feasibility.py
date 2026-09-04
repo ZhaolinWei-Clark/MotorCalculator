@@ -8,6 +8,10 @@ from enum import Enum
 from typing import Any, Mapping
 
 from motor_calculator.motor_core.models import AnalysisResult
+from motor_calculator.motor_core.voltage_semantics import (
+    VOLTAGE_AUTHORITY_CORRECTED,
+    VOLTAGE_AUTHORITY_LEGACY_REFERENCE,
+)
 
 
 class FeasibilitySeverity(str, Enum):
@@ -43,15 +47,19 @@ class DesignFeasibilityAssessment:
     total_slot_copper_area_mm2: float | None
     total_available_slot_area_mm2: float | None
     legacy_fill_proxy: float
-    required_voltage_line_rms_v: float
+    # Phase 9C: these three are the AUTHORITATIVE voltage results. For PMSM they
+    # carry the corrected single-basis values; for BLDC they are None because the
+    # sinusoidal phasor basis does not apply.
+    required_voltage_line_rms_v: float | None
     available_voltage_line_rms_v: float | None
     voltage_margin_percent: float | None
     voltage_status: FeasibilityCalculability
     issues: tuple[FeasibilityIssue, ...]
-    # Phase 9B C1 parallel outputs. `voltage_margin_percent` above stays the
-    # legacy-sourced same-basis margin and still drives the severity codes.
-    corrected_required_voltage_line_rms_v: float | None = None
-    corrected_voltage_margin_percent: float | None = None
+    # Legacy mixed-basis values, retained for compatibility/diagnostics only.
+    # They drive no severity code and no user recommendation.
+    legacy_required_voltage_line_rms_v: float = 0.0
+    legacy_voltage_margin_percent: float | None = None
+    voltage_model_provenance: str = VOLTAGE_AUTHORITY_CORRECTED
 
     @property
     def has_error(self) -> bool:
@@ -64,8 +72,27 @@ class DesignFeasibilityAssessment:
             for issue in self.issues
         )
 
+    @property
+    def voltage_margin_line_rms_percent(self) -> float | None:
+        """Authoritative same-basis margin; alias of `voltage_margin_percent`."""
+
+        return self.voltage_margin_percent
+
+    @property
+    def corrected_required_voltage_line_rms_v(self) -> float | None:
+        """Phase 9B name, retained as a non-breaking alias."""
+
+        return self.required_voltage_line_rms_v
+
+    @property
+    def corrected_voltage_margin_percent(self) -> float | None:
+        """Phase 9B name, retained as a non-breaking alias."""
+
+        return self.voltage_margin_percent
+
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
+        payload["voltage_margin_line_rms_percent"] = self.voltage_margin_line_rms_percent
         payload["current_density_status"] = self.current_density_status.value
         payload["slot_fill_status"] = self.slot_fill_status.value
         payload["voltage_status"] = self.voltage_status.value
@@ -167,36 +194,47 @@ def _slot_fill(
     )
 
 
-def _voltage_margin(
+def _authoritative_voltage(
     parameters: Mapping[str, Any], result: AnalysisResult
-) -> tuple[float | None, float | None, FeasibilityCalculability]:
+) -> tuple[float | None, float | None, float | None, FeasibilityCalculability]:
+    """Phase 9C: the AUTHORITATIVE voltage check uses the corrected requirement.
+
+    Returns `(available, required, margin, status)`. The legacy mixed-basis
+    value is never consulted here; it is reported separately for reference.
+    """
+
     waveform = str(parameters.get("waveform", ""))
     if waveform not in {"正弦波", "PMSM", "pmsm"}:
-        return None, None, FeasibilityCalculability.NOT_ENOUGH_SEMANTICS
+        return None, None, None, FeasibilityCalculability.NOT_ENOUGH_SEMANTICS
+
+    corrected = result.performance.required_voltage_line_rms_v
+    if corrected is None:
+        return None, None, None, FeasibilityCalculability.NOT_ENOUGH_SEMANTICS
 
     available_line_rms_v = same_basis_available_line_rms_v(parameters["V_dc"])
-    required_line_rms_v = float(result.performance.required_voltage_v)
+    required_line_rms_v = float(corrected)
     margin_percent = same_basis_voltage_margin_percent(
         parameters["V_dc"], required_line_rms_v
     )
-    return available_line_rms_v, margin_percent, FeasibilityCalculability.APPROXIMATE
-
-
-def _corrected_voltage_margin(
-    parameters: Mapping[str, Any], result: AnalysisResult
-) -> tuple[float | None, float | None]:
-    """Phase 9B C1 parallel margin, computed from the corrected requirement.
-
-    Same inverter envelope, different requirement. This is published alongside
-    the legacy-sourced margin and does not drive any severity code yet.
-    """
-
-    corrected = result.performance.required_voltage_line_rms_corrected_v
-    if corrected is None:
-        return None, None
     return (
-        float(corrected),
-        same_basis_voltage_margin_percent(parameters["V_dc"], float(corrected)),
+        available_line_rms_v,
+        required_line_rms_v,
+        margin_percent,
+        FeasibilityCalculability.APPROXIMATE,
+    )
+
+
+def _legacy_voltage_reference(
+    parameters: Mapping[str, Any], result: AnalysisResult
+) -> tuple[float, float | None]:
+    """Legacy mixed-basis reference values. These drive nothing."""
+
+    legacy_required = float(result.performance.required_voltage_v)
+    waveform = str(parameters.get("waveform", ""))
+    if waveform not in {"正弦波", "PMSM", "pmsm"}:
+        return legacy_required, None
+    return legacy_required, same_basis_voltage_margin_percent(
+        parameters["V_dc"], legacy_required
     )
 
 
@@ -209,8 +247,13 @@ def evaluate_design_feasibility(
     slot_fill, slot_status, total_copper, total_available = _slot_fill(
         parameters, conductor_area
     )
-    available_voltage, voltage_margin, voltage_status = _voltage_margin(parameters, result)
-    corrected_required_voltage, corrected_voltage_margin = _corrected_voltage_margin(
+    (
+        available_voltage,
+        required_voltage,
+        voltage_margin,
+        voltage_status,
+    ) = _authoritative_voltage(parameters, result)
+    legacy_required_voltage, legacy_voltage_margin = _legacy_voltage_reference(
         parameters, result
     )
     issues: list[FeasibilityIssue] = []
@@ -221,9 +264,11 @@ def evaluate_design_feasibility(
         else f"槽满率 {slot_status.value}"
     )
     voltage_summary = (
-        f"可用/所需线电压 RMS {available_voltage:.2f}/{float(result.performance.required_voltage_v):.2f} V，"
+        f"可用/所需线电压 RMS {available_voltage:.2f}/{required_voltage:.2f} V，"
         f"同基裕量 {voltage_margin:.1f}%"
-        if available_voltage is not None and voltage_margin is not None
+        if available_voltage is not None
+        and required_voltage is not None
+        and voltage_margin is not None
         else f"电压裕量 {voltage_status.value}"
     )
     issues.append(
@@ -300,7 +345,6 @@ def evaluate_design_feasibility(
                 )
             )
 
-    required_voltage = float(result.performance.required_voltage_v)
     if voltage_status is FeasibilityCalculability.NOT_ENOUGH_SEMANTICS:
         issues.append(
             FeasibilityIssue(
@@ -309,10 +353,14 @@ def evaluate_design_feasibility(
                 "BLDC 梯形波缺少受控的 PWM/换相电压基准，不能把 DC 母线与 legacy RMS 需求直接比较。",
             )
         )
-    elif available_voltage is not None and voltage_margin is not None:
+    elif (
+        available_voltage is not None
+        and required_voltage is not None
+        and voltage_margin is not None
+    ):
         detail = (
-            f"可用线电压 RMS 约 {available_voltage:.2f} V，legacy 所需线电压 RMS "
-            f"{required_voltage:.2f} V，同基裕量 {voltage_margin:.1f}%。"
+            f"可用线电压 RMS 约 {available_voltage:.2f} V，所需线电压 RMS "
+            f"{required_voltage:.2f} V（修正同基口径），同基裕量 {voltage_margin:.1f}%。"
         )
         if voltage_margin < 0.0:
             issues.append(
@@ -373,8 +421,13 @@ def evaluate_design_feasibility(
         voltage_margin_percent=voltage_margin,
         voltage_status=voltage_status,
         issues=tuple(issues),
-        corrected_required_voltage_line_rms_v=corrected_required_voltage,
-        corrected_voltage_margin_percent=corrected_voltage_margin,
+        legacy_required_voltage_line_rms_v=legacy_required_voltage,
+        legacy_voltage_margin_percent=legacy_voltage_margin,
+        voltage_model_provenance=(
+            VOLTAGE_AUTHORITY_CORRECTED
+            if required_voltage is not None
+            else VOLTAGE_AUTHORITY_LEGACY_REFERENCE
+        ),
     )
 
 

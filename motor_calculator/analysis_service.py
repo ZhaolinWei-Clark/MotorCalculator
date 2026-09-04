@@ -143,6 +143,42 @@ def _runner_settings(accuracy: SimulationAccuracy) -> tuple[SpeedControlRunnerCo
     return SpeedControlRunnerConfig(use_decoupling_feedforward=True), RK4Integrator()
 
 
+def dq_bridge_parameters(
+    inputs: MotorAnalysisInput | Mapping[str, object],
+    analysis_result: AnalysisResult,
+    *,
+    # Mechanical parameters are always supplied by the caller in production. The
+    # placeholder default only exists so the ELECTRICAL mapping can be inspected
+    # on its own; PMSMDynamicParameters rejects a non-positive inertia.
+    inertia_kg_m2: float = 1.0,
+    viscous_friction_nm_per_rad_s: float = 0.0,
+) -> PMSMDynamicParameters:
+    """Map a static PMSM result onto the Phase 6 dq sandbox parameters.
+
+    Phase 9C Step 6: `Ld = Lq` is the per-phase SYNCHRONOUS inductance
+    `L_s = L_ph - M`, the same quantity the corrected static voltage path uses.
+    Before this correction the bridge passed the phase self-inductance `L_ph`,
+    so the same machine carried two different inductances depending on which
+    path evaluated it. The dq equations themselves are unchanged.
+    """
+
+    model_input = _coerce_model_input(inputs)
+    electrical = analysis_result.electrical
+    torque_constant = electrical.torque_constant_nm_per_phase_peak_a
+    if torque_constant is None:
+        raise AnalysisUnavailableError("当前结果没有 PMSM 相峰值电流口径的 Kt，无法安全映射磁链。")
+    synchronous_inductance = electrical.line_inductance_h
+    return PMSMDynamicParameters(
+        Rs=electrical.phase_resistance_ohm,
+        Ld=synchronous_inductance,
+        Lq=synchronous_inductance,
+        psi_f=torque_constant / (1.5 * model_input.pole_pairs),
+        pole_pairs=model_input.pole_pairs,
+        J=inertia_kg_m2,
+        B=viscous_friction_nm_per_rad_s,
+    )
+
+
 def run_dynamic_analysis(
     inputs: MotorAnalysisInput | Mapping[str, object],
     analysis_result: AnalysisResult,
@@ -158,18 +194,11 @@ def run_dynamic_analysis(
     peak_current = analysis_result.performance.phase_current_peak_a
     if peak_current is None or peak_current <= 0.0:
         raise AnalysisUnavailableError("当前结果没有可用的 PMSM 相峰值电流限制。")
-    torque_constant = analysis_result.electrical.torque_constant_nm_per_phase_peak_a
-    assert torque_constant is not None
-    flux_linkage = torque_constant / (1.5 * model_input.pole_pairs)
-    scalar_inductance = analysis_result.electrical.phase_inductance_h
-    parameters = PMSMDynamicParameters(
-        Rs=analysis_result.electrical.phase_resistance_ohm,
-        Ld=scalar_inductance,
-        Lq=scalar_inductance,
-        psi_f=flux_linkage,
-        pole_pairs=model_input.pole_pairs,
-        J=settings.inertia_kg_m2,
-        B=settings.viscous_friction_nm_per_rad_s,
+    parameters = dq_bridge_parameters(
+        model_input,
+        analysis_result,
+        inertia_kg_m2=settings.inertia_kg_m2,
+        viscous_friction_nm_per_rad_s=settings.viscous_friction_nm_per_rad_s,
     )
     speed_controller = SpeedController(
         SpeedControllerConfig(
@@ -212,7 +241,7 @@ def run_dynamic_analysis(
         elapsed_seconds=time.perf_counter() - started,
         mapping_notes=(
             "Rs 使用当前静态 AnalysisResult 的相电阻。",
-            "Ld=Lq 使用当前标量相电感，仅作为表贴式 PMSM 沙盒近似。",
+            "Ld=Lq 使用每相同步电感 L_s = L_ph - M，与修正静态电压路径同口径；仅作为表贴式 PMSM 沙盒近似。",
             "psi_f 由显式 PMSM 相峰值电流 Kt / (1.5*p) 换算。",
             "J、B 与 PI 增益来自本次用户设置，不写回项目默认值。",
         ),

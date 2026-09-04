@@ -214,21 +214,24 @@ def test_c1_3_corrected_required_voltage_is_published(case_name):
 
 @pytest.mark.parametrize("case_name", sorted(C1_REFERENCE))
 def test_c1_3_both_margins_are_available_and_different(case_name):
+    """Phase 9C promoted the corrected margin to `voltage_margin_percent`; the
+    legacy-sourced margin now lives under `legacy_voltage_margin_percent`."""
+
     parsed, result = _evaluate(_cases()[case_name])
     assessment = evaluate_design_feasibility(parsed, result)
     expected = C1_REFERENCE[case_name]
 
-    assert assessment.voltage_margin_percent == pytest.approx(
+    assert assessment.legacy_voltage_margin_percent == pytest.approx(
         expected["legacy_margin"], rel=1e-12
     )
-    assert assessment.corrected_voltage_margin_percent == pytest.approx(
+    assert assessment.voltage_margin_percent == pytest.approx(
         expected["corrected_margin"], rel=1e-12
     )
-    assert assessment.corrected_required_voltage_line_rms_v == pytest.approx(
+    assert assessment.required_voltage_line_rms_v == pytest.approx(
         expected["corrected"], rel=1e-12
     )
     # The difference must never be hidden.
-    assert assessment.corrected_voltage_margin_percent < assessment.voltage_margin_percent
+    assert assessment.voltage_margin_percent < assessment.legacy_voltage_margin_percent
 
 
 def test_c1_3_bldc_reports_the_corrected_voltage_as_unavailable():
@@ -239,7 +242,7 @@ def test_c1_3_bldc_reports_the_corrected_voltage_as_unavailable():
     assert result.performance.required_voltage_line_rms_corrected_v is None
     assert "not_applicable" in result.performance.required_voltage_corrected_status
     assessment = evaluate_design_feasibility(parsed, result)
-    assert assessment.corrected_voltage_margin_percent is None
+    assert assessment.voltage_margin_percent is None
 
 
 # ---------------------------------------------------------------------------
@@ -289,8 +292,8 @@ def test_c1_4_feasibility_flips_are_counted_and_only_go_one_way():
     for raw in _campaign_grid():
         parsed, result = _evaluate(raw)
         assessment = evaluate_design_feasibility(parsed, result)
-        legacy_ok = assessment.voltage_margin_percent >= 0.0
-        corrected_ok = assessment.corrected_voltage_margin_percent >= 0.0
+        legacy_ok = assessment.legacy_voltage_margin_percent >= 0.0
+        corrected_ok = assessment.voltage_margin_percent >= 0.0
         assert not (corrected_ok and not legacy_ok), (
             "a design cannot become feasible under the corrected basis"
         )

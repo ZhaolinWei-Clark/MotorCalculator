@@ -119,10 +119,11 @@ def test_speed_sweep_csv_uses_the_same_basis_voltage_columns(tmp_path):
         rows = list(csv.DictReader(stream))
 
     assert rows
-    assert "voltage_margin_percent" in rows[0]
+    # Phase 9C renamed the authoritative column.
+    assert "voltage_margin_line_rms_percent" in rows[0]
     assert "voltage_available_line_rms_v" in rows[0]
     for row, point in zip(rows, sweep.points):
-        assert float(row["voltage_margin_percent"]) == pytest.approx(
+        assert float(row["voltage_margin_line_rms_percent"]) == pytest.approx(
             point.voltage_margin_percent, rel=1e-12
         )
         assert float(row["voltage_available_line_rms_v"]) == pytest.approx(
@@ -205,7 +206,7 @@ def test_rc2_export_payload_uses_unambiguous_metric_names():
         assessment.slot_fill_factor * 100.0
     )
     assert payload["slot_occupancy_status"] == assessment.slot_fill_status.value
-    assert payload["voltage_margin_same_basis_percent"] == pytest.approx(
+    assert payload["voltage_margin_line_rms_percent"] == pytest.approx(
         assessment.voltage_margin_percent
     )
     # Without the winding-factor panel the export omits those keys rather than
@@ -220,7 +221,7 @@ def test_rc2_export_payload_uses_unambiguous_metric_names():
         result.performance.voltage_margin_percent
     )
     assert "slot_fill_factor" not in payload
-    assert payload["voltage_margin_same_basis_percent"] != pytest.approx(
+    assert payload["voltage_margin_line_rms_percent"] != pytest.approx(
         payload["legacy_dc_bus_difference_percent"]
     )
 

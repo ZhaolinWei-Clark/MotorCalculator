@@ -12,6 +12,10 @@ from motor_calculator.motor_core.loss_semantics import (
     EDDY_LOSS_LIMITATION_ZH,
 )
 from motor_calculator.motor_core.models import AnalysisResult
+from motor_calculator.motor_core.voltage_semantics import (
+    LEGACY_VOLTAGE_REFERENCE_NOTE_ZH,
+    VOLTAGE_GUIDANCE_ZH,
+)
 from motor_calculator.validation.design_feasibility import (
     DesignFeasibilityAssessment,
     FeasibilitySeverity,
@@ -39,8 +43,9 @@ _PRECISION = {
     "kt_phase_rms": 4,
     "phase_current_rms_a": 3,
     "required_voltage_v": 2,
-    "required_voltage_line_rms_corrected_v": 2,
-    "corrected_voltage_margin_percent": 2,
+    "legacy_required_voltage_v": 2,
+    "legacy_voltage_margin_percent": 2,
+    "legacy_fill_proxy": 3,
     "back_emf_line_rms_v": 2,
     "copper_loss_w": 2,
     "eddy_loss_w": 2,
@@ -273,24 +278,45 @@ def build_dashboard_data(
         _optional_metric("ke_line_rms", "Ke 线电压 RMS", electrical.back_emf_constant_line_rms_v_per_krpm, "V/krpm", "按当前控制模式的显式 Ke 语义。", "AnalysisResult.electrical", "当前模式没有可用 Ke 语义。"),
         _optional_metric("kt_phase_rms", "Kt 相电流 RMS", electrical.torque_constant_nm_per_phase_rms_a, "Nm/A", "按当前控制模式的显式 Kt 语义。", "AnalysisResult.electrical", "当前模式没有可用 Kt 语义。"),
         _metric("phase_current_rms_a", "相电流 RMS", performance.phase_current_rms_a, "A", DashboardStatus.INFO, "当前工作点相电流有效值。", "AnalysisResult.performance"),
-        _metric("required_voltage_v", "所需线电压 RMS（legacy）", performance.required_voltage_v, "V", DashboardStatus.INFO, "legacy 混合基准 RSS 估计，保留为兼容值。", "AnalysisResult.performance"),
         _optional_metric(
-            "required_voltage_line_rms_corrected_v",
-            "所需线电压 RMS（修正同基）",
-            performance.required_voltage_line_rms_corrected_v,
+            "required_voltage_v",
+            "所需线电压 RMS",
+            performance.required_voltage_line_rms_v,
             "V",
-            "单一线电压 RMS 基准的稳态相量结果，与 Phase 6 dq 稳态解一致；尚未成为默认口径。",
+            VOLTAGE_GUIDANCE_ZH,
             "AnalysisResult.performance",
-            "当前控制模式缺少正弦相量基准，无法给出修正所需电压。",
+            "当前控制模式缺少正弦相量基准，无法给出同基所需电压。",
+        ),
+    )
+
+    # Phase 9C: legacy mixed-basis values are diagnostics only.
+    legacy_diagnostics = (
+        _metric(
+            "legacy_required_voltage_v",
+            "兼容值：legacy 所需线电压 RMS",
+            performance.legacy_required_voltage_v,
+            "V",
+            DashboardStatus.INFO,
+            LEGACY_VOLTAGE_REFERENCE_NOTE_ZH,
+            "AnalysisResult.performance",
         ),
         _optional_metric(
-            "corrected_voltage_margin_percent",
-            "同基电压裕量（修正）",
-            assessment.corrected_voltage_margin_percent,
+            "legacy_voltage_margin_percent",
+            "兼容值：legacy 同基裕量",
+            assessment.legacy_voltage_margin_percent,
             "%",
-            "使用修正所需电压与同一 SVPWM 包络比较；严重度判据仍由 legacy 值驱动。",
+            LEGACY_VOLTAGE_REFERENCE_NOTE_ZH,
             "validation.design_feasibility",
-            "当前控制模式缺少正弦相量基准，无法给出修正裕量。",
+            "当前控制模式缺少正弦相量基准。",
+        ),
+        _metric(
+            "legacy_fill_proxy",
+            "兼容值：legacy 线性绕组占比",
+            assessment.legacy_fill_proxy,
+            "",
+            DashboardStatus.INFO,
+            "内圆周一维裸铜线宽比例，不是槽满率，不得用于制造性结论。",
+            "validation.design_feasibility",
         ),
     )
 
@@ -308,6 +334,7 @@ def build_dashboard_data(
         feasibility_metrics=feasibility,
         electromagnetic_metrics=electromagnetic,
         loss_metrics=loss_metrics,
+        legacy_diagnostic_metrics=legacy_diagnostics,
         availability_items=availability_items,
         design_status=design_summary,
         result_label_zh=result_label_zh,

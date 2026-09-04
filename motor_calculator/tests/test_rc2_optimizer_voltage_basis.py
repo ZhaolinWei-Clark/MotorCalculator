@@ -183,8 +183,9 @@ def test_optimizer_summary_uses_modern_labels(slotted_starting_inputs):
     assert "同基电压裕量" in text
     assert "近似裸铜槽占比" in text
     # Legacy values may remain, but only as explicitly marked compatibility values.
-    assert "Legacy 直流母线差额" in text
+    assert "兼容值 legacy 直流母线差额" in text
     assert "Legacy 线性绕组占比" in text
+    assert "所需线电压 RMS" in text
     for line in text.splitlines():
         if line.strip().startswith("• 电压裕量") or line.strip().startswith("• 填充系数"):
             pytest.fail(f"legacy metric exposed under a modern-sounding label: {line!r}")

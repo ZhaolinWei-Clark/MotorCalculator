@@ -2002,8 +2002,9 @@ class MotorCalculatorApp:
     def run_optimization(self):
         """运行自动设计优化"""
         # RC2 P0-2: `V_required` 是线电压 RMS 需求，必须与同基的线性 SVPWM 电压
-        # 包络 Vdc/sqrt(2) 比较，而不是直接与直流母线电压 Vdc 比较。旧口径会高估
-        # 约 sqrt(2) 倍可用电压，从而接受并推荐无法实现的设计。
+        # 包络 Vdc/sqrt(2) 比较，而不是直接与直流母线电压 Vdc 比较。
+        # Phase 9C: 进一步把所需电压本身切换为修正的单一基准稳态相量值；
+        # legacy 混合基准值只作为兼容参考展示，不再参与接受判据或排序。
         from motor_calculator.validation.design_feasibility import (
             evaluate_design_feasibility,
             same_basis_available_line_rms_v,
@@ -2063,15 +2064,17 @@ class MotorCalculatorApp:
                 score = 0
                 perf = results.performance
                 
-                # 硬约束（重罚）
-                if perf.V_required > available_line_rms_V:
+                # 硬约束（重罚）。Phase 9C: 使用修正同基所需电压。
+                candidate_assessment = evaluate_design_feasibility(params, results)
+                candidate_required_v = candidate_assessment.required_voltage_line_rms_v
+                if candidate_required_v is None:
+                    continue
+                if candidate_required_v > available_line_rms_V:
                     score -= 10000
                 # RC2 P0-1: legacy K_fill 是内圆周线宽比例，不是槽满率，且对任何
                 # 现实设计都远大于 1，因此旧约束恒定命中、不携带任何信息。改为使用
                 # Phase 8G 的近似裸铜槽占比；槽几何不足时不施加槽面积惩罚。
-                candidate_occupancy = evaluate_design_feasibility(
-                    params, results
-                ).slot_fill_factor
+                candidate_occupancy = candidate_assessment.slot_fill_factor
                 if candidate_occupancy is not None and candidate_occupancy > params["fill_limit"]:
                     score -= 5000
                 if perf.J_current > 8:
@@ -2081,13 +2084,14 @@ class MotorCalculatorApp:
                 
                 # 软目标
                 score += perf.Efficiency * 10  # 最大化效率
-                score -= abs(target_V - perf.V_required) * 2  # 电压利用率
+                score -= abs(target_V - candidate_required_v) * 2  # 电压利用率（修正同基）
                 score -= perf.T_ripple * 10  # 最小化转矩脉动
                 
                 optimization_log.append({
                     "N": N_try,
                     "n_par": n_par_needed,
-                    "V_req": perf.V_required,
+                    "V_req": candidate_required_v,
+                    "legacy_V_req": perf.V_required,
                     "J": perf.J_current,
                     "Eff": perf.Efficiency,
                     "legacy_K_fill": perf.K_fill,
@@ -2129,8 +2133,15 @@ class MotorCalculatorApp:
                 else:
                     self.result_text.insert(
                         tk.END,
-                        f"  • 同基电压裕量: {best_assessment.voltage_margin_percent:.1f}%"
-                        f"（可用线电压 RMS {best_assessment.available_voltage_line_rms_v:.2f} V）\n",
+                        f"  • 所需线电压 RMS: {best_assessment.required_voltage_line_rms_v:.2f} V\n",
+                    )
+                    self.result_text.insert(
+                        tk.END,
+                        f"  • 可用线电压 RMS: {best_assessment.available_voltage_line_rms_v:.2f} V\n",
+                    )
+                    self.result_text.insert(
+                        tk.END,
+                        f"  • 同基电压裕量: {best_assessment.voltage_margin_percent:.1f}%\n",
                     )
                 if best_assessment.slot_fill_factor is None:
                     self.result_text.insert(
@@ -2146,7 +2157,11 @@ class MotorCalculatorApp:
                 self.result_text.insert(tk.END, f"  • 转矩脉动: {perf.T_ripple:.2f}%\n")
                 self.result_text.insert(
                     tk.END,
-                    f"  • Legacy 直流母线差额: {perf.V_margin:.1f}%（兼容值，非工程结论）\n",
+                    f"  • 兼容值 legacy 所需线电压 RMS: {perf.V_required:.2f} V（混合基准，仅供参考）\n",
+                )
+                self.result_text.insert(
+                    tk.END,
+                    f"  • 兼容值 legacy 直流母线差额: {perf.V_margin:.1f}%（非工程结论）\n",
                 )
                 self.result_text.insert(
                     tk.END,

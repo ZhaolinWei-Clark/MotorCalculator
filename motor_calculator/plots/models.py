@@ -79,6 +79,9 @@ class DashboardData:
     availability_items: tuple[AvailabilityItem, ...]
     design_status: DesignStatusSummary
     result_label_zh: str = "当前成功计算"
+    # Phase 9C: legacy mixed-basis values are kept for compatibility/debugging
+    # but must not sit beside the primary KPIs as if equally authoritative.
+    legacy_diagnostic_metrics: tuple[DashboardMetric, ...] = ()
 
     @property
     def metric_by_key(self) -> Mapping[str, DashboardMetric]:
@@ -89,6 +92,7 @@ class DashboardData:
                 self.feasibility_metrics,
                 self.electromagnetic_metrics,
                 self.loss_metrics,
+                self.legacy_diagnostic_metrics,
             )
             for metric in section
         }
@@ -99,6 +103,7 @@ class SpeedSweepPoint:
     speed_rpm: float
     torque_nm: float | None
     output_power_w: float | None
+    # Phase 9C authoritative values (corrected single-basis, PMSM only).
     required_voltage_line_rms_v: float | None
     available_voltage_line_rms_v: float | None
     voltage_margin_percent: float | None
@@ -107,6 +112,9 @@ class SpeedSweepPoint:
     availability: AvailabilityStatus
     feasibility_status: DashboardStatus
     message_zh: str = ""
+    # Legacy mixed-basis reference, retained for optional comparison only.
+    legacy_required_voltage_line_rms_v: float | None = None
+    legacy_voltage_margin_percent: float | None = None
 
 
 @dataclass(frozen=True)
@@ -136,6 +144,8 @@ class PlotSeries:
     availability: AvailabilityStatus
     unavailable_reason_zh: str = ""
     source_label_zh: str = ""
+    # Phase 9C: legacy comparison curves exist but are not drawn by default.
+    default_visible: bool = True
 
 
 @dataclass(frozen=True)

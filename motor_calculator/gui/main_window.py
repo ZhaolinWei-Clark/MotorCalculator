@@ -26,7 +26,12 @@ from motor_calculator.motor_core.loss_semantics import (
     loss_limitation_report_lines_zh,
     loss_model_status_payload,
 )
-from motor_calculator.motor_core.voltage_semantics import CORRECTED_VOLTAGE_BASIS
+from motor_calculator.motor_core.voltage_semantics import (
+    CORRECTED_VOLTAGE_BASIS,
+    LEGACY_VOLTAGE_REFERENCE_NOTE_ZH,
+    VOLTAGE_GUIDANCE_ZH,
+    VOLTAGE_SEMANTICS_VERSION,
+)
 from motor_calculator.motor_core.winding_factor import (
     COIL_SPAN_TOOLTIP_ZH,
     SKEW_TOOLTIP_ZH,
@@ -197,7 +202,10 @@ class MotorCalculatorAppMixin:
         self._apply_startup_example()
         self._initialize_project_support()
 
-    STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v1"
+    # Phase 9C: v2 is selected under the authoritative corrected voltage basis.
+    # v1 remains available as a legacy/reference starting example.
+    STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v2"
+    LEGACY_STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v1"
 
     def _apply_startup_example(self) -> bool:
         """RC2: open on the audited manufacturability starting example.
@@ -1603,29 +1611,33 @@ class MotorCalculatorAppMixin:
                 "slot_occupancy_ratio": occupancy,
                 "slot_occupancy_percent": None if occupancy is None else occupancy * 100.0,
                 "slot_occupancy_status": assessment.slot_fill_status.value,
-                "voltage_margin_same_basis_percent": assessment.voltage_margin_percent,
-                "voltage_available_line_rms_v": assessment.available_voltage_line_rms_v,
-                "voltage_required_line_rms_v": assessment.required_voltage_line_rms_v,
+                # Phase 9C authoritative voltage fields.
+                "required_voltage_line_rms_v": assessment.required_voltage_line_rms_v,
+                "available_voltage_line_rms_v": assessment.available_voltage_line_rms_v,
+                "voltage_margin_line_rms_percent": (
+                    assessment.voltage_margin_line_rms_percent
+                ),
                 "voltage_status": assessment.voltage_status.value,
-                # Phase 9B C1 parallel voltage outputs, explicitly named.
-                "voltage_required_line_rms_corrected_v": (
-                    target.performance.required_voltage_line_rms_corrected_v
+                "voltage_model_provenance": assessment.voltage_model_provenance,
+                "voltage_semantics_version": VOLTAGE_SEMANTICS_VERSION,
+                "voltage_basis": dict(CORRECTED_VOLTAGE_BASIS),
+                "voltage_guidance_zh": VOLTAGE_GUIDANCE_ZH,
+                # Legacy mixed-basis reference values, explicitly named.
+                "legacy_required_voltage_v": float(
+                    target.performance.legacy_required_voltage_v
                 ),
-                "voltage_margin_corrected_same_basis_percent": (
-                    assessment.corrected_voltage_margin_percent
+                "legacy_voltage_margin_percent": (
+                    assessment.legacy_voltage_margin_percent
                 ),
-                "voltage_legacy_corrected_relative_difference": (
-                    target.performance.required_voltage_legacy_corrected_relative_difference
-                ),
-                "voltage_corrected_status": (
-                    target.performance.required_voltage_corrected_status
-                ),
-                "voltage_corrected_basis": dict(CORRECTED_VOLTAGE_BASIS),
-                "current_density_a_per_mm2": assessment.current_density_a_per_mm2,
-                "legacy_linear_winding_proxy": assessment.legacy_fill_proxy,
                 "legacy_dc_bus_difference_percent": float(
                     target.performance.voltage_margin_percent
                 ),
+                "legacy_voltage_reference_note_zh": LEGACY_VOLTAGE_REFERENCE_NOTE_ZH,
+                "voltage_legacy_corrected_relative_difference": (
+                    target.performance.required_voltage_legacy_corrected_relative_difference
+                ),
+                "current_density_a_per_mm2": assessment.current_density_a_per_mm2,
+                "legacy_linear_winding_proxy": assessment.legacy_fill_proxy,
             }
         )
         resolution = self._latest_winding_factor_resolution()
@@ -1650,28 +1662,27 @@ class MotorCalculatorAppMixin:
                 f"   近似裸铜槽占比        : {assessment.slot_fill_factor:.4f}"
                 f" ({assessment.slot_fill_factor * 100.0:.1f} %)"
             )
+        # Phase 9C: the corrected same-basis result is the authoritative value.
         if assessment.voltage_margin_percent is None:
             voltage_line = (
                 f"   同基电压裕量          : 信息不足（{assessment.voltage_status.value}）"
             )
         else:
             voltage_line = (
-                f"   同基电压裕量(legacy)  : {assessment.voltage_margin_percent:.2f} %"
+                f"   同基电压裕量          : {assessment.voltage_margin_percent:.2f} %"
                 f" (可用/所需线电压 RMS {assessment.available_voltage_line_rms_v:.2f}"
                 f"/{assessment.required_voltage_line_rms_v:.2f} V)"
             )
-        # Phase 9B C1: publish both voltage bases side by side. The legacy value
-        # stays the production default until the promotion gates pass.
-        if assessment.corrected_voltage_margin_percent is None:
+        if assessment.legacy_voltage_margin_percent is None:
             corrected_voltage_line = (
-                "   同基电压裕量(修正)    : 不适用（当前控制模式缺少正弦相量基准）"
+                f"   兼容值 legacy 电压    : 所需 {performance.legacy_required_voltage_v:.2f} V"
+                "（混合基准，不作工程结论）"
             )
         else:
-            relative = performance.required_voltage_legacy_corrected_relative_difference
             corrected_voltage_line = (
-                f"   同基电压裕量(修正)    : {assessment.corrected_voltage_margin_percent:.2f} %"
-                f" (所需线电压 RMS {assessment.corrected_required_voltage_line_rms_v:.2f} V"
-                f"，较 legacy 高 {relative * 100.0:.2f} %)"
+                f"   兼容值 legacy 电压    : 所需 {performance.legacy_required_voltage_v:.2f} V，"
+                f"同基裕量 {assessment.legacy_voltage_margin_percent:.2f} %"
+                "（混合基准，不作工程结论）"
             )
 
         lines = [
@@ -1692,10 +1703,9 @@ class MotorCalculatorAppMixin:
         lines.extend(loss_limitation_report_lines_zh())
         lines.extend(
             [
+                f"   电压基准说明          : {VOLTAGE_GUIDANCE_ZH}",
                 "   说明                  : 槽占比仅为裸铜截面积近似占比，未包含导线绝缘、"
-                "槽绝缘、排布和绕制工艺；",
-                "                           电压裕量使用统一 line-RMS 基准，不等同于完整"
-                "逆变器瞬态动态裕量。",
+                "槽绝缘、排布和绕制工艺。",
                 "-" * 70,
                 "",
             ]

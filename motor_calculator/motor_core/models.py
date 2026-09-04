@@ -374,6 +374,26 @@ class ElectricalResult:
     def L_line(self) -> float:
         return self.line_inductance_h
 
+    # ------------------------------------------------------------------
+    # Phase 9C nomenclature aliases. The historical names are ambiguous:
+    # `line_resistance_ohm` is the terminal-to-terminal DC measurement 2*R_ph,
+    # not the balanced three-phase sqrt(3) relation, and `line_inductance_h` is
+    # the per-phase SYNCHRONOUS inductance L_ph - M, not a line-to-line value.
+    # Nothing is removed in RC3; these are additive, non-breaking aliases.
+    # ------------------------------------------------------------------
+
+    @property
+    def terminal_resistance_ohm(self) -> float:
+        """Terminal-to-terminal resistance, 2 * phase_resistance_ohm."""
+
+        return self.line_resistance_ohm
+
+    @property
+    def phase_synchronous_inductance_h(self) -> float:
+        """Per-phase synchronous inductance, L_s = L_ph - M."""
+
+        return self.line_inductance_h
+
     @property
     def M_mutual(self) -> float:
         return self.mutual_inductance_h
@@ -445,6 +465,42 @@ class PerformanceResult:
     required_voltage_line_rms_corrected_v: float | None = None
     required_voltage_legacy_corrected_relative_difference: float | None = None
     required_voltage_corrected_status: str = "not_evaluated"
+
+    # ------------------------------------------------------------------
+    # Phase 9C authoritative / legacy voltage semantics
+    # ------------------------------------------------------------------
+
+    @property
+    def required_voltage_line_rms_v(self) -> float | None:
+        """Authoritative required terminal voltage, line RMS.
+
+        `None` when the control mode has no sinusoidal phasor basis (BLDC).
+        """
+
+        return self.required_voltage_line_rms_corrected_v
+
+    @property
+    def legacy_required_voltage_v(self) -> float:
+        """Legacy mixed-basis RSS value, kept for compatibility/reference only."""
+
+        return self.required_voltage_v
+
+    @property
+    def legacy_voltage_margin_percent(self) -> float:
+        """Legacy raw-Vdc difference, kept for compatibility/reference only."""
+
+        return self.voltage_margin_percent
+
+    @property
+    def voltage_authority(self) -> str:
+        from .voltage_semantics import (
+            VOLTAGE_AUTHORITY_CORRECTED,
+            VOLTAGE_AUTHORITY_LEGACY_REFERENCE,
+        )
+
+        if self.required_voltage_line_rms_corrected_v is None:
+            return VOLTAGE_AUTHORITY_LEGACY_REFERENCE
+        return VOLTAGE_AUTHORITY_CORRECTED
 
     @property
     def T_rated(self) -> float:

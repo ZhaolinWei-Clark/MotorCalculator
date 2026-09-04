@@ -95,7 +95,7 @@ def test_output_inventory_is_unique_and_explains_unavailable_metrics() -> None:
     assert indexed["dynamic_speed"].mode == "dynamic sandbox"
 
 
-def test_feasible_baseline_dashboard_preserves_phase8g_values() -> None:
+def test_feasible_baseline_dashboard_preserves_authoritative_values() -> None:
     parameters = _feasible_inputs()
     result, assessment = _run(parameters)
     dashboard = build_dashboard_data(parameters, result, assessment)
@@ -105,10 +105,11 @@ def test_feasible_baseline_dashboard_preserves_phase8g_values() -> None:
     assert metrics["efficiency_percent"].value == pytest.approx(89.5909, rel=1e-4)
     assert metrics["current_density_a_per_mm2"].value == pytest.approx(4.3399, rel=1e-4)
     assert metrics["slot_fill_factor"].value == pytest.approx(0.3176891447)
-    assert metrics["voltage_margin_percent"].value == pytest.approx(15.62548387)
-    assert dashboard.design_status.severe_count == 0
-    assert dashboard.design_status.warning_count == 0
-    assert all(metric.status not in {DashboardStatus.WARNING, DashboardStatus.SEVERE} for metric in dashboard.feasibility_metrics)
+    # Phase 9C: the primary card carries the authoritative corrected margin;
+    # the legacy-sourced number moved to the legacy diagnostics group.
+    assert metrics["voltage_margin_percent"].value == pytest.approx(-5.102538786591522)
+    assert metrics["legacy_voltage_margin_percent"].value == pytest.approx(15.62548387)
+    assert dashboard.design_status.severe_count == 1  # voltage limited on the real basis
 
 
 def test_bad_design_exposes_severe_contributors_without_a_fake_score() -> None:
@@ -139,7 +140,13 @@ def test_speed_sweep_uses_real_model_points_and_does_not_mutate_inputs() -> None
     assert parameters == original
     assert sweep.points[1].torque_nm == pytest.approx(expected.performance.rated_torque_nm)
     assert sweep.points[1].output_power_w == pytest.approx(expected.performance.output_power_w)
-    assert sweep.points[1].required_voltage_line_rms_v == pytest.approx(expected.performance.required_voltage_v)
+    # Phase 9C: the sweep curve is the authoritative corrected requirement.
+    assert sweep.points[1].required_voltage_line_rms_v == pytest.approx(
+        expected.performance.required_voltage_line_rms_v
+    )
+    assert sweep.points[1].legacy_required_voltage_line_rms_v == pytest.approx(
+        expected.performance.required_voltage_v
+    )
     assert all(point.availability is AvailabilityStatus.AVAILABLE for point in sweep.points)
 
 

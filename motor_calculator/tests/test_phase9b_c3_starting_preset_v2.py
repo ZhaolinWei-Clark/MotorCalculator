@@ -91,7 +91,7 @@ def test_c3_v2_meets_every_stated_target():
     assert assessment.current_density_a_per_mm2 <= 5.0
     assert assessment.slot_fill_factor is not None
     assert 0.25 <= assessment.slot_fill_factor <= 0.50  # conservative region
-    assert assessment.corrected_voltage_margin_percent >= 10.0
+    assert assessment.voltage_margin_percent >= 10.0
     assert result.performance.rated_torque_nm > 0.0
     assert result.performance.efficiency_percent > 0.0
 
@@ -110,13 +110,13 @@ def test_c3_v2_observed_values_are_pinned():
     assert result.performance.required_voltage_v == pytest.approx(
         observed["legacy_required_voltage_v"], rel=1e-12
     )
-    assert assessment.corrected_required_voltage_line_rms_v == pytest.approx(
+    assert assessment.required_voltage_line_rms_v == pytest.approx(
         observed["corrected_required_voltage_v"], rel=1e-12
     )
-    assert assessment.voltage_margin_percent == pytest.approx(
+    assert assessment.legacy_voltage_margin_percent == pytest.approx(
         observed["legacy_margin_percent"], rel=1e-12
     )
-    assert assessment.corrected_voltage_margin_percent == pytest.approx(
+    assert assessment.voltage_margin_percent == pytest.approx(
         observed["corrected_margin_percent"], rel=1e-12
     )
     assert result.performance.efficiency_percent == pytest.approx(
@@ -130,18 +130,20 @@ def test_c3_v1_is_infeasible_on_the_corrected_basis_and_v2_is_not():
     _p1, _r1, a1 = _evaluate(V1_VALUES)
     _p2, _r2, a2 = _evaluate(V2_VALUES)
 
-    assert a1.voltage_margin_percent > 0.0  # legacy basis says v1 is fine
-    assert a1.corrected_voltage_margin_percent < 0.0  # corrected basis does not
-    assert a2.corrected_voltage_margin_percent > 0.0
+    assert a1.legacy_voltage_margin_percent > 0.0  # legacy basis says v1 is fine
+    assert a1.voltage_margin_percent < 0.0  # the authoritative basis does not
+    assert a2.voltage_margin_percent > 0.0
 
 
-def test_c3_v2_is_not_the_startup_default():
-    """Promotion is gated; the application must still open on v1."""
+def test_v2_is_the_startup_default_after_phase9c_promotion():
+    """Phase 9C promoted v2; v1 remains available as a legacy reference."""
 
     import importlib
 
     mixin = importlib.import_module("gui.main_window").MotorCalculatorAppMixin
-    assert mixin.STARTUP_EXAMPLE_PRESET_ID == V1_ID
+    assert mixin.STARTUP_EXAMPLE_PRESET_ID == V2_ID
+    assert mixin.LEGACY_STARTUP_EXAMPLE_PRESET_ID == V1_ID
+    assert default_preset_registry().get(V1_ID).available
 
 
 def test_c3_no_validator_was_relaxed_to_admit_v2():

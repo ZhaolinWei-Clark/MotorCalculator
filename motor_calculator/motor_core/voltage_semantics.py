@@ -49,6 +49,28 @@ CORRECTED_VOLTAGE_NOT_APPLICABLE_STATUS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Phase 9C promotion. The corrected value is the authoritative engineering
+# result for supported PMSM calculations; the legacy value survives only as a
+# clearly named compatibility/reference output.
+# ---------------------------------------------------------------------------
+
+VOLTAGE_AUTHORITY_CORRECTED = "CORRECTED_SAME_BASIS_PMSM"
+VOLTAGE_AUTHORITY_LEGACY_REFERENCE = "LEGACY_MIXED_BASIS_REFERENCE"
+VOLTAGE_SEMANTICS_VERSION = "phase9c.voltage.v1"
+
+VOLTAGE_GUIDANCE_ZH = (
+    "当前 PMSM 电压裕量使用统一 line-RMS 基准计算，并与现有 dq 稳态模型保持一致。"
+    "该结果仍为稳态近似，不代表完整逆变器开关级动态裕量。"
+)
+
+LEGACY_VOLTAGE_REFERENCE_NOTE_ZH = (
+    "legacy 所需电压与 legacy 直流母线差额仅作为兼容/调试参考保留，"
+    "其混合基准（E 线基准、I·R 端子基准、I·X 每相基准）与 RSS 合成已被判定为缺陷，"
+    "不再驱动任何工程结论。"
+)
+
+
 class VoltageSemanticsError(ValueError):
     """Raised when a corrected-voltage input is structurally invalid."""
 
