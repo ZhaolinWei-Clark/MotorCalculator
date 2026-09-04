@@ -28,6 +28,11 @@ from .models import (
 )
 
 
+# Phase 9B A3: one authoritative sentence, quoted verbatim by the sweep result,
+# every derived series and the rendered figure title.
+SPEED_SWEEP_SCOPE_STATEMENT_ZH = "基于当前模型逐点重算，不是完整转矩-转速能力包络。"
+
+
 def _input_hash(parameters: Mapping[str, object]) -> str:
     payload = json.dumps(dict(parameters), ensure_ascii=False, sort_keys=True, separators=(",", ":"))
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
@@ -97,8 +102,8 @@ def evaluate_speed_points(
         points=tuple(points),
         control_mode=control_mode,
         source_label_zh=(
-            "基于当前静态模型的速度扫描；每个点均为独立真实计算；"
-            "除转速外保持输入不变（包括额定功率），不是能力包络"
+            f"{SPEED_SWEEP_SCOPE_STATEMENT_ZH}"
+            "每个点均为独立真实计算；除转速外保持输入不变（包括额定功率）。"
         ),
         input_hash=_input_hash(baseline),
         elapsed_seconds=time.perf_counter() - started,
@@ -218,7 +223,7 @@ def render_speed_sweep_figure(result: SpeedSweepResult):
     axes[1, 0].set_ylabel("线电压 RMS (V)")
     axes[1, 1].set_ylabel("裕量 (%)")
     figure.suptitle(
-        "基于当前静态模型的速度扫描\n保持其余输入不变（包括额定功率）；不是电驱能力包络",
+        f"{SPEED_SWEEP_SCOPE_STATEMENT_ZH}\n保持其余输入不变（包括额定功率）",
         fontsize=12,
         fontweight="bold",
     )

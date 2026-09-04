@@ -4,6 +4,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from motor_calculator.motor_core.loss_semantics import (
+    CORE_LOSS_CONFIDENCE,
+    CORE_LOSS_DERIVATION,
+    CORE_LOSS_LABEL_ZH,
+    EDDY_LOSS_CONFIDENCE,
+    EDDY_LOSS_DERIVATION,
+    EDDY_LOSS_LABEL_ZH,
+)
+
 
 @dataclass(frozen=True)
 class OutputInventoryItem:
@@ -34,9 +43,9 @@ OUTPUT_INVENTORY: tuple[OutputInventoryItem, ...] = (
     OutputInventoryItem("kt_phase_rms", "Kt 相电流 RMS", "Nm/A", "AnalysisResult.electrical", "static", "mode-dependent", "explicit electrical semantic output", "parallel revised/legacy semantics", ("KPI", "table", "sensitivity")),
     OutputInventoryItem("back_emf_line_rms_v", "线反电动势 RMS", "V", "AnalysisResult.electrical", "static", "PMSM/BLDC/AFPM", "direct model output", "waveform semantics explicit", ("KPI", "table", "curve")),
     OutputInventoryItem("copper_loss_w", "铜耗", "W", "AnalysisResult.performance", "static", "PMSM/BLDC/AFPM", "direct legacy loss output", "model-limited", ("loss", "table")),
-    OutputInventoryItem("eddy_loss_w", "涡流损耗", "W", "AnalysisResult.performance", "static", "PMSM/BLDC/AFPM", "direct legacy loss output", "empirical/model-limited", ("loss", "table")),
+    OutputInventoryItem("eddy_loss_w", EDDY_LOSS_LABEL_ZH, "W", "AnalysisResult.performance", "static", "PMSM/BLDC/AFPM", EDDY_LOSS_DERIVATION, EDDY_LOSS_CONFIDENCE, ("loss", "table")),
     OutputInventoryItem("mechanical_loss_w", "机械损耗", "W", "AnalysisResult.performance", "static", "PMSM/BLDC/AFPM", "direct legacy loss output", "empirical/model-limited", ("loss", "table")),
-    OutputInventoryItem("core_loss_w", "铁芯损耗", "W", "AnalysisResult.performance", "static", "PMSM/BLDC/AFPM", "direct legacy loss output", "empirical/model-limited", ("loss", "table")),
+    OutputInventoryItem("core_loss_w", CORE_LOSS_LABEL_ZH, "W", "AnalysisResult.performance", "static", "PMSM/BLDC/AFPM", CORE_LOSS_DERIVATION, CORE_LOSS_CONFIDENCE, ("loss", "table")),
     OutputInventoryItem("static_temperature_rise", "静态温升", "degC", "not implemented", "static", "none", "unavailable", "not supported", ("unavailable",), "current static mode has no credible temperature-rise prediction"),
     OutputInventoryItem("dynamic_temperature_c", "绕组温度", "degC", "dynamics.ThermalSimulationResult", "dynamic sandbox", "PMSM", "first-order lumped thermal model", "sandbox only", ("dynamic curve",), "available only after an explicit thermal simulation"),
     OutputInventoryItem("dynamic_speed", "动态转速", "rad/s", "dynamics.SimulationResult", "dynamic sandbox", "PMSM", "time-domain state", "sandbox only", ("dynamic curve",), "available only after an explicit simulation"),

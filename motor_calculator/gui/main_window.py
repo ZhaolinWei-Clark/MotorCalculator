@@ -22,6 +22,10 @@ from motor_calculator.motor_core import (
     MotorValidationError,
     parse_legacy_gui_params,
 )
+from motor_calculator.motor_core.loss_semantics import (
+    loss_limitation_report_lines_zh,
+    loss_model_status_payload,
+)
 from motor_calculator.motor_core.winding_factor import (
     COIL_SPAN_TOOLTIP_ZH,
     SKEW_TOOLTIP_ZH,
@@ -1588,8 +1592,13 @@ class MotorCalculatorAppMixin:
             return payload
 
         occupancy = assessment.slot_fill_factor
+        # Phase 9B A1/A2: loss values are unchanged; only their model status and
+        # limitation text are added so a consumer cannot read them as validated.
+        payload.update(loss_model_status_payload())
         payload.update(
             {
+                "eddy_loss_w": float(target.performance.eddy_loss_w),
+                "core_loss_w": float(target.performance.core_loss_w),
                 "slot_occupancy_ratio": occupancy,
                 "slot_occupancy_percent": None if occupancy is None else occupancy * 100.0,
                 "slot_occupancy_status": assessment.slot_fill_status.value,
@@ -1650,6 +1659,8 @@ class MotorCalculatorAppMixin:
         ]
         if resolution is not None:
             lines.extend(format_winding_factor_report_lines_zh(resolution))
+        lines.append("")
+        lines.extend(loss_limitation_report_lines_zh())
         lines.extend(
             [
                 "   说明                  : 槽占比仅为裸铜截面积近似占比，未包含导线绝缘、"

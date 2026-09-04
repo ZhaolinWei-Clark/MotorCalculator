@@ -5,6 +5,12 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Iterable, Mapping
 
+from motor_calculator.motor_core.loss_semantics import (
+    CORE_LOSS_LABEL_ZH,
+    CORE_LOSS_LIMITATION_ZH,
+    EDDY_LOSS_LABEL_ZH,
+    EDDY_LOSS_LIMITATION_ZH,
+)
 from motor_calculator.motor_core.models import AnalysisResult
 from motor_calculator.validation.design_feasibility import (
     DesignFeasibilityAssessment,
@@ -272,9 +278,9 @@ def build_dashboard_data(
         _metric(key, label, float(value), "W", DashboardStatus.INFO, limitation, "AnalysisResult.performance")
         for key, label, value, limitation in (
             ("copper_loss_w", "铜耗", performance.copper_loss_w, "当前模型计算的三相铜耗。"),
-            ("eddy_loss_w", "legacy 涡流损耗", performance.eddy_loss_w, "经验/模型受限损耗项。"),
+            ("eddy_loss_w", EDDY_LOSS_LABEL_ZH, performance.eddy_loss_w, EDDY_LOSS_LIMITATION_ZH),
             ("mechanical_loss_w", "legacy 机械损耗", performance.mechanical_loss_w, "经验/模型受限损耗项。"),
-            ("core_loss_w", "legacy 铁芯损耗", performance.core_loss_w, "经验/模型受限损耗项。"),
+            ("core_loss_w", CORE_LOSS_LABEL_ZH, performance.core_loss_w, CORE_LOSS_LIMITATION_ZH),
         )
     )
     return DashboardData(

@@ -18,6 +18,7 @@ from motor_calculator.calibration_sandbox.sensitivity import (
 from motor_calculator.dynamics import SimulationResult
 from motor_calculator.input_ux import APPLICATION_DEFAULTS
 from motor_calculator.motor_core import LegacyGuiMotorModelBridge, parse_legacy_gui_params
+from motor_calculator.plots.performance import SPEED_SWEEP_SCOPE_STATEMENT_ZH
 from motor_calculator.plots import (
     AvailabilityStatus,
     DashboardStatus,
@@ -240,7 +241,7 @@ def test_plot_exports_png_and_svg_with_chinese_labels(tmp_path: Path) -> None:
     png = export_figure(figure, tmp_path / "性能扫描.png")
     svg = export_figure(figure, tmp_path / "性能扫描.svg")
     assert png.stat().st_size > 1000
-    assert "基于当前静态模型的速度扫描" in svg.read_text(encoding="utf-8")
+    assert SPEED_SWEEP_SCOPE_STATEMENT_ZH in svg.read_text(encoding="utf-8")
     assert configure_chinese_matplotlib()
 
 
@@ -259,7 +260,8 @@ def test_every_available_sweep_series_retains_model_source_label() -> None:
         run_speed_sweep(_feasible_inputs(), 1800.0, 2600.0, 5)
     )
     assert all(item.source_label_zh for item in series)
-    assert all("不是能力包络" in item.source_label_zh for item in series)
+    # Phase 9B A3 replaced the wording with one authoritative sentence.
+    assert all(SPEED_SWEEP_SCOPE_STATEMENT_ZH in item.source_label_zh for item in series)
 
 
 def test_figure_export_rejects_unsupported_format(tmp_path: Path) -> None:
