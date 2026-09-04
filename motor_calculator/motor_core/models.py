@@ -440,6 +440,11 @@ class PerformanceResult:
     fill_factor: float
     current_semantics_status: str
     required_voltage_semantics_status: str
+    # Phase 9B C1 parallel outputs. `required_voltage_v` above keeps its legacy
+    # mixed-basis meaning and remains the production default.
+    required_voltage_line_rms_corrected_v: float | None = None
+    required_voltage_legacy_corrected_relative_difference: float | None = None
+    required_voltage_corrected_status: str = "not_evaluated"
 
     @property
     def T_rated(self) -> float:

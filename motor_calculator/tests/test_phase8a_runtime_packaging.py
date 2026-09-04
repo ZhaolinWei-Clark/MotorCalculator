@@ -203,7 +203,7 @@ def test_one_folder_spec_excludes_development_and_user_data():
 @pytest.mark.parametrize(
     ("path", "expected_hash"),
     (
-        (CALCULATIONS, "032fe19062ba844f7ad12cf541d0ed6841050019fea9bb400f48ebd7b3b40970"),
+        (CALCULATIONS, "aad64af3d20afc1e73bd9d3510d25ebea7fa194c173f38229c1042c940b7e942"),
         (LEGACY_BASELINE, "15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9"),
     ),
 )

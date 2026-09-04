@@ -37,7 +37,7 @@ from motor_calculator.project import serializer as project_serializer
 ROOT = Path(__file__).resolve().parents[2]
 LEGACY_BASELINE = ROOT / "motor_calculator" / "tests" / "fixtures" / "legacy_baseline.json"
 CALCULATIONS = ROOT / "motor_calculator" / "motor_core" / "calculations.py"
-EXPECTED_CALCULATIONS_HASH = "032fe19062ba844f7ad12cf541d0ed6841050019fea9bb400f48ebd7b3b40970"
+EXPECTED_CALCULATIONS_HASH = "aad64af3d20afc1e73bd9d3510d25ebea7fa194c173f38229c1042c940b7e942"
 EXPECTED_LEGACY_HASH = "15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9"
 
 

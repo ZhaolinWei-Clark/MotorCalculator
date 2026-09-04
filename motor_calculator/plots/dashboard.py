@@ -39,6 +39,8 @@ _PRECISION = {
     "kt_phase_rms": 4,
     "phase_current_rms_a": 3,
     "required_voltage_v": 2,
+    "required_voltage_line_rms_corrected_v": 2,
+    "corrected_voltage_margin_percent": 2,
     "back_emf_line_rms_v": 2,
     "copper_loss_w": 2,
     "eddy_loss_w": 2,
@@ -271,7 +273,25 @@ def build_dashboard_data(
         _optional_metric("ke_line_rms", "Ke 线电压 RMS", electrical.back_emf_constant_line_rms_v_per_krpm, "V/krpm", "按当前控制模式的显式 Ke 语义。", "AnalysisResult.electrical", "当前模式没有可用 Ke 语义。"),
         _optional_metric("kt_phase_rms", "Kt 相电流 RMS", electrical.torque_constant_nm_per_phase_rms_a, "Nm/A", "按当前控制模式的显式 Kt 语义。", "AnalysisResult.electrical", "当前模式没有可用 Kt 语义。"),
         _metric("phase_current_rms_a", "相电流 RMS", performance.phase_current_rms_a, "A", DashboardStatus.INFO, "当前工作点相电流有效值。", "AnalysisResult.performance"),
-        _metric("required_voltage_v", "所需线电压 RMS", performance.required_voltage_v, "V", DashboardStatus.INFO, "当前 legacy 静态所需线电压估计。", "AnalysisResult.performance"),
+        _metric("required_voltage_v", "所需线电压 RMS（legacy）", performance.required_voltage_v, "V", DashboardStatus.INFO, "legacy 混合基准 RSS 估计，保留为兼容值。", "AnalysisResult.performance"),
+        _optional_metric(
+            "required_voltage_line_rms_corrected_v",
+            "所需线电压 RMS（修正同基）",
+            performance.required_voltage_line_rms_corrected_v,
+            "V",
+            "单一线电压 RMS 基准的稳态相量结果，与 Phase 6 dq 稳态解一致；尚未成为默认口径。",
+            "AnalysisResult.performance",
+            "当前控制模式缺少正弦相量基准，无法给出修正所需电压。",
+        ),
+        _optional_metric(
+            "corrected_voltage_margin_percent",
+            "同基电压裕量（修正）",
+            assessment.corrected_voltage_margin_percent,
+            "%",
+            "使用修正所需电压与同一 SVPWM 包络比较；严重度判据仍由 legacy 值驱动。",
+            "validation.design_feasibility",
+            "当前控制模式缺少正弦相量基准，无法给出修正裕量。",
+        ),
     )
 
     loss_metrics = tuple(

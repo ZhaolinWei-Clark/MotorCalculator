@@ -48,6 +48,10 @@ class DesignFeasibilityAssessment:
     voltage_margin_percent: float | None
     voltage_status: FeasibilityCalculability
     issues: tuple[FeasibilityIssue, ...]
+    # Phase 9B C1 parallel outputs. `voltage_margin_percent` above stays the
+    # legacy-sourced same-basis margin and still drives the severity codes.
+    corrected_required_voltage_line_rms_v: float | None = None
+    corrected_voltage_margin_percent: float | None = None
 
     @property
     def has_error(self) -> bool:
@@ -178,6 +182,24 @@ def _voltage_margin(
     return available_line_rms_v, margin_percent, FeasibilityCalculability.APPROXIMATE
 
 
+def _corrected_voltage_margin(
+    parameters: Mapping[str, Any], result: AnalysisResult
+) -> tuple[float | None, float | None]:
+    """Phase 9B C1 parallel margin, computed from the corrected requirement.
+
+    Same inverter envelope, different requirement. This is published alongside
+    the legacy-sourced margin and does not drive any severity code yet.
+    """
+
+    corrected = result.performance.required_voltage_line_rms_corrected_v
+    if corrected is None:
+        return None, None
+    return (
+        float(corrected),
+        same_basis_voltage_margin_percent(parameters["V_dc"], float(corrected)),
+    )
+
+
 def evaluate_design_feasibility(
     parameters: Mapping[str, Any], result: AnalysisResult
 ) -> DesignFeasibilityAssessment:
@@ -188,6 +210,9 @@ def evaluate_design_feasibility(
         parameters, conductor_area
     )
     available_voltage, voltage_margin, voltage_status = _voltage_margin(parameters, result)
+    corrected_required_voltage, corrected_voltage_margin = _corrected_voltage_margin(
+        parameters, result
+    )
     issues: list[FeasibilityIssue] = []
 
     fill_summary = (
@@ -348,6 +373,8 @@ def evaluate_design_feasibility(
         voltage_margin_percent=voltage_margin,
         voltage_status=voltage_status,
         issues=tuple(issues),
+        corrected_required_voltage_line_rms_v=corrected_required_voltage,
+        corrected_voltage_margin_percent=corrected_voltage_margin,
     )
 
 

@@ -61,6 +61,13 @@ from .models import (
 from .pmsm_ke_kt_models import compare_legacy_and_revised_pmsm_ke_kt
 from .rated_torque_models import calculate_legacy_rated_torque_nm, compare_rated_torque_models
 from .units import control_mode_to_legacy_waveform, legacy_params_to_model_input
+from .voltage_semantics import (
+    CORRECTED_VOLTAGE_NOT_APPLICABLE_STATUS,
+    CORRECTED_VOLTAGE_STATUS,
+    LEGACY_VOLTAGE_STATUS,
+    corrected_required_voltage_line_rms_v,
+    legacy_corrected_relative_difference,
+)
 from .validation import validate_finite_result, validate_motor_input, validate_result_object_finite
 
 
@@ -601,6 +608,29 @@ class MotorAnalysisEngine:
         ) * VOLTAGE_REQUIREMENT_MARGIN_FACTOR
         voltage_margin_percent = (i.dc_bus_voltage_v - required_voltage_v) / i.dc_bus_voltage_v * 100.0
 
+        # Phase 9B C1: mandatory parallel output on one explicit LINE-RMS basis.
+        # The legacy value above is untouched and remains the production default.
+        # The corrected form is a sinusoidal steady-state phasor result, so it is
+        # only defined for the PMSM control mode.
+        if i.control_mode is MotorControlMode.PMSM_SINUSOIDAL:
+            required_voltage_line_rms_corrected_v = corrected_required_voltage_line_rms_v(
+                back_emf_phase_rms_v=electrical_result.back_emf_phase_rms_v,
+                phase_current_rms_a=phase_current_rms_a,
+                phase_resistance_ohm=electrical_result.phase_resistance_ohm,
+                synchronous_inductance_h=electrical_result.line_inductance_h,
+                electrical_angular_speed_rad_s=2.0 * PI * electrical_frequency_hz,
+            )
+            required_voltage_legacy_corrected_relative_difference = (
+                legacy_corrected_relative_difference(
+                    required_voltage_v, required_voltage_line_rms_corrected_v
+                )
+            )
+            required_voltage_corrected_status = CORRECTED_VOLTAGE_STATUS
+        else:
+            required_voltage_line_rms_corrected_v = None
+            required_voltage_legacy_corrected_relative_difference = None
+            required_voltage_corrected_status = CORRECTED_VOLTAGE_NOT_APPLICABLE_STATUS
+
         copper_area_m2 = PI * (i.wire_diameter_m / 2.0) ** 2 * i.parallel_paths
         current_density_a_per_mm2 = phase_current_rms_a / (copper_area_m2 * 1e6)
         fill_factor = (3.0 * i.turns_per_phase * 2.0 * i.parallel_paths * i.wire_diameter_m) / (PI * i.inner_diameter_m)
@@ -663,7 +693,12 @@ class MotorAnalysisEngine:
             voltage_margin_percent=voltage_margin_percent,
             fill_factor=fill_factor,
             current_semantics_status=current_semantics_status,
-            required_voltage_semantics_status="legacy_line_rms_requirement_model",
+            required_voltage_semantics_status=LEGACY_VOLTAGE_STATUS,
+            required_voltage_line_rms_corrected_v=required_voltage_line_rms_corrected_v,
+            required_voltage_legacy_corrected_relative_difference=(
+                required_voltage_legacy_corrected_relative_difference
+            ),
+            required_voltage_corrected_status=required_voltage_corrected_status,
         )
         validate_result_object_finite(performance_result)
 

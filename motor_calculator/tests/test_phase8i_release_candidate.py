@@ -141,7 +141,7 @@ def test_production_physics_files_remain_frozen() -> None:
 
     verified = verify_protected_files(ROOT)
     assert verified["motor_calculator/motor_core/calculations.py"] == (
-        "032fe19062ba844f7ad12cf541d0ed6841050019fea9bb400f48ebd7b3b40970"
+        "aad64af3d20afc1e73bd9d3510d25ebea7fa194c173f38229c1042c940b7e942"
     )
     assert verified["motor_calculator/tests/fixtures/legacy_baseline.json"] == (
         "15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9"
