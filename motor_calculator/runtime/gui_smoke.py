@@ -425,7 +425,9 @@ def _exercise_phase8g_feasibility(root, app, main_window_module) -> dict[str, An
     original_confirm = main_window_module.messagebox.askokcancel
     main_window_module.messagebox.askokcancel = lambda *_args, **_kwargs: True
     try:
-        preset_applied = app._apply_preset_by_id("design.manufacturability_start.v1")
+        # Phase 9C: v1 is voltage limited on the authoritative corrected basis,
+        # so the feasible reference case is now v2.
+        preset_applied = app._apply_preset_by_id("design.manufacturability_start.v2")
     finally:
         main_window_module.messagebox.askokcancel = original_confirm
     app.run_analysis()
@@ -462,7 +464,7 @@ def _exercise_phase8g_feasibility(root, app, main_window_module) -> dict[str, An
         original_confirm = main_window_module.messagebox.askokcancel
         main_window_module.messagebox.askokcancel = lambda *_args, **_kwargs: True
         try:
-            app._apply_preset_by_id("design.manufacturability_start.v1")
+            app._apply_preset_by_id("design.manufacturability_start.v2")
         finally:
             main_window_module.messagebox.askokcancel = original_confirm
     finally:
@@ -479,6 +481,7 @@ def _exercise_phase8g_feasibility(root, app, main_window_module) -> dict[str, An
         "phase8g_feasible_current_density": feasible.current_density_a_per_mm2,
         "phase8g_feasible_slot_fill": feasible.slot_fill_factor,
         "phase8g_feasible_voltage_margin": feasible.voltage_margin_percent,
+        "phase8g_feasible_legacy_voltage_margin": feasible.legacy_voltage_margin_percent,
         "phase8g_report_shows_engineering_numbers": (
             "当前电流密度" in report and "可用/所需线电压 RMS" in report
         ),
@@ -655,6 +658,78 @@ def _capture_window(root, destination: Path) -> str | None:
     return None
 
 
+def _exercise_rc3_voltage_authority(root, app) -> dict[str, Any]:
+    """Phase 9C: the corrected voltage must be authoritative everywhere."""
+
+    from motor_calculator.plots import build_speed_sweep_series, run_speed_sweep
+    from motor_calculator.validation.design_feasibility import evaluate_design_feasibility
+
+    results: dict[str, Any] = {}
+    app.run_analysis()
+    root.update()
+    params = app._get_params()
+    assessment = app._latest_feasibility_assessment
+    data = app.results_dashboard.data
+    report = app.result_text.get("1.0", "end")
+
+    required = data.metric_by_key["required_voltage_v"]
+    margin = data.metric_by_key["voltage_margin_percent"]
+    results["rc3_dashboard_uses_corrected_voltage"] = (
+        required.value is not None
+        and abs(required.value - float(app.calc_results.performance.required_voltage_line_rms_v))
+        < 1e-9
+        and margin.value is not None
+        and abs(margin.value - assessment.voltage_margin_percent) < 1e-9
+    )
+    legacy_keys = {metric.key for metric in data.legacy_diagnostic_metrics}
+    results["rc3_dashboard_legacy_group_present"] = {
+        "legacy_required_voltage_v",
+        "legacy_voltage_margin_percent",
+    } <= legacy_keys
+    results["rc3_report_shows_corrected_voltage"] = "同基电压裕量" in report
+    results["rc3_report_marks_legacy_as_compatibility"] = "兼容值 legacy 电压" in report
+
+    sweep = run_speed_sweep(params, 1400.0, 2400.0, point_count=5)
+    series = {item.key: item for item in build_speed_sweep_series(sweep)}
+    first = sweep.points[0]
+    results["rc3_sweep_uses_corrected_voltage"] = (
+        first.required_voltage_line_rms_v is not None
+        and first.legacy_required_voltage_line_rms_v is not None
+        and first.required_voltage_line_rms_v > first.legacy_required_voltage_line_rms_v
+    )
+    results["rc3_sweep_legacy_curve_hidden_by_default"] = (
+        series["legacy_required_voltage"].default_visible is False
+        and series["required_voltage"].default_visible is True
+    )
+
+    payload = app.rc2_export_payload()
+    results["rc3_export_uses_authoritative_names"] = (
+        payload.get("voltage_model_provenance") == "CORRECTED_SAME_BASIS_PMSM"
+        and "required_voltage_line_rms_v" in payload
+        and "voltage_margin_line_rms_percent" in payload
+        and "legacy_required_voltage_v" in payload
+    )
+    results["rc3_startup_corrected_margin"] = assessment.voltage_margin_percent
+    results["rc3_startup_legacy_margin"] = assessment.legacy_voltage_margin_percent
+
+    # A design the legacy basis calls feasible must now be rejected.
+    bad = dict(params)
+    bad["n_rated"] = 2200.0
+    bad["N_ph_turns"] = 50
+    bad["n_parallel"] = 2
+    from motor_calculator.motor_core import LegacyGuiMotorModelBridge, parse_legacy_gui_params
+
+    bad_parsed = parse_legacy_gui_params(bad)
+    bad_result = LegacyGuiMotorModelBridge(bad_parsed).run_full_analysis()
+    bad_assessment = evaluate_design_feasibility(bad_parsed, bad_result)
+    results["rc3_bad_design_rejected_on_corrected_basis"] = (
+        bad_assessment.voltage_margin_percent < 0.0
+        and bad_assessment.legacy_voltage_margin_percent > 0.0
+        and bad_assessment.has_severe_design_risk
+    )
+    return results
+
+
 def _exercise_rc2_winding_factor_and_occupancy(root, app) -> dict[str, Any]:
     """RC2: slot occupancy and winding-factor provenance must be user-visible."""
 
@@ -799,6 +874,27 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             first_launch_params, first_launch_result
         )
         payload["rc2_first_launch_preset_id"] = app._last_preset_id
+        # Phase 9C: startup must now open on the corrected-basis v2 example and
+        # the authoritative voltage must be the corrected one.
+        payload["rc3_startup_preset_is_v2"] = (
+            app._last_preset_id == "design.manufacturability_start.v2"
+        )
+        payload["rc3_corrected_voltage_v"] = (
+            first_launch_result.performance.required_voltage_line_rms_v
+        )
+        payload["rc3_legacy_voltage_v"] = float(
+            first_launch_result.performance.legacy_required_voltage_v
+        )
+        payload["rc3_voltage_authority"] = first_launch_result.performance.voltage_authority
+        payload["rc3_corrected_margin_percent"] = first_launch_assessment.voltage_margin_percent
+        payload["rc3_legacy_margin_percent"] = (
+            first_launch_assessment.legacy_voltage_margin_percent
+        )
+        payload["rc3_voltage_provenance"] = first_launch_assessment.voltage_model_provenance
+        if not payload["rc3_startup_preset_is_v2"]:
+            raise RuntimeError("RC3 startup must use design.manufacturability_start.v2")
+        if payload["rc3_voltage_authority"] != "CORRECTED_SAME_BASIS_PMSM":
+            raise RuntimeError("RC3 voltage authority must be the corrected same-basis path")
         payload["rc2_first_launch_no_severe"] = not any(
             issue.severity is FeasibilitySeverity.SEVERE_DESIGN_RISK
             for issue in first_launch_assessment.issues
@@ -889,6 +985,22 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             )
         ):
             raise RuntimeError("Phase 8I analysis GUI smoke did not pass every gate")
+        rc3_results = _exercise_rc3_voltage_authority(root, app)
+        payload.update(rc3_results)
+        if not all(
+            rc3_results[name]
+            for name in (
+                "rc3_dashboard_uses_corrected_voltage",
+                "rc3_dashboard_legacy_group_present",
+                "rc3_report_shows_corrected_voltage",
+                "rc3_report_marks_legacy_as_compatibility",
+                "rc3_sweep_uses_corrected_voltage",
+                "rc3_sweep_legacy_curve_hidden_by_default",
+                "rc3_export_uses_authoritative_names",
+                "rc3_bad_design_rejected_on_corrected_basis",
+            )
+        ):
+            raise RuntimeError("RC3 voltage authority GUI smoke did not pass every gate")
         rc2_results = _exercise_rc2_winding_factor_and_occupancy(root, app)
         payload.update(rc2_results)
         if not all(
