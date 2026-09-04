@@ -88,7 +88,7 @@ def test_every_preset_has_a_localized_display_name() -> None:
 def test_protected_calculation_and_legacy_baseline_hashes() -> None:
     expected = {
         ROOT / "motor_calculator" / "motor_core" / "calculations.py":
-            "1609b2ee96ec93fa56a0af68ca4fe3eaea368807d70aa0e2078e7e18c72c1a14",
+            "032fe19062ba844f7ad12cf541d0ed6841050019fea9bb400f48ebd7b3b40970",
         ROOT / "motor_calculator" / "tests" / "fixtures" / "legacy_baseline.json":
             "15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9",
     }

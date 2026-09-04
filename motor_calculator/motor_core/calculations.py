@@ -16,6 +16,11 @@ from .constants import (
     BALANCED_THREE_PHASE_MUTUAL_RATIO,
     BEARING_LOSS_RATED_POWER_RATIO,
     BEARING_LOSS_REFERENCE_SPEED_RPM,
+    COGGING_HIGHEST_HARMONIC_MULTIPLE,
+    COGGING_MAXIMUM_SAMPLES,
+    COGGING_MINIMUM_INTERVALS,
+    COGGING_SAMPLES_PER_HIGHEST_CYCLE,
+    COGGING_SHAPE_PEAK_FACTOR,
     CORE_LOSS_RATED_POWER_RATIO,
     END_WINDING_INDUCTANCE_RATIO,
     END_WINDING_LENGTH_FACTOR,
@@ -347,12 +352,32 @@ class MotorAnalysisEngine:
 
         return copper_loss_w, eddy_loss_w, core_loss_w, mechanical_loss_w
 
+    def cogging_sample_count(self) -> int:
+        """Phase 9B B2: derive the grid from the represented spatial content.
+
+        The previous fixed 360-point grid left 359 intervals, which violates
+        Nyquist for most realistic slot/pole combinations. The reported peak
+        survived only because 359 is prime, so aliasing permuted the sample set
+        rather than distorting it. The rule below removes that dependency.
+        """
+
+        i = self.motor_input
+        pole_count = i.pole_count
+        slot_count = i.slot_count if i.slot_count else pole_count * 3
+        least_common_multiple = (pole_count * slot_count) // gcd(pole_count, slot_count)
+        highest_order = COGGING_HIGHEST_HARMONIC_MULTIPLE * least_common_multiple
+        intervals = max(
+            COGGING_MINIMUM_INTERVALS,
+            COGGING_SAMPLES_PER_HIGHEST_CYCLE * highest_order,
+        )
+        return min(intervals + 1, COGGING_MAXIMUM_SAMPLES)
+
     def calculate_cogging_torque(self) -> Tuple[np.ndarray, np.ndarray]:
         i = self.motor_input
         pole_count = i.pole_count
         slot_count = i.slot_count if i.slot_count else pole_count * 3
         least_common_multiple = (pole_count * slot_count) // gcd(pole_count, slot_count)
-        rotor_position_rad = np.linspace(0.0, 2.0 * PI, 360)
+        rotor_position_rad = np.linspace(0.0, 2.0 * PI, self.cogging_sample_count())
 
         if i.is_coreless:
             return rotor_position_rad, np.zeros_like(rotor_position_rad)
@@ -597,6 +622,13 @@ class MotorAnalysisEngine:
 
         torque_waveform = self.calculate_torque_waveform()
         cogging_rotor_position_rad, cogging_torque_nm = self.calculate_cogging_torque()
+        # Phase 9B B2: the shape peak factor is exact and independent of the
+        # slot/pole combination, so the reported peak no longer depends on how
+        # the trace happens to be sampled.
+        cogging_shape_peak_factor = 0.0 if i.is_coreless else COGGING_SHAPE_PEAK_FACTOR
+        cogging_fundamental_ratio = 0.0 if i.is_coreless else i.cogging_factor
+        cogging_peak_ratio = cogging_shape_peak_factor * i.cogging_factor
+        cogging_torque_peak_nm = cogging_peak_ratio * rated_torque_nm
 
         performance_result = PerformanceResult(
             control_mode=i.control_mode,
@@ -613,7 +645,7 @@ class MotorAnalysisEngine:
             rated_torque_model_status=rated_torque_comparison.rated_torque_model_status,
             average_torque_nm=torque_waveform["T_avg"],
             torque_ripple_percent=torque_waveform["T_ripple_pct"],
-            cogging_torque_peak_nm=np.max(np.abs(cogging_torque_nm)),
+            cogging_torque_peak_nm=cogging_torque_peak_nm,
             phase_current_rms_a=phase_current_rms_a,
             phase_current_peak_a=phase_current_peak_a,
             line_current_rms_a=line_current_rms_a,
@@ -642,6 +674,17 @@ class MotorAnalysisEngine:
             "cogging": {
                 "rotor_position_rad": cogging_rotor_position_rad,
                 "cogging_torque_nm": cogging_torque_nm,
+                # Phase 9B B2 (Decision 1): publish both ratios explicitly instead
+                # of silently reinterpreting the ambiguous legacy `k_cogging`
+                # input, which has always been the fundamental-amplitude ratio.
+                "k_cogging_peak": cogging_peak_ratio,
+                "k_cogging_fundamental": cogging_fundamental_ratio,
+                "legacy_k_cogging": i.cogging_factor,
+                "k_cogging_semantics_status": (
+                    "legacy_k_cogging_equals_fundamental_amplitude_ratio"
+                ),
+                "cogging_shape_peak_factor": cogging_shape_peak_factor,
+                "sample_count": int(cogging_rotor_position_rad.size),
                 "theta": cogging_rotor_position_rad,
                 "T_cog": cogging_torque_nm,
             },

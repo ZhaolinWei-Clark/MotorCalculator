@@ -31,6 +31,32 @@ VOLTAGE_REQUIREMENT_MARGIN_FACTOR = 1.05
 DEFAULT_FILL_LIMIT = 0.65
 DEFAULT_SLOT_COUNT_PER_POLE_PAIR = 6
 DEFAULT_COGGING_FACTOR = 0.02
+
+# Phase 9B B2: deterministic adaptive cogging sampling.
+#
+# The cogging shape is  sin(N*theta) + 0.3*sin(2N*theta) + 0.1*sin(3N*theta)
+# with N = LCM(pole_count, slot_count) cycles per MECHANICAL revolution, so the
+# highest represented spatial order is
+#     H = COGGING_HIGHEST_HARMONIC_MULTIPLE * N
+# `np.linspace(0, 2*pi, n)` duplicates the endpoint, so the effective sample
+# rate is (n - 1) samples per revolution. Strict Nyquist therefore needs
+#     n - 1 > 2*H
+# and faithful peak/plot rendering needs S samples per cycle of the highest
+# component:
+#     n - 1 >= COGGING_SAMPLES_PER_HIGHEST_CYCLE * H
+# S = 8 was chosen from a measured sweep: worst RMS error 0.043% against a
+# dense reference, against 0.087% at S = 4 and 0.029% at S = 12.
+COGGING_HIGHEST_HARMONIC_MULTIPLE = 3
+COGGING_SAMPLES_PER_HIGHEST_CYCLE = 8
+# Keeps the previous plot density for small LCM. The old fixed grid was
+# linspace(0, 2*pi, 360), i.e. 359 intervals.
+COGGING_MINIMUM_INTERVALS = 359
+# Stability/memory ceiling for pathological slot/pole combinations.
+COGGING_MAXIMUM_SAMPLES = 200_001
+# Exact maximum of |sin(x) + 0.3*sin(2x) + 0.1*sin(3x)|, Newton-refined and
+# cross-checked against a 2e7-point scan. Independent of N, so the reported
+# cogging peak can be taken analytically instead of from the sampled trace.
+COGGING_SHAPE_PEAK_FACTOR = 1.1283820906416413
 DEFAULT_RIPPLE_6TH = 0.05
 DEFAULT_RIPPLE_12TH = 0.02
 

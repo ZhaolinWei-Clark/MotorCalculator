@@ -31,12 +31,19 @@ from motor_calculator.version import (
 #   1609b2ee96ec93fa56a0af68ca4fe3eaea368807d70aa0e2078e7e18c72c1a14
 #       Phase 9B Batch B1, approved presentation-only harmonic order mapping
 #       (k / pole_pairs instead of k * pole_pairs). Fourier amplitudes, Bg_avg
-#       and Bg_rms are unchanged; see docs/reviews/phase9_formula_change_approval_zh.md
+#       and Bg_rms are unchanged.
+#   032fe19062ba844f7ad12cf541d0ed6841050019fea9bb400f48ebd7b3b40970
+#       Phase 9B Batch B2, approved adaptive cogging sampling derived from
+#       3*LCM(2p, Q), plus an analytic shape peak factor. The cogging waveform
+#       grid and the reported cogging peak change; no other output moves.
+#
+# See docs/reviews/phase9_formula_change_approval_zh.md and
+# docs/reviews/phase9b_controlled_formula_corrections_zh.md.
 #
 # legacy_baseline.json remains frozen at its original hash and is never updated.
 PROTECTED_FILE_HASHES = {
     "motor_calculator/motor_core/calculations.py": (
-        "1609b2ee96ec93fa56a0af68ca4fe3eaea368807d70aa0e2078e7e18c72c1a14"
+        "032fe19062ba844f7ad12cf541d0ed6841050019fea9bb400f48ebd7b3b40970"
     ),
     "motor_calculator/tests/fixtures/legacy_baseline.json": (
         "15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9"
