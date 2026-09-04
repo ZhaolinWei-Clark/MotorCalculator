@@ -487,7 +487,15 @@ class MotorAnalysisEngine:
         air_gap_flux_density_average_t = np.mean(np.abs(air_gap_flux_density_t))
         air_gap_flux_density_rms_t = np.sqrt(np.mean(air_gap_flux_density_t**2))
         spectrum = np.abs(np.fft.fft(air_gap_flux_density_t)[: len(air_gap_flux_density_t) // 2]) / len(air_gap_flux_density_t) * 2.0
-        harmonics = np.arange(len(spectrum)) * pole_count / 2.0
+        # Phase 9B B1 (presentation-only): `mechanical_angle_deg` spans one
+        # mechanical revolution, so FFT bin k is k cycles per mechanical
+        # revolution and the electrical fundamental sits at k = pole_pairs.
+        # The electrical order is therefore k / pole_pairs. The previous
+        # `k * pole_pairs` mapping was inverted by a factor of pole_pairs**2 and
+        # pushed the fundamental past the downstream `order <= 25` plot filter
+        # for pole_pairs >= 5. Fourier amplitudes are untouched.
+        mechanical_harmonic_order = np.arange(len(spectrum), dtype=float)
+        electrical_harmonic_order = mechanical_harmonic_order / float(i.pole_pairs)
 
         return {
             "mechanical_angle_deg": mechanical_angle_deg,
@@ -500,7 +508,13 @@ class MotorAnalysisEngine:
             "Bg_peak": magnetic_result.air_gap_flux_density_peak_t,
             "Bg_avg": air_gap_flux_density_average_t,
             "Bg_rms": air_gap_flux_density_rms_t,
-            "harmonics": harmonics[:50],
+            "mechanical_harmonic_order": mechanical_harmonic_order[:50],
+            "electrical_harmonic_order": electrical_harmonic_order[:50],
+            # Legacy alias. It never carried a defensible meaning (k * pole_pairs
+            # is neither the electrical nor the mechanical order) and is not part
+            # of legacy_baseline.json, any export, or any project snapshot, so it
+            # is corrected in place rather than frozen.
+            "harmonics": electrical_harmonic_order[:50],
             "spectrum": spectrum[:50],
         }
 

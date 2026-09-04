@@ -1851,12 +1851,17 @@ class MotorCalculatorApp:
         
         # 图2: 谐波分析
         ax2 = fig.add_subplot(gs[1, 0])
-        harmonics = flux_data.get("harmonics", np.arange(20))
+        # Phase 9B B1: plot against the explicit ELECTRICAL harmonic order so the
+        # fundamental lands at 1 for every pole count. The old `harmonics` key
+        # carried k * pole_pairs and filtered the fundamental out for p >= 5.
+        harmonics = flux_data.get(
+            "electrical_harmonic_order", flux_data.get("harmonics", np.arange(20))
+        )
         spectrum = flux_data.get("spectrum", np.zeros(20))
-        
+
         valid_idx = harmonics <= 25
-        ax2.bar(harmonics[valid_idx], spectrum[valid_idx], width=0.6, color='steelblue', alpha=0.8)
-        ax2.set_xlabel('空间谐波次数', fontsize=10)
+        ax2.bar(harmonics[valid_idx], spectrum[valid_idx], width=0.02 + 0.6 / max(len(harmonics), 1), color='steelblue', alpha=0.8)
+        ax2.set_xlabel('电气空间谐波次数（基波 = 1）', fontsize=10)
         ax2.set_ylabel('幅值 (T)', fontsize=10)
         ax2.set_title('磁密空间谐波分析', fontsize=11, fontweight='bold')
         ax2.grid(True, alpha=0.3, axis='y')

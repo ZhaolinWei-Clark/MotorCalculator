@@ -22,9 +22,21 @@ from motor_calculator.version import (
 )
 
 
+# Approved-change log for motor_core/calculations.py. The file stays frozen
+# except for changes that carry an explicit written approval; each entry records
+# the hash the file carried after that approved change.
+#
+#   416330175f2c770cd6e4c5c6e0df98e22eb7c290e3b5825926cc124642b87a2d
+#       frozen baseline through v1.0.0-rc1 and v1.0.0-rc2
+#   1609b2ee96ec93fa56a0af68ca4fe3eaea368807d70aa0e2078e7e18c72c1a14
+#       Phase 9B Batch B1, approved presentation-only harmonic order mapping
+#       (k / pole_pairs instead of k * pole_pairs). Fourier amplitudes, Bg_avg
+#       and Bg_rms are unchanged; see docs/reviews/phase9_formula_change_approval_zh.md
+#
+# legacy_baseline.json remains frozen at its original hash and is never updated.
 PROTECTED_FILE_HASHES = {
     "motor_calculator/motor_core/calculations.py": (
-        "416330175f2c770cd6e4c5c6e0df98e22eb7c290e3b5825926cc124642b87a2d"
+        "1609b2ee96ec93fa56a0af68ca4fe3eaea368807d70aa0e2078e7e18c72c1a14"
     ),
     "motor_calculator/tests/fixtures/legacy_baseline.json": (
         "15598fb1529e6f7707c80b6665597ab07bd148b087b59991b8038e3b508c17b9"
