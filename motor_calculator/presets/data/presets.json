@@ -7,10 +7,18 @@
       "display_name": "AFPM SSDR Starting Template",
       "category": "motor_topology",
       "evidence_kind": "demonstration",
-      "values": {"coreless": true, "magnet_type": "表贴式", "waveform": "正弦波"},
+      "values": {
+        "coreless": true,
+        "magnet_type": "表贴式",
+        "waveform": "正弦波"
+      },
       "provenance": "Existing application-supported AFPM configuration fields; Phase 8D starting-template metadata.",
-      "assumptions": ["Uses the existing dual-rotor, single-stator, dual-air-gap production topology."],
-      "notes": ["Starting template only; not an optimized design."]
+      "assumptions": [
+        "Uses the existing dual-rotor, single-stator, dual-air-gap production topology."
+      ],
+      "notes": [
+        "Starting template only; not an optimized design."
+      ]
     },
     {
       "preset_id": "template.afpm_dssr.unavailable.v1",
@@ -21,7 +29,9 @@
       "values": {},
       "provenance": "Phase 8D model-capability audit.",
       "assumptions": [],
-      "notes": ["No values are applied."],
+      "notes": [
+        "No values are applied."
+      ],
       "available": false,
       "unavailable_reason": "The current production input schema cannot represent dual-stator/single-rotor topology explicitly."
     },
@@ -31,10 +41,16 @@
       "display_name": "PMSM Starting Template",
       "category": "motor_topology",
       "evidence_kind": "demonstration",
-      "values": {"waveform": "正弦波"},
+      "values": {
+        "waveform": "正弦波"
+      },
       "provenance": "Existing Phase 3 PMSM sinusoidal semantic selector.",
-      "assumptions": ["Changes waveform semantics only."],
-      "notes": ["Starting template only; geometry and winding remain unchanged."]
+      "assumptions": [
+        "Changes waveform semantics only."
+      ],
+      "notes": [
+        "Starting template only; geometry and winding remain unchanged."
+      ]
     },
     {
       "preset_id": "template.bldc.v1",
@@ -42,10 +58,16 @@
       "display_name": "BLDC Starting Template",
       "category": "motor_topology",
       "evidence_kind": "demonstration",
-      "values": {"waveform": "梯形波"},
+      "values": {
+        "waveform": "梯形波"
+      },
       "provenance": "Existing Phase 3 BLDC trapezoidal semantic selector.",
-      "assumptions": ["Changes waveform semantics only."],
-      "notes": ["Starting template only; geometry and winding remain unchanged."]
+      "assumptions": [
+        "Changes waveform semantics only."
+      ],
+      "notes": [
+        "Starting template only; geometry and winding remain unchanged."
+      ]
     },
     {
       "preset_id": "magnet.n35.v1",
@@ -53,10 +75,17 @@
       "display_name": "NdFeB N35 Typical Reference",
       "category": "magnet_material",
       "evidence_kind": "typical",
-      "values": {"magnet_grade": "N35", "Br": 1.17},
+      "values": {
+        "magnet_grade": "N35",
+        "Br": 1.17
+      },
       "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
-      "assumptions": ["Br is nominal and manufacturer-dependent."],
-      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "assumptions": [
+        "Br is nominal and manufacturer-dependent."
+      ],
+      "notes": [
+        "Verify the selected supplier datasheet and operating temperature."
+      ],
       "applicable_temperature_c": 20.0
     },
     {
@@ -65,10 +94,17 @@
       "display_name": "NdFeB N42 Typical Reference",
       "category": "magnet_material",
       "evidence_kind": "typical",
-      "values": {"magnet_grade": "N42", "Br": 1.28},
+      "values": {
+        "magnet_grade": "N42",
+        "Br": 1.28
+      },
       "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
-      "assumptions": ["Br is nominal and manufacturer-dependent."],
-      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "assumptions": [
+        "Br is nominal and manufacturer-dependent."
+      ],
+      "notes": [
+        "Verify the selected supplier datasheet and operating temperature."
+      ],
       "applicable_temperature_c": 20.0
     },
     {
@@ -77,10 +113,17 @@
       "display_name": "NdFeB N48 Typical Reference",
       "category": "magnet_material",
       "evidence_kind": "typical",
-      "values": {"magnet_grade": "N48", "Br": 1.38},
+      "values": {
+        "magnet_grade": "N48",
+        "Br": 1.38
+      },
       "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
-      "assumptions": ["Br is nominal and manufacturer-dependent."],
-      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "assumptions": [
+        "Br is nominal and manufacturer-dependent."
+      ],
+      "notes": [
+        "Verify the selected supplier datasheet and operating temperature."
+      ],
       "applicable_temperature_c": 20.0
     },
     {
@@ -89,10 +132,17 @@
       "display_name": "NdFeB N52 Typical Reference",
       "category": "magnet_material",
       "evidence_kind": "typical",
-      "values": {"magnet_grade": "N52", "Br": 1.43},
+      "values": {
+        "magnet_grade": "N52",
+        "Br": 1.43
+      },
       "provenance": "Existing motor_core.constants.MAGNET_LIBRARY nominal demonstration value.",
-      "assumptions": ["Br is nominal and manufacturer-dependent."],
-      "notes": ["Verify the selected supplier datasheet and operating temperature."],
+      "assumptions": [
+        "Br is nominal and manufacturer-dependent."
+      ],
+      "notes": [
+        "Verify the selected supplier datasheet and operating temperature."
+      ],
       "applicable_temperature_c": 20.0
     },
     {
@@ -101,10 +151,49 @@
       "display_name": "Manufacturability Starting Example",
       "category": "design_example",
       "evidence_kind": "demonstration",
-      "values": {"V_dc": 72.0, "P_rated": 600.0, "n_rated": 2200.0, "d_wire": 1.2, "slot_type": "半闭口槽", "coreless": false},
+      "values": {
+        "V_dc": 72.0,
+        "P_rated": 600.0,
+        "n_rated": 2200.0,
+        "d_wire": 1.2,
+        "slot_type": "半闭口槽",
+        "coreless": false
+      },
       "provenance": "Phase 8G internally consistent conservative starting example using only the current production input schema.",
-      "assumptions": ["Uses a slotted SSDR AFPM PMSM starting point and an SVPWM-compatible voltage-envelope check."],
-      "notes": ["Starting example only; not optimized, calibrated, or externally validated for manufacturing."]
+      "assumptions": [
+        "Uses a slotted SSDR AFPM PMSM starting point and an SVPWM-compatible voltage-envelope check."
+      ],
+      "notes": [
+        "Starting example only; not optimized, calibrated, or externally validated for manufacturing."
+      ]
+    },
+    {
+      "preset_id": "design.manufacturability_start.v2",
+      "version": 1,
+      "display_name": "Manufacturability Starting Example (corrected voltage basis)",
+      "category": "design_example",
+      "evidence_kind": "demonstration",
+      "values": {
+        "V_dc": 72.0,
+        "P_rated": 600.0,
+        "n_rated": 1800.0,
+        "N_ph_turns": 42,
+        "d_wire": 1.2,
+        "n_parallel": 3,
+        "slot_type": "半闭口槽",
+        "coreless": false
+      },
+      "provenance": "Phase 9B Batch C3 candidate. Selected under the corrected single-basis steady-state phasor voltage requirement, not the legacy mixed-basis RSS value. v1 is unchanged and remains the startup default.",
+      "assumptions": [
+        "Uses a slotted SSDR AFPM PMSM starting point and the linear SVPWM-compatible line-RMS envelope Vdc/sqrt(2).",
+        "Voltage headroom is judged against the corrected requirement; the legacy requirement is retained only as a compatibility value.",
+        "Efficiency is reported under the current loss model, in which the conductor eddy term is EXPERIMENTAL and the magnetic loss term is an empirical rated-point lump."
+      ],
+      "notes": [
+        "Candidate only. It does not become the startup default until the corrected voltage model is promoted.",
+        "Observed: torque 3.1833 Nm, current density 4.2098 A/mm2, bare-copper slot occupancy 0.4003, corrected same-basis margin 19.2815%, no ERROR and no SEVERE DESIGN RISK.",
+        "Not optimized, calibrated, or externally validated for manufacturing."
+      ]
     },
     {
       "preset_id": "design.application_reference.v1",
@@ -112,10 +201,22 @@
       "display_name": "Application Default Example",
       "category": "design_example",
       "evidence_kind": "demonstration",
-      "values": {"D_out": 140.0, "D_in": 70.0, "g_side": 1.0, "h_mag": 5.0, "p": 8, "N_ph_turns": 50, "k_w": 0.93},
+      "values": {
+        "D_out": 140.0,
+        "D_in": 70.0,
+        "g_side": 1.0,
+        "h_mag": 5.0,
+        "p": 8,
+        "N_ph_turns": 50,
+        "k_w": 0.93
+      },
       "provenance": "Current frozen application defaults, exposed only as an explicit starting example.",
-      "assumptions": ["Does not imply optimization or external validation."],
-      "notes": ["Only listed fields change after user confirmation."]
+      "assumptions": [
+        "Does not imply optimization or external validation."
+      ],
+      "notes": [
+        "Only listed fields change after user confirmation."
+      ]
     },
     {
       "preset_id": "operating.application_reference.v1",
@@ -123,10 +224,19 @@
       "display_name": "Application Operating Point",
       "category": "operating_point",
       "evidence_kind": "demonstration",
-      "values": {"V_dc": 48.0, "P_rated": 800.0, "n_rated": 2500.0, "Temp_coil": 80.0},
+      "values": {
+        "V_dc": 48.0,
+        "P_rated": 800.0,
+        "n_rated": 2500.0,
+        "Temp_coil": 80.0
+      },
       "provenance": "Current frozen application defaults, exposed only as an explicit demonstration operating point.",
-      "assumptions": ["Not a safe limit or recommended rating."],
-      "notes": ["Only operating-point fields change after user confirmation."]
+      "assumptions": [
+        "Not a safe limit or recommended rating."
+      ],
+      "notes": [
+        "Only operating-point fields change after user confirmation."
+      ]
     }
   ]
 }

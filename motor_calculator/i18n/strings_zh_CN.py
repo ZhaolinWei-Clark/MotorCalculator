@@ -278,6 +278,7 @@ PRESET_NAMES = {
     "magnet.n52.v1": "NdFeB N52 典型参考值",
     "design.application_reference.v1": "应用默认值示例",
     "design.manufacturability_start.v1": "可制造性起始示例",
+    "design.manufacturability_start.v2": "可制造性起始示例（修正电压基准，候选）",
     "operating.application_reference.v1": "应用工作点示例",
 }
 

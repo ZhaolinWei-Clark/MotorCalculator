@@ -275,6 +275,7 @@ PRESET_NAMES = {
     "magnet.n52.v1": "NdFeB N52 Typical Reference",
     "design.application_reference.v1": "Application Default Example",
     "design.manufacturability_start.v1": "Manufacturability Starting Example",
+    "design.manufacturability_start.v2": "Manufacturability Starting Example (corrected voltage basis, candidate)",
     "operating.application_reference.v1": "Application Operating Point",
 }
 
