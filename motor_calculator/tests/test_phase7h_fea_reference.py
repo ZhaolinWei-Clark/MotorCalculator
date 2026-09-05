@@ -84,8 +84,24 @@ def test_controlled_fea_reference_schema_is_fully_specified_and_blocked():
 
 
 def test_evidence_classifications_remain_distinct():
-    assert len({classification.value for classification in EvidenceClassification}) == 4
-    assert EvidenceClassification.INDEPENDENT_FEA_REFERENCE is not EvidenceClassification.EXPERIMENTAL_MEASUREMENT
+    # Phase 10A added NUMERICAL_FEA for solver runs this application drives
+    # itself, alongside the imported-reference classifications Phase 7H defined.
+    values = {classification.value for classification in EvidenceClassification}
+    assert len(values) == len(list(EvidenceClassification)) == 5
+    assert values == {
+        "INTERNAL_ANALYTICAL",
+        "INDEPENDENT_FEA_REFERENCE",
+        "PUBLISHED_FEA_REFERENCE",
+        "EXPERIMENTAL_MEASUREMENT",
+        "NUMERICAL_FEA",
+    }
+    # No FEA classification, imported or locally solved, is a measurement.
+    for classification in (
+        EvidenceClassification.INDEPENDENT_FEA_REFERENCE,
+        EvidenceClassification.PUBLISHED_FEA_REFERENCE,
+        EvidenceClassification.NUMERICAL_FEA,
+    ):
+        assert classification is not EvidenceClassification.EXPERIMENTAL_MEASUREMENT
 
 
 def test_reference_modules_do_not_reuse_analytical_afpm_implementation():

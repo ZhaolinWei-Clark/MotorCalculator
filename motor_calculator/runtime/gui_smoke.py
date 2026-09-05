@@ -821,6 +821,99 @@ def _exercise_rc2_winding_factor_and_occupancy(root, app) -> dict[str, Any]:
     return results
 
 
+def _exercise_phase10a_fea_validation(root, app, output: Path) -> dict[str, Any]:
+    """Phase 10A: the FEA validation entry must open, state solver availability
+    honestly, generate a case, and never show a fabricated FEA number."""
+
+    from motor_calculator.fea.models import FEASupportability, FEAValidationTarget
+
+    results: dict[str, Any] = {}
+    menu = app._project_analysis_menu
+    labels = [
+        str(menu.entrycget(index, "label"))
+        for index in range(menu.index("end") + 1)
+        if menu.type(index) == "command"
+    ]
+    results["phase10a_menu_entry_present"] = "FEA 验证..." in labels
+
+    dialog = app._open_fea_validation()
+    root.update()
+    results["phase10a_dialog_opened"] = bool(dialog.window.winfo_exists())
+    results["phase10a_dialog_fits_screen"] = _window_fits_screen(dialog.window)
+
+    model = dialog.view_model
+    results["phase10a_view_model_built"] = model is not None
+    if model is None:
+        dialog.window.destroy()
+        return results
+
+    availability = model.availability
+    results["phase10a_femm_available"] = bool(availability.is_available)
+    results["phase10a_availability_probe_version"] = availability.probe_version
+    # Before the FEA-only parameters are confirmed the case must be unbuildable.
+    results["phase10a_blocked_before_parameters"] = (
+        model.modelling is None and not model.can_generate_case
+    )
+    review_before = dialog.review_text.get("1.0", "end").strip()
+    results["phase10a_missing_geometry_explained"] = "rotor back-iron" in review_before
+
+    suggested_back_iron_m, suggested_span = model.suggested_values()
+    dialog.back_iron_var.set(f"{suggested_back_iron_m * 1000.0:.3f}")
+    dialog.coil_span_var.set(str(suggested_span))
+    dialog._confirm_parameters()
+    root.update()
+
+    results["phase10a_case_generated"] = bool(model.can_generate_case)
+    preview = model.preview()
+    results["phase10a_supportability"] = preview.supportability.state.value
+    results["phase10a_fidelity_tier"] = preview.supportability.fidelity_tier
+    results["phase10a_case_id"] = preview.case.case_id if preview.case else None
+    review_after = dialog.review_text.get("1.0", "end")
+    results["phase10a_review_states_tier"] = "FEA_TIER_3" in review_after
+    results["phase10a_review_states_approximations"] = "近似与已知遗漏" in review_after
+    results["phase10a_review_states_no_convergence_claim"] = "不作收敛声明" in review_after
+
+    # The run button must track real solver availability, with no fake result.
+    run_state = str(dialog.run_button.cget("state"))
+    results["phase10a_run_button_matches_availability"] = (
+        (run_state == "normal") if availability.is_available else (run_state == "disabled")
+    )
+    results["phase10a_unavailable_message_shown"] = (
+        availability.is_available
+        or "未检测到 FEMM" in dialog.solver_status_var.get()
+    )
+    results["phase10a_no_fake_results_shown"] = not model.has_results
+    results["phase10a_no_fea_curves_without_data"] = (
+        model.has_real_fea_data is False and not model.has_results
+    )
+
+    # Script generation must work with no solver installed.
+    script_dir = output.parent / "phase10a_scripts"
+    scripts = model.export_scripts(script_dir)
+    results["phase10a_scripts_generated"] = len(scripts)
+    results["phase10a_scripts_need_no_solver"] = bool(scripts) and not availability.is_available
+
+    bundle_dir = output.parent / "phase10a_export"
+    written = model.export_results(bundle_dir)
+    results["phase10a_case_exported"] = [path.name for path in written] == ["fea_case.json"]
+
+    # Switching target must re-derive the sampling plan, not reuse the old one.
+    model.set_target(FEAValidationTarget.COGGING_TORQUE)
+    cogging_case = model.preview().case
+    results["phase10a_cogging_span_is_cogging_period"] = (
+        cogging_case is not None
+        and cogging_case.operating_point.rotor_angle_span_mech_deg
+        < preview.case.operating_point.rotor_angle_span_mech_deg
+    )
+    results["phase10a_cogging_zero_current"] = (
+        cogging_case is not None and cogging_case.operating_point.phase_current_rms_a == 0.0
+    )
+
+    dialog.window.destroy()
+    root.update()
+    return results
+
+
 def run_real_gui_smoke(root, app, output_path: Path) -> None:
     """Exercise the real GUI, persist evidence/export, write JSON, then exit."""
 
@@ -1024,6 +1117,31 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             )
         ):
             raise RuntimeError("RC2 winding-factor / slot-occupancy GUI smoke did not pass every gate")
+        phase10a_results = _exercise_phase10a_fea_validation(root, app, output)
+        payload.update(phase10a_results)
+        if not all(
+            phase10a_results[name]
+            for name in (
+                "phase10a_menu_entry_present",
+                "phase10a_dialog_opened",
+                "phase10a_view_model_built",
+                "phase10a_blocked_before_parameters",
+                "phase10a_missing_geometry_explained",
+                "phase10a_case_generated",
+                "phase10a_review_states_tier",
+                "phase10a_review_states_approximations",
+                "phase10a_review_states_no_convergence_claim",
+                "phase10a_run_button_matches_availability",
+                "phase10a_unavailable_message_shown",
+                "phase10a_no_fake_results_shown",
+                "phase10a_no_fea_curves_without_data",
+                "phase10a_scripts_generated",
+                "phase10a_case_exported",
+                "phase10a_cogging_span_is_cogging_period",
+                "phase10a_cogging_zero_current",
+            )
+        ):
+            raise RuntimeError("Phase 10A FEA validation GUI smoke did not pass every gate")
         project_results = _exercise_project_workflow(root, app, main_window_module, output)
         if not all(
             project_results[name]
