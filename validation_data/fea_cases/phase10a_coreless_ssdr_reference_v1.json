@@ -624,7 +624,7 @@
     }
   },
   "execution_status": "BLOCKED_BY_SOLVER_AVAILABILITY",
-  "expected_fea_values": "This reference records the case definition only. It contains no expected FEA numbers, because no solver has produced any. Expected values may be added only after a real solver run, together with that run's provenance.",
+  "expected_solver_values_statement": "This reference records the case definition only. It contains no expected FEA numbers, because no solver has produced any. Expected values may be added only after a real solver run, together with that run's provenance.",
   "reference_id": "phase10a_coreless_ssdr_reference_v1",
   "selection_rationale": "MotorCalculator has no radial-flux topology in its input schema, so the first reference must come from the axial-flux family it actually models. Within that family the coreless single-stator dual-rotor machine is the only variant whose analytical magnetic circuit corresponds to exactly one physical geometry, needs no invented B-H curve, and stays linear.",
   "source_parameters_legacy_gui": {

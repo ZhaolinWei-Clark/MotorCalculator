@@ -17,6 +17,14 @@ hidden_imports = [
     "motor_calculator.plots.analysis",
     "motor_calculator.validation.feedback_service",
     "motor_calculator.validation.phase7i_uncertainty_report",
+    # Phase 10A. The FEA bridge is imported lazily from the analysis menu, so
+    # PyInstaller cannot see it by static analysis. It has no FEMM dependency:
+    # the packaged application must start and run normally on a machine with no
+    # FEA software installed.
+    "motor_calculator.fea",
+    "motor_calculator.fea.service",
+    "motor_calculator.fea.view_model",
+    "motor_calculator.gui.fea_validation_dialog",
     "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:
@@ -44,6 +52,15 @@ data_files = [
     (
         str(repository_root / "motor_calculator" / "presets" / "data" / "presets.json"),
         "motor_calculator/presets/data",
+    ),
+    (
+        str(
+            repository_root
+            / "validation_data"
+            / "fea_cases"
+            / "phase10a_coreless_ssdr_reference_v1.json"
+        ),
+        "validation_data/fea_cases",
     ),
 ]
 build_info = repository_root / "packaging" / "build_info.json"

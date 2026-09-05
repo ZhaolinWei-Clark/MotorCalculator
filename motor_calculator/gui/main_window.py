@@ -808,6 +808,8 @@ class MotorCalculatorAppMixin:
         analysis_menu.add_command(
             label="敏感性分析...", command=lambda: self._open_analysis_center("sensitivity")
         )
+        analysis_menu.add_separator()
+        analysis_menu.add_command(label="FEA 验证...", command=self._open_fea_validation)
         menu_bar.add_cascade(label="分析", menu=analysis_menu)
         help_menu = tk.Menu(menu_bar, tearoff=False)
         help_menu.add_command(label=tr("menu.diagnostics"), command=self._export_runtime_diagnostics)
@@ -850,6 +852,24 @@ class MotorCalculatorAppMixin:
             )
         self._analysis_center.select_analysis(analysis_name)
         return self._analysis_center
+
+    def _open_fea_validation(self):
+        """Open the FEA validation bridge. Never runs a solver by itself."""
+
+        from .fea_validation_dialog import FEAValidationDialog
+
+        existing = getattr(self, "_fea_validation_dialog", None)
+        if existing is None or not existing.window.winfo_exists():
+            self._fea_validation_dialog = FEAValidationDialog(
+                self.root,
+                inputs_provider=self._get_params,
+                result_provider=self._current_analysis_result,
+                export_dir=self._runtime_paths.export_dir,
+            )
+        else:
+            existing.refresh()
+            existing.window.lift()
+        return self._fea_validation_dialog
 
     def _current_analysis_result(self):
         result = getattr(self, "calc_results", None)
