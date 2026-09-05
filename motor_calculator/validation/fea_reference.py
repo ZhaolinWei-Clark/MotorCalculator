@@ -29,6 +29,10 @@ class EvidenceClassification(str, Enum):
     INDEPENDENT_FEA_REFERENCE = "INDEPENDENT_FEA_REFERENCE"
     PUBLISHED_FEA_REFERENCE = "PUBLISHED_FEA_REFERENCE"
     EXPERIMENTAL_MEASUREMENT = "EXPERIMENTAL_MEASUREMENT"
+    # Phase 10A. Produced by a solver this application drove itself, as opposed
+    # to an externally solved reference that was imported. It is numerical
+    # evidence and is never equivalent to EXPERIMENTAL_MEASUREMENT.
+    NUMERICAL_FEA = "NUMERICAL_FEA"
 
 
 class FEAExecutionStatus(str, Enum):
