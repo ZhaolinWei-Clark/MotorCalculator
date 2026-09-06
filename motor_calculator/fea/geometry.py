@@ -428,12 +428,48 @@ def build_slice_model(
     domain_y = back_iron_outer_y + margin
     regions.append(
         FEARegion(
-            name="air_domain",
+            name="air_domain_upper",
             role="air_domain",
             polygon_m=_rectangle(0.0, -domain_y, span, domain_y),
             block_label_m=(slot_pitch * 0.25, back_iron_outer_y + margin / 2.0),
             material_key="air",
             mesh_size_m=mesh_sizes["air_domain"],
+        )
+    )
+    # ------------------------------------------------------------------
+    # Every enclosed subregion needs its own block label: FEMM refuses to mesh
+    # a model that contains a region carrying no material, and the refusal is
+    # silent from Lua's point of view -- the real solver returned from
+    # mi_analyze without writing a mesh at all.
+    #
+    # The two rotor back-iron bands span the full width, so they cut the air
+    # into three disconnected parts rather than one:
+    #   * outside the upper back iron   (labelled above)
+    #   * outside the lower back iron   (its mirror; a separate region)
+    #   * everything inside the stack   (the two air gaps and the spaces
+    #     between magnets and between coil sides, which are all connected to
+    #     each other through the gaps between coil sides)
+    # ------------------------------------------------------------------
+    regions.append(
+        FEARegion(
+            name="air_domain_lower",
+            role="air_domain_label_only",
+            polygon_m=_rectangle(0.0, -domain_y, span, domain_y),
+            block_label_m=(slot_pitch * 0.25, -(back_iron_outer_y + margin / 2.0)),
+            material_key="air",
+            mesh_size_m=mesh_sizes["air_domain"],
+        )
+    )
+    regions.append(
+        FEARegion(
+            name="air_active_stack",
+            role="air_domain_label_only",
+            polygon_m=_rectangle(0.0, -domain_y, span, domain_y),
+            # Inside the upper mechanical air gap, which carries no other
+            # region at any circumferential position.
+            block_label_m=(slot_pitch * 0.5, half_coil + gap / 2.0),
+            material_key="air",
+            mesh_size_m=mesh_sizes["air_gap"],
         )
     )
 

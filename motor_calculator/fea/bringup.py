@@ -103,6 +103,18 @@ def _lua_string(value: str) -> str:
     return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
+def _lua_path(path: Path) -> str:
+    """A filesystem path as a Lua string literal.
+
+    Forward slashes are used deliberately. FEMM accepts them on Windows, and
+    they remove an entire class of bug: a Windows path embedded in a Lua string
+    needs every backslash doubled, and a single missed escape turns a path
+    segment into an escape sequence (``\\a`` is a bell, not a directory).
+    """
+
+    return _lua_string(str(path).replace("\\", "/"))
+
+
 def build_bringup_script(*, fem_path: Path, output_path: Path) -> str:
     """Emit the smallest useful magnetostatic FEMM Lua script.
 
@@ -126,6 +138,19 @@ def build_bringup_script(*, fem_path: Path, output_path: Path) -> str:
         'mi_addmaterial("bringup_magnet", {mur}, {mur}, {hc}, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0)'.format(
             mur=_num(BRINGUP_MAGNET_RELATIVE_PERMEABILITY), hc=_num(coercivity)
         ),
+        # mi_addsegment connects two *existing* nodes. Without mi_addnode the
+        # segments are silently dropped and the mesher receives an empty
+        # geometry, which the real solver showed as a .poly file declaring zero
+        # nodes and zero segments.
+        "-- Nodes: magnet block, then air domain",
+        f"mi_addnode({_num(-half_w)}, {_num(-half_h)})",
+        f"mi_addnode({_num(half_w)}, {_num(-half_h)})",
+        f"mi_addnode({_num(half_w)}, {_num(half_h)})",
+        f"mi_addnode({_num(-half_w)}, {_num(half_h)})",
+        f"mi_addnode({_num(-domain)}, {_num(-domain)})",
+        f"mi_addnode({_num(domain)}, {_num(-domain)})",
+        f"mi_addnode({_num(domain)}, {_num(domain)})",
+        f"mi_addnode({_num(-domain)}, {_num(domain)})",
         "-- Magnet block",
         f"mi_addsegment({_num(-half_w)}, {_num(-half_h)}, {_num(half_w)}, {_num(-half_h)})",
         f"mi_addsegment({_num(half_w)}, {_num(-half_h)}, {_num(half_w)}, {_num(half_h)})",
@@ -158,7 +183,7 @@ def build_bringup_script(*, fem_path: Path, output_path: Path) -> str:
         ),
         "mi_clearselected()",
         "-- Solve",
-        f"mi_saveas({_lua_string(str(fem_path))})",
+        f"mi_saveas({_lua_path(fem_path)})",
         "mi_analyze(1)",
         "mi_loadsolution()",
         "-- Extract three field probes",
@@ -168,10 +193,14 @@ def build_bringup_script(*, fem_path: Path, output_path: Path) -> str:
         ("above_pole", BRINGUP_PROBE_ABOVE_POLE),
         ("far_field", BRINGUP_PROBE_FAR_FIELD),
     )
-    lines.append(f"handle = openfile({_lua_string(str(output_path))}, {_lua_string('w')})")
+    lines.append(f"handle = openfile({_lua_path(output_path)}, {_lua_string('w')})")
     lines.append('write(handle, "probe,bx_t,by_t\\n")')
     for name, (x, y) in probes:
-        lines.append(f"bx_{name}, by_{name} = mo_getb({_num(x)}, {_num(y)})")
+        # FEMM has no mo_getb. The postprocessor point query is
+        # mo_getpointvalues, whose first three returns are A, Bx, By.
+        lines.append(
+            f"a_{name}, bx_{name}, by_{name} = mo_getpointvalues({_num(x)}, {_num(y)})"
+        )
         lines.append(
             f'write(handle, {_lua_string(name)}, ",", bx_{name}, ",", by_{name}, "\\n")'
         )
@@ -180,6 +209,10 @@ def build_bringup_script(*, fem_path: Path, output_path: Path) -> str:
             "closefile(handle)",
             "mo_close()",
             "mi_close()",
+            # Without quit() FEMM keeps its main window open after the script
+            # ends and the subprocess never returns, so every run would sit
+            # until the timeout.
+            "quit()",
         ]
     )
     return "\n".join(lines) + "\n"

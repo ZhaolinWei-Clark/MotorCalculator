@@ -60,17 +60,35 @@ def test_probe_version_records_the_widened_search():
 
 
 def test_probe_searches_the_registry_and_every_fixed_drive():
+    """The candidate set is tested directly, not through the search log.
+
+    The probe short-circuits on the first hit, so once FEMM is actually
+    installed the log stops early and proves nothing about coverage. This
+    machine found FEMM on D:, which the v1 probe would have missed entirely.
+    """
+
+    from motor_calculator.fea.availability import (
+        _candidate_executables,
+        _fixed_drive_roots,
+        _program_files_roots,
+    )
+
+    roots = {str(root) for root in _program_files_roots()}
+    assert any("Programs" in root for root in roots), roots
+    drive_roots = _fixed_drive_roots()
+    assert drive_roots, "at least the system drive must be probed"
+    assert {str(root) for root in drive_roots} <= roots
+
+    candidates = {str(path) for path in _candidate_executables()}
+    assert any(path.lower().endswith("femm.exe") for path in candidates)
+    # Every probed root contributes candidates, not just the system drive.
+    assert len(candidates) >= len(roots)
+
+
+def test_probe_reports_where_it_looked_even_on_a_hit():
     report = detect_femm()
-    searched = report.searched_locations
-    assert searched
-    # PATH is still probed first.
-    assert any(entry.startswith("PATH:") for entry in searched)
-    # A relocated install on a non-system drive would previously have been
-    # missed entirely.
-    drives = {entry[:2] for entry in searched if len(entry) > 2 and entry[1] == ":"}
-    assert len(drives) >= 1
-    # Per-user installs.
-    assert any("Programs" in entry for entry in searched)
+    assert report.searched_locations
+    assert any(entry.startswith("PATH:") for entry in report.searched_locations)
 
 
 def test_probe_never_raises_and_always_returns_one_verdict():
@@ -122,21 +140,47 @@ def test_bringup_script_defines_solve_and_extracts(tmp_path):
         '"planar"',
         "mi_addmaterial",
         "mi_addboundprop",
+        "mi_addnode",
         "mi_analyze(1)",
         "mi_loadsolution()",
-        "mo_getb",
+        # Verified against FEMM 4.2: the point query is mo_getpointvalues,
+        # returning A, Bx, By. There is no mo_getb.
+        "mo_getpointvalues",
         "closefile(handle)",
         "mi_close()",
+        # Without quit() FEMM never exits and the subprocess hangs.
+        "quit()",
     ):
         assert fragment in script, fragment
+    assert "mo_getb(" not in script
     assert FEMM_BRINGUP_VERSION in script
+
+
+def test_bringup_script_adds_nodes_before_segments(tmp_path):
+    """mi_addsegment joins two *existing* nodes.
+
+    Without mi_addnode the segments are silently dropped and the mesher gets an
+    empty geometry: the real solver emitted a .poly file declaring zero nodes
+    and zero segments, and never produced a solution.
+    """
+
+    script = build_bringup_script(
+        fem_path=tmp_path / "b.fem", output_path=tmp_path / "b.csv"
+    )
+    lines = script.splitlines()
+    first_node = next(i for i, l in enumerate(lines) if l.startswith("mi_addnode("))
+    first_segment = next(i for i, l in enumerate(lines) if l.startswith("mi_addsegment("))
+    assert first_node < first_segment
+    # Eight corners: the magnet block and the air domain.
+    assert sum(1 for l in lines if l.startswith("mi_addnode(")) == 8
+    assert sum(1 for l in lines if l.startswith("mi_addsegment(")) == 8
 
 
 def test_bringup_script_probes_all_three_points(tmp_path):
     script = build_bringup_script(
         fem_path=tmp_path / "b.fem", output_path=tmp_path / "b.csv"
     )
-    assert script.count("mo_getb") == 3
+    assert script.count("mo_getpointvalues") == 3
     for name in ("magnet_centre", "above_pole", "far_field"):
         assert name in script
 

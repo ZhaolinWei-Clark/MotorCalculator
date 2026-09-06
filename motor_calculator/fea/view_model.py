@@ -151,7 +151,9 @@ class FEAValidationViewModel:
     # ------------------------------------------------------------------
     # Actions
     # ------------------------------------------------------------------
-    def run(self, *, allow_mock_solver: bool = False) -> FEAValidationRun:
+    def run(
+        self, *, allow_mock_solver: bool = False, force_mock_solver: bool = False
+    ) -> FEAValidationRun:
         """Run the validation. Only ever called from an explicit user action."""
 
         if self.modelling is None:
@@ -163,6 +165,7 @@ class FEAValidationViewModel:
             modelling=self.modelling,
             availability=self.availability,
             allow_mock_solver=allow_mock_solver,
+            force_mock_solver=force_mock_solver,
         )
         return self.last_run
 

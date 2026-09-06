@@ -28,7 +28,7 @@ from pathlib import Path
 from typing import Protocol
 
 from .availability import FEMMAvailabilityReport, detect_femm
-from .femm_lua import balanced_phase_currents, build_position_script
+from .femm_lua import balanced_phase_currents, build_position_script, unit_turns_scale
 from .geometry import build_slice_model
 from .hashing import compute_analytical_fingerprint
 from .models import FEAValidationCase, FEAValidationTarget
@@ -209,8 +209,19 @@ def generate_case_scripts(
     return tuple(scripts)
 
 
-def parse_samples_csv(path: Path, phase_names: tuple[str, ...]) -> tuple[FEAPositionSample, ...]:
-    """Parse the CSV the generated Lua writes."""
+def parse_samples_csv(
+    path: Path,
+    phase_names: tuple[str, ...],
+    *,
+    flux_linkage_scale: float = 1.0,
+) -> tuple[FEAPositionSample, ...]:
+    """Parse the CSV the generated Lua writes.
+
+    ``flux_linkage_scale`` restores the physical turns count. The script emits
+    unit turns because FEMM truncates its ``turns`` block property to an
+    integer, and flux linkage is exactly linear in turns, so the magnitude is
+    applied here rather than being silently rounded by the solver.
+    """
 
     with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
@@ -233,7 +244,9 @@ def parse_samples_csv(path: Path, phase_names: tuple[str, ...]) -> tuple[FEAPosi
             samples.append(
                 FEAPositionSample(
                     rotor_angle_mech_deg=float(row["rotor_angle_mech_deg"]),
-                    phase_flux_linkage_wb_turn=linkage,
+                    phase_flux_linkage_wb_turn={
+                        name: value * flux_linkage_scale for name, value in linkage.items()
+                    },
                     circumferential_force_n=float(row["circumferential_force_n"]),
                     element_count=int(float(element_raw)) if element_raw else None,
                 )
@@ -287,6 +300,19 @@ class FEMMSubprocessSolver:
                 f"{completed.stderr.strip() or completed.stdout.strip()}"
             )
 
+    @staticmethod
+    def _flux_linkage_scale(case: FEAValidationCase) -> float:
+        """Turns magnitude the emitted script deliberately left out."""
+
+        model = build_slice_model(
+            case.geometry,
+            slot_layers=case.winding.slot_layers(),
+            mesh_sizes=_mesh_size_map(case),
+            symmetry=case.symmetry,
+            rotor_angle_mech_deg=case.operating_point.rotor_angle_start_mech_deg,
+        )
+        return unit_turns_scale(model)
+
     def solve(
         self,
         case: FEAValidationCase,
@@ -328,7 +354,11 @@ class FEMMSubprocessSolver:
             for script in scripts:
                 self._run_script(executable, script, workspace)
             phase_names = tuple(sorted(set(case.winding.coil_phase_assignment)))
-            samples = parse_samples_csv(workspace / "fea_samples.csv", phase_names)
+            samples = parse_samples_csv(
+                workspace / "fea_samples.csv",
+                phase_names,
+                flux_linkage_scale=self._flux_linkage_scale(case),
+            )
         except FEASolverExecutionError as error:
             return FEASolveOutcome(
                 status="FAILED",

@@ -110,8 +110,13 @@ def test_availability_probe_reports_exactly_one_verdict_and_where_it_looked():
 
 
 def test_availability_honours_an_explicit_override_only_when_the_file_exists(tmp_path):
-    missing = detect_femm(environment_override=str(tmp_path / "nope.exe"))
-    assert missing.availability is FEMMAvailability.FEMM_NOT_INSTALLED
+    # An override naming a file that does not exist is ignored: the probe falls
+    # through to its normal search rather than pointing the adapter at nothing.
+    # (It may then legitimately find a real installation, so the verdict itself
+    # is not what this asserts.)
+    bogus = tmp_path / "nope.exe"
+    missing = detect_femm(environment_override=str(bogus))
+    assert missing.executable_path != bogus.resolve()
 
     fake = tmp_path / "femm.exe"
     fake.write_bytes(b"")
@@ -938,7 +943,7 @@ def test_running_a_validation_does_not_change_the_analytical_result():
     )
     run_validation(
         inputs, analysis, target=FEAValidationTarget.NO_LOAD_BACK_EMF,
-        modelling=MODELLING, allow_mock_solver=True,
+        modelling=MODELLING, force_mock_solver=True,
     )
     after = (
         analysis.electrical.back_emf_phase_rms_v,
@@ -977,12 +982,15 @@ def test_the_view_model_refuses_to_run_before_parameters_are_confirmed():
 
 
 def test_a_blocked_run_shows_no_numbers_and_no_curves():
+    # Availability is checked *before* running: with FEMM installed this call
+    # would launch a real multi-minute field campaign, which is not what a unit
+    # test should do, and the blocked path it covers would not be exercised.
+    if detect_femm().is_available:
+        pytest.skip("FEMM is installed on this machine; the blocked path does not apply")
     inputs, analysis = _design()
     run = run_validation(
         inputs, analysis, target=FEAValidationTarget.NO_LOAD_BACK_EMF, modelling=MODELLING
     )
-    if run.outcome.result is not None:
-        pytest.skip("FEMM is installed on this machine")
     assert run.outcome.status == "BLOCKED_BY_ENVIRONMENT"
     assert run.comparison is None
     assert run.evidence is None
@@ -994,7 +1002,7 @@ def test_a_blocked_run_shows_no_numbers_and_no_curves():
 def test_the_view_model_never_reports_mock_data_as_real():
     model = _view_model()
     model.confirm_modelling_parameters(rotor_back_iron_thickness_m=0.006, coil_span_slots=1)
-    model.run(allow_mock_solver=not model.solver_available)
+    model.run(force_mock_solver=True)
     if model.last_run.used_mock_solver:
         assert model.has_results is True
         assert model.has_real_fea_data is False
@@ -1032,7 +1040,7 @@ def test_export_bundle_writes_case_result_and_comparison(tmp_path):
     inputs, analysis = _design()
     run = run_validation(
         inputs, analysis, target=FEAValidationTarget.NO_LOAD_BACK_EMF,
-        modelling=MODELLING, allow_mock_solver=True,
+        modelling=MODELLING, force_mock_solver=True,
     )
     written = export_bundle(
         run.case, tmp_path, result=run.outcome.result, report=run.comparison
@@ -1054,7 +1062,7 @@ def test_exported_comparison_csv_carries_the_mock_and_admissibility_flags(tmp_pa
     inputs, analysis = _design()
     run = run_validation(
         inputs, analysis, target=FEAValidationTarget.NO_LOAD_BACK_EMF,
-        modelling=MODELLING, allow_mock_solver=True,
+        modelling=MODELLING, force_mock_solver=True,
     )
     export_bundle(run.case, tmp_path, result=run.outcome.result, report=run.comparison)
     with (tmp_path / "fea_comparison.csv").open(encoding="utf-8", newline="") as handle:

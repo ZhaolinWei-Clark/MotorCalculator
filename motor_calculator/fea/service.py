@@ -136,17 +136,24 @@ def run_validation(
     modelling: FEAModellingParameters,
     availability: FEMMAvailabilityReport | None = None,
     allow_mock_solver: bool = False,
+    force_mock_solver: bool = False,
 ) -> FEAValidationRun:
     """Run one validation.
 
-    ``allow_mock_solver`` exists for pipeline tests only. Even when it is set,
-    the resulting comparison is marked inadmissible as evidence.
+    ``allow_mock_solver`` permits the mock pipeline as a *fallback* when no real
+    solver is present. ``force_mock_solver`` selects it even when one is, which
+    is what a software test wants: a unit test must not launch a multi-minute
+    field campaign just because the machine happens to have FEMM installed.
+    Either way the resulting comparison is marked inadmissible as evidence.
     """
 
     report = availability if availability is not None else detect_femm()
     case = build_validation_case(inputs, analysis, target=target, modelling=modelling)
 
-    if report.is_available:
+    if force_mock_solver:
+        outcome = MockFEASolver().solve(case)
+        used_mock = True
+    elif report.is_available:
         solver = FEMMSubprocessSolver(availability=report)
         outcome = solver.solve(case)
         used_mock = False
