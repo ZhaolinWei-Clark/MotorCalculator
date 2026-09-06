@@ -1,0 +1,115 @@
+{
+  "comparison": {
+    "analytical_fingerprint_at_comparison": "a63a8b92dfbcdeb3fbfa73fa2d7fb8e635838eeecb3f29c27ef9c91ff2d1b293",
+    "approximation_labels": [
+      "MEAN_RADIUS_UNROLLED_2D_SLICE",
+      "NO_END_WINDING_GEOMETRY",
+      "NO_INNER_OUTER_EDGE_FRINGING",
+      "MAGNETOSTATIC_NO_EDDY_REACTION"
+    ],
+    "auto_calibration_enabled": false,
+    "case_id": "4f5f6f03c71a35093445885feabb56fbf99fbc600226658bb910c56fa0b692ee",
+    "discrepancy_candidates": [
+      "lumped magnetic-circuit simplification: one reluctance path per pole with no resolved field spreading",
+      "the analytical `leakage_factor` is a scalar fitted stand-in for geometric inter-pole leakage",
+      "the analytical Carter factor is a slot-type table value and ignores the entered slot opening width",
+      "the analytical winding factor is a fundamental-only sinusoidal projection; the solver sees the full waveform",
+      "2D mean-radius slice: no inner/outer edge fringing and no radial variation of pole pitch",
+      "the FEA core permeability is a declared modelling parameter with no analytical counterpart",
+      "mesh discretisation of the air gap and magnet edges"
+    ],
+    "evidence_admissible": true,
+    "fidelity_tier": "FEA_TIER_3",
+    "is_mock": false,
+    "metrics": [
+      {
+        "absolute_error": -0.0511816253668087,
+        "analytical_value": 23.604703894560327,
+        "band_statement": "PROVISIONAL_PROJECT_BANDS: close <= 5 percent, moderate <= 20 percent, large above 20 percent. These bands are a reading aid chosen by this project; they are not an industry tolerance and not a pass/fail criterion.",
+        "basis": "phase RMS, no-load, at the case mechanical speed",
+        "error_relative_to_reference_scale_percent": null,
+        "fea_value": 23.553522269193518,
+        "notes": [],
+        "quantity": "back_emf_phase_rms",
+        "reference_scale_name": null,
+        "reference_scale_value": null,
+        "relative_error_percent": -0.21682807628272535,
+        "status": "CLOSE_AGREEMENT",
+        "unit": "volt"
+      },
+      {
+        "absolute_error": -0.09836244027913921,
+        "analytical_value": 40.88454644299743,
+        "band_statement": "PROVISIONAL_PROJECT_BANDS: close <= 5 percent, moderate <= 20 percent, large above 20 percent. These bands are a reading aid chosen by this project; they are not an industry tolerance and not a pass/fail criterion.",
+        "basis": "line RMS of the non-triplen content, balanced Y",
+        "error_relative_to_reference_scale_percent": null,
+        "fea_value": 40.786184002718294,
+        "notes": [],
+        "quantity": "back_emf_line_rms",
+        "reference_scale_name": null,
+        "reference_scale_value": null,
+        "relative_error_percent": -0.24058586638909968,
+        "status": "CLOSE_AGREEMENT",
+        "unit": "volt"
+      },
+      {
+        "absolute_error": -0.0001954994081425354,
+        "analytical_value": 0.09016332732095494,
+        "band_statement": "PROVISIONAL_PROJECT_BANDS: close <= 5 percent, moderate <= 20 percent, large above 20 percent. These bands are a reading aid chosen by this project; they are not an industry tolerance and not a pass/fail criterion.",
+        "basis": "phase RMS per mechanical rad/s",
+        "error_relative_to_reference_scale_percent": null,
+        "fea_value": 0.08996782791281241,
+        "notes": [],
+        "quantity": "back_emf_constant_phase_rms",
+        "reference_scale_name": null,
+        "reference_scale_value": null,
+        "relative_error_percent": -0.21682807628273854,
+        "status": "CLOSE_AGREEMENT",
+        "unit": "volt_second_per_radian_mechanical"
+      },
+      {
+        "absolute_error": -1.0472183302688543e-06,
+        "analytical_value": 0.0003429919194211033,
+        "band_statement": "PROVISIONAL_PROJECT_BANDS: close <= 5 percent, moderate <= 20 percent, large above 20 percent. These bands are a reading aid chosen by this project; they are not an industry tolerance and not a pass/fail criterion.",
+        "basis": "analytical lumped pole flux against the FEA fundamental flux linkage divided by the analytical effective series turns",
+        "error_relative_to_reference_scale_percent": null,
+        "fea_value": 0.0003419447010908344,
+        "notes": [
+          "this row divides out the analytical turns and winding factor, so it is not an independent measurement of either"
+        ],
+        "quantity": "flux_per_pole",
+        "reference_scale_name": null,
+        "reference_scale_value": null,
+        "relative_error_percent": -0.30531865941224917,
+        "status": "CLOSE_AGREEMENT",
+        "unit": "weber"
+      },
+      {
+        "absolute_error": -0.06397459621556145,
+        "analytical_value": 0.93,
+        "band_statement": "PROVISIONAL_PROJECT_BANDS: close <= 5 percent, moderate <= 20 percent, large above 20 percent. These bands are a reading aid chosen by this project; they are not an industry tolerance and not a pass/fail criterion.",
+        "basis": "fundamental winding factor entered in the analytical model against the one implied by the coil span and slot/pole combination actually meshed",
+        "error_relative_to_reference_scale_percent": null,
+        "fea_value": 0.8660254037844386,
+        "notes": [
+          "the second value is computed from the solved winding geometry, not measured from the field",
+          "a mismatch here means the back-EMF agreement above is the product of the winding factor error and the flux error, and neither factor is individually validated by it"
+        ],
+        "quantity": "winding_factor_entered_vs_solved_geometry",
+        "reference_scale_name": null,
+        "reference_scale_value": null,
+        "relative_error_percent": -6.878988840382952,
+        "status": "MODERATE_DEVIATION",
+        "unit": "dimensionless"
+      }
+    ],
+    "result_analytical_fingerprint": "a63a8b92dfbcdeb3fbfa73fa2d7fb8e635838eeecb3f29c27ef9c91ff2d1b293",
+    "result_case_id": "4f5f6f03c71a35093445885feabb56fbf99fbc600226658bb910c56fa0b692ee",
+    "sample_statistics": null,
+    "schema_version": "phase10a.fea.comparison.v1",
+    "stale": false,
+    "stale_reasons": [],
+    "target": "NO_LOAD_BACK_EMF"
+  },
+  "export_schema_version": "phase10a.fea.export.v1"
+}

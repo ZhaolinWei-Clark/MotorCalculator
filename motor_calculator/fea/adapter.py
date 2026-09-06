@@ -21,6 +21,7 @@ import math
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 from dataclasses import dataclass
@@ -400,9 +401,70 @@ class FEMMSubprocessSolver:
         )
 
 
+def windows_file_version(executable: Path) -> str | None:
+    """The PE resource version of an executable, or ``None``.
+
+    Read through ``version.dll`` with ctypes so no third-party dependency is
+    introduced. Every failure path returns ``None``: an unreadable version is
+    recorded as unknown, never guessed.
+    """
+
+    if sys.platform != "win32":
+        return None
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        version_dll = ctypes.WinDLL("version")
+        path = str(executable)
+        size = version_dll.GetFileVersionInfoSizeW(ctypes.c_wchar_p(path), None)
+        if not size:
+            return None
+        buffer = ctypes.create_string_buffer(size)
+        if not version_dll.GetFileVersionInfoW(
+            ctypes.c_wchar_p(path), 0, size, buffer
+        ):
+            return None
+        value = ctypes.c_void_p()
+        length = wintypes.UINT()
+        if not version_dll.VerQueryValueW(
+            buffer, ctypes.c_wchar_p("\\"), ctypes.byref(value), ctypes.byref(length)
+        ):
+            return None
+
+        class FixedFileInfo(ctypes.Structure):
+            _fields_ = [
+                ("dwSignature", wintypes.DWORD),
+                ("dwStrucVersion", wintypes.DWORD),
+                ("dwFileVersionMS", wintypes.DWORD),
+                ("dwFileVersionLS", wintypes.DWORD),
+                ("dwProductVersionMS", wintypes.DWORD),
+                ("dwProductVersionLS", wintypes.DWORD),
+                ("dwFileFlagsMask", wintypes.DWORD),
+                ("dwFileFlags", wintypes.DWORD),
+                ("dwFileOS", wintypes.DWORD),
+                ("dwFileType", wintypes.DWORD),
+                ("dwFileSubtype", wintypes.DWORD),
+                ("dwFileDateMS", wintypes.DWORD),
+                ("dwFileDateLS", wintypes.DWORD),
+            ]
+
+        info = ctypes.cast(value, ctypes.POINTER(FixedFileInfo)).contents
+        high, low = info.dwProductVersionMS, info.dwProductVersionLS
+        return (
+            f"{(high >> 16) & 0xFFFF}.{high & 0xFFFF}."
+            f"{(low >> 16) & 0xFFFF}.{low & 0xFFFF}"
+        )
+    except (OSError, AttributeError, ValueError):
+        return None
+
+
 def _probe_version(executable: Path) -> str:
     """Best-effort solver version string, never fabricated."""
 
+    product_version = windows_file_version(executable)
+    if product_version:
+        return product_version
     try:
         parent = executable.parent
         for name in ("version.txt", "VERSION"):

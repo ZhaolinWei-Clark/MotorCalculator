@@ -241,6 +241,31 @@ def sample_statistics(
     )
 
 
+def _geometric_winding_factor(case: FEAValidationCase) -> float | None:
+    """Fundamental winding factor of the winding the solver actually meshed.
+
+    Derived from the slot/pole combination and the declared coil span with the
+    project's own slot-EMF-star implementation, which Phase 10B does not modify.
+    ``None`` when that combination has no balanced symmetric winding.
+    """
+
+    from ..motor_core.winding_factor import (
+        WindingFactorError,
+        compute_fundamental_winding_factor,
+    )
+
+    try:
+        breakdown = compute_fundamental_winding_factor(
+            slots=case.winding.slot_count,
+            pole_pairs=case.winding.pole_pairs,
+            coil_span_slots=case.winding.coil_span_slots,
+            phases=case.winding.phases,
+        )
+    except (WindingFactorError, ValueError):
+        return None
+    return breakdown.fundamental_winding_factor
+
+
 def _stale_reasons(case: FEAValidationCase, result: FEARawResult) -> tuple[str, ...]:
     from .hashing import compute_analytical_fingerprint
 
@@ -321,6 +346,32 @@ def build_comparison(
                 notes=(
                     "this row divides out the analytical turns and winding factor, so it "
                     "is not an independent measurement of either",
+                ),
+            )
+        )
+        # The back-EMF comparison can only ever test the *product* N * k_w * flux,
+        # because that is what flux linkage is. If the entered winding factor does
+        # not match the winding the solver actually meshed, an agreeing Ke can be
+        # two offsetting errors rather than two correct sub-models, so the two
+        # winding factors are reported side by side.
+        geometric = _geometric_winding_factor(case)
+        metrics.append(
+            compare_metric(
+                quantity="winding_factor_entered_vs_solved_geometry",
+                unit="dimensionless",
+                basis=(
+                    "fundamental winding factor entered in the analytical model "
+                    "against the one implied by the coil span and slot/pole "
+                    "combination actually meshed"
+                ),
+                analytical_value=case.winding.winding_factor_analytical,
+                fea_value=geometric,
+                notes=(
+                    "the second value is computed from the solved winding geometry, "
+                    "not measured from the field",
+                    "a mismatch here means the back-EMF agreement above is the product "
+                    "of the winding factor error and the flux error, and neither "
+                    "factor is individually validated by it",
                 ),
             )
         )
