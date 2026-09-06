@@ -49,6 +49,25 @@ TARGET_CHOICES_ZH = (
     (FEAValidationTarget.COGGING_TORQUE, "齿槽转矩"),
 )
 
+#: Which targets have actually been run against a real solver and compared.
+#: Phase 10B validated no-load back-EMF only; the other two can be executed but
+#: no campaign has been run for them, and the screen must not imply otherwise.
+TARGET_VALIDATION_STATUS_ZH = {
+    FEAValidationTarget.NO_LOAD_BACK_EMF: (
+        "已在 Phase 10B 中以真实 FEMM 求解并完成对比（FEA_TIER_3，单一参考设计）。"
+    ),
+    FEAValidationTarget.AVERAGE_TORQUE: (
+        "NOT_YET_VALIDATED：尚未运行过真实转矩验证活动。"
+        "此外，相 A 轴与转子 d 轴的电角对齐尚未由空载扫描实测，"
+        "因此激励不能确认就是解析转矩常数所定义的 id = 0 工况。"
+    ),
+    FEAValidationTarget.COGGING_TORQUE: (
+        "NOT_YET_VALIDATED：尚未运行过真实齿槽验证活动。"
+        "当前无铁芯参考设计按构造没有齿槽，对其求解只能得到数值噪声底，"
+        "不构成齿槽预测的验证。"
+    ),
+}
+
 
 def suggested_modelling_values(inputs: MotorAnalysisInput) -> tuple[float, int]:
     """Editable starting values for the two FEA-only parameters.
@@ -114,6 +133,12 @@ class FEAValidationViewModel:
     def set_target(self, target: FEAValidationTarget) -> None:
         self.target = target
         self.last_run = None
+
+    @property
+    def target_validation_status_zh(self) -> str:
+        """Whether this target has actually been validated, in plain words."""
+
+        return TARGET_VALIDATION_STATUS_ZH[self.target]
 
     # ------------------------------------------------------------------
     # Review

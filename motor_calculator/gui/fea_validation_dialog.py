@@ -99,6 +99,10 @@ class FEAValidationDialog:
         )
         self.target_combo.grid(row=0, column=1, sticky=tk.W, padx=8, pady=6)
         self.target_combo.bind("<<ComboboxSelected>>", lambda _event: self._on_target_changed())
+        self.target_status_var = tk.StringVar(value="")
+        ttk.Label(
+            frame, textvariable=self.target_status_var, wraplength=620, justify=tk.LEFT
+        ).grid(row=0, column=2, columnspan=3, sticky=tk.W, padx=8, pady=6)
 
         ttk.Label(
             frame, text=MODELLING_PARAMETER_NOTICE_ZH, wraplength=900, justify=tk.LEFT
@@ -189,6 +193,7 @@ class FEAValidationDialog:
             self.back_iron_var.set(f"{back_iron_m * 1000.0:.3f}")
             self.coil_span_var.set(str(coil_span))
 
+        self.target_status_var.set(model.target_validation_status_zh)
         self._set_text(self.review_text, model.review_text_zh())
         self._set_text(
             self.results_text,

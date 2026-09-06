@@ -872,6 +872,27 @@ def _exercise_phase10a_fea_validation(root, app, output: Path) -> dict[str, Any]
     results["phase10a_review_states_tier"] = "FEA_TIER_3" in review_after
     results["phase10a_review_states_approximations"] = "近似与已知遗漏" in review_after
     results["phase10a_review_states_no_convergence_claim"] = "不作收敛声明" in review_after
+    # Phase 10B: only no-load back-EMF has been validated against a real solver.
+    # The screen must say so for the other two targets rather than implying
+    # they carry the same standing.
+    results["phase10b_ke_marked_validated"] = (
+        "Phase 10B" in dialog.target_status_var.get()
+    )
+    model.set_target(FEAValidationTarget.AVERAGE_TORQUE)
+    dialog.refresh()
+    root.update()
+    results["phase10b_torque_marked_not_validated"] = (
+        "NOT_YET_VALIDATED" in dialog.target_status_var.get()
+    )
+    model.set_target(FEAValidationTarget.COGGING_TORQUE)
+    dialog.refresh()
+    root.update()
+    results["phase10b_cogging_marked_not_validated"] = (
+        "NOT_YET_VALIDATED" in dialog.target_status_var.get()
+    )
+    model.set_target(FEAValidationTarget.NO_LOAD_BACK_EMF)
+    dialog.refresh()
+    root.update()
 
     # The run button must track real solver availability, with no fake result.
     run_state = str(dialog.run_button.cget("state"))
@@ -1139,6 +1160,9 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "phase10a_case_exported",
                 "phase10a_cogging_span_is_cogging_period",
                 "phase10a_cogging_zero_current",
+                "phase10b_ke_marked_validated",
+                "phase10b_torque_marked_not_validated",
+                "phase10b_cogging_marked_not_validated",
             )
         ):
             raise RuntimeError("Phase 10A FEA validation GUI smoke did not pass every gate")
