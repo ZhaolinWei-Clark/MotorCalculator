@@ -15,7 +15,13 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-FEMM_AVAILABILITY_PROBE_VERSION = "phase10a.femm.probe.v1"
+#: Bumped by Phase 10B. The v1 probe searched only PATH, the conventional
+#: install directories and the Python interfaces. Preparing the first real
+#: bring-up showed that a relocated install would have been reported as absent,
+#: so v2 also consults the Windows registry (App Paths and the uninstall
+#: entries), the ``.fem`` file association, the per-user ``Programs`` directory,
+#: and every fixed drive root.
+FEMM_AVAILABILITY_PROBE_VERSION = "phase10b.femm.probe.v2"
 
 #: Executable names FEMM ships under, newest naming first.
 FEMM_EXECUTABLE_NAMES = ("femm.exe", "femm42.exe", "femm")
@@ -32,6 +38,28 @@ FEMM_INSTALL_SUBDIRECTORIES = (
 
 #: Python interfaces to FEMM, in the order we would prefer to use them.
 FEMM_PYTHON_MODULE_CANDIDATES = ("femm", "pyfemm")
+
+#: Registry locations that name an installed FEMM directly. ``App Paths`` is the
+#: canonical Windows answer to "where is this program", and FEMM's installer
+#: also writes an uninstall entry carrying ``InstallLocation``.
+FEMM_REGISTRY_APP_PATHS = (
+    r"SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\femm.exe",
+    r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\App Paths\femm.exe",
+)
+
+FEMM_REGISTRY_UNINSTALL_ROOTS = (
+    r"SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall",
+    r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall",
+)
+
+#: Substring identifying a FEMM uninstall entry. Deliberately narrow: a looser
+#: pattern such as "opera" matches "Autodesk Interoperability Engine Manager",
+#: which is not an FEA solver. A false positive here would send the adapter at
+#: an unrelated executable.
+FEMM_UNINSTALL_DISPLAY_NAME_TOKEN = "femm"
+
+#: Extensions whose registered handler would point at the FEMM executable.
+FEMM_ASSOCIATED_EXTENSIONS = (".fem",)
 
 
 class FEMMAvailability(str, Enum):
@@ -73,20 +101,129 @@ class FEMMAvailabilityReport:
         return not self.is_available
 
 
+def _fixed_drive_roots() -> tuple[Path, ...]:
+    """Every fixed drive root, so a non-system-drive install is still found.
+
+    FEMM's installer defaults to a drive-root directory, and a user with a
+    second drive routinely relocates it there.
+    """
+
+    roots: list[Path] = []
+    if sys.platform != "win32":
+        return ()
+    try:
+        import string
+
+        for letter in string.ascii_uppercase:
+            root = Path(f"{letter}:{os.sep}")
+            if root.is_dir():
+                roots.append(root)
+    except OSError:
+        # An unreadable or disconnected drive must not break detection.
+        return ()
+    return tuple(roots)
+
+
 def _program_files_roots() -> tuple[Path, ...]:
     roots: list[Path] = []
     for variable in ("ProgramFiles", "ProgramFiles(x86)", "ProgramW6432"):
         raw = os.environ.get(variable)
         if raw:
             roots.append(Path(raw))
-    # A conventional FEMM install also lands directly on the system drive.
+    # Modern per-user installs land under %LOCALAPPDATA%\Programs.
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        roots.append(Path(local_app_data) / "Programs")
+    # A conventional FEMM install also lands directly on a drive root, and not
+    # necessarily the system drive.
     system_drive = os.environ.get("SystemDrive")
     if system_drive:
         roots.append(Path(system_drive + os.sep))
+    roots.extend(_fixed_drive_roots())
     unique: list[Path] = []
     for root in roots:
         if root not in unique:
             unique.append(root)
+    return tuple(unique)
+
+
+def _registry_candidates() -> tuple[Path, ...]:
+    """Executable paths named by the Windows registry.
+
+    Read-only, and defensive: a missing key, a denied read or a non-Windows
+    platform yields no candidates rather than an error, because detection
+    failing closed is correct while detection crashing is not.
+    """
+
+    if sys.platform != "win32":
+        return ()
+    try:
+        import winreg
+    except ImportError:
+        return ()
+
+    candidates: list[Path] = []
+
+    def _read_value(root, subkey: str, name: str) -> str | None:
+        for access in (winreg.KEY_READ, winreg.KEY_READ | winreg.KEY_WOW64_64KEY):
+            try:
+                with winreg.OpenKey(root, subkey, 0, access) as key:
+                    value, _kind = winreg.QueryValueEx(key, name)
+                    text = str(value).strip().strip('"')
+                    return text or None
+            except OSError:
+                continue
+        return None
+
+    for subkey in FEMM_REGISTRY_APP_PATHS:
+        for root in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
+            value = _read_value(root, subkey, "")
+            if value:
+                candidates.append(Path(value))
+
+    for uninstall_root in FEMM_REGISTRY_UNINSTALL_ROOTS:
+        for root in (winreg.HKEY_LOCAL_MACHINE, winreg.HKEY_CURRENT_USER):
+            try:
+                with winreg.OpenKey(root, uninstall_root) as key:
+                    count = winreg.QueryInfoKey(key)[0]
+            except OSError:
+                continue
+            for index in range(count):
+                try:
+                    with winreg.OpenKey(root, uninstall_root) as key:
+                        entry = winreg.EnumKey(key, index)
+                except OSError:
+                    continue
+                subkey = f"{uninstall_root}\\{entry}"
+                display = _read_value(root, subkey, "DisplayName") or ""
+                if FEMM_UNINSTALL_DISPLAY_NAME_TOKEN not in display.lower():
+                    continue
+                location = _read_value(root, subkey, "InstallLocation")
+                if not location:
+                    continue
+                directory = Path(location)
+                for parts in ((), ("bin",)):
+                    for name in FEMM_EXECUTABLE_NAMES:
+                        candidates.append(directory.joinpath(*parts) / name)
+
+    for extension in FEMM_ASSOCIATED_EXTENSIONS:
+        handler = _read_value(winreg.HKEY_CLASSES_ROOT, extension, "")
+        if not handler:
+            continue
+        command = _read_value(
+            winreg.HKEY_CLASSES_ROOT, f"{handler}\\shell\\open\\command", ""
+        )
+        if not command:
+            continue
+        # A shell command looks like: "C:\path\femm.exe" "%1"
+        executable = command.split('"')[1] if command.startswith('"') else command.split(" ")[0]
+        if executable:
+            candidates.append(Path(executable))
+
+    unique: list[Path] = []
+    for candidate in candidates:
+        if candidate not in unique:
+            unique.append(candidate)
     return tuple(unique)
 
 
@@ -153,6 +290,22 @@ def detect_femm(*, environment_override: str | None = None) -> FEMMAvailabilityR
                 probe_version=FEMM_AVAILABILITY_PROBE_VERSION,
                 platform=sys.platform,
                 detail="FEMM located on PATH.",
+            )
+
+    # The registry is consulted before the directory sweep: it names the install
+    # the user actually performed, rather than guessing at a conventional path.
+    for candidate in _registry_candidates():
+        searched.append(f"registry:{candidate}")
+        if candidate.is_file():
+            return FEMMAvailabilityReport(
+                availability=FEMMAvailability.FEMM_AVAILABLE,
+                integration_path=FEMMIntegrationPath.SUBPROCESS_LUA,
+                executable_path=candidate.resolve(),
+                python_module_name=_find_python_module(),
+                searched_locations=tuple(searched),
+                probe_version=FEMM_AVAILABILITY_PROBE_VERSION,
+                platform=sys.platform,
+                detail="FEMM located through a Windows registry entry.",
             )
 
     for candidate in _candidate_executables():
