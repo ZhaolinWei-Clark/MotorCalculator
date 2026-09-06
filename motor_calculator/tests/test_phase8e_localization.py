@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from pathlib import Path
 
 from motor_calculator.i18n import (
@@ -97,13 +98,27 @@ def test_protected_calculation_and_legacy_baseline_hashes() -> None:
 
 
 def test_runtime_source_has_no_absolute_repository_dependency() -> None:
-    old_root = "C:\\Users\\10099\\Documents\\Codex\\2026-07-03\\agents-md-docs-project-status-zh\\repo"
+    """Runtime sources must not hard-code an absolute user-profile path.
+
+    Phase 8E moved the repository off the C drive, and this guard existed to
+    stop that specific old root from creeping back in. It is now written as a
+    pattern rather than that one literal: matching any ``C:\\Users\\<name>`` or
+    ``C:/Users/<name>`` path is a strictly stronger check, and it keeps a
+    developer's Windows account name out of the published source.
+    """
+
+    absolute_user_path = re.compile(r"[A-Za-z]:[\\/]{1,2}Users[\\/]{1,2}\w")
     runtime_files = (
         ROOT / "motor_calculator" / "runtime" / "paths.py",
         ROOT / "motor_calculator" / "gui" / "main_window.py",
         ROOT / "packaging" / "MotorCalculator.spec",
     )
-    assert all(old_root not in path.read_text(encoding="utf-8") for path in runtime_files)
+    offenders = [
+        path.name
+        for path in runtime_files
+        if absolute_user_path.search(path.read_text(encoding="utf-8"))
+    ]
+    assert not offenders, f"absolute user-profile paths found in: {offenders}"
 
 
 def test_gui_smoke_checks_confidence_actions_remain_visible() -> None:

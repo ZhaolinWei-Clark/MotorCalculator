@@ -2,7 +2,7 @@
 
 ## 目标
 
-- 原仓库：`C:\Users\10099\Documents\Codex\2026-07-03\agents-md-docs-project-status-zh\repo`
+- 原仓库：`%USERPROFILE%\Documents\Codex\2026-07-03\agents-md-docs-project-status-zh\repo`
 - 新 canonical 仓库：`D:\Codex\Projects\MotorCalculator`
 - 解释器：`D:\Python312\python.exe`
 

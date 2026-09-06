@@ -9,7 +9,7 @@
 | 操作系统 | Windows 11，AMD64 |
 | Python | 3.12.13，64 bit，MSC v.1944 |
 | `.venv` 解释器 | `.venv\Scripts\python.exe` |
-| 基础解释器 | `C:\Users\10099\.cache\codex-runtimes\codex-primary-runtime\dependencies\python` |
+| 基础解释器 | `%USERPROFILE%\.cache\codex-runtimes\codex-primary-runtime\dependencies\python` |
 | tkinter | 可导入 |
 | 编译时 Tcl/Tk | 8.6 / 8.6 |
 | Tcl/Tk DLL 文件版本 | 8.6.12 |
@@ -29,7 +29,7 @@
 
 1. `.venv` 和基础解释器直接运行 `tkinter.Tcl()` 都报 `Can't find a usable init.tcl`，证明 venv 只是继承故障。
 2. 显式把 `TCL_LIBRARY`、`TK_LIBRARY` 指向该基础解释器的 Tcl/Tk 目录后仍失败，因此不是单纯环境变量缺失。
-3. 原生 Tcl 对实际路径 `C:/Users/10099/.cache/...` 执行 `file normalize` 时把 `.cache` 路径段归一化为空，并报告 `file exists = 0`；PowerShell 和 Python 文件 API 同时确认文件存在。
+3. 原生 Tcl 对实际路径 `<USER_HOME>/.cache/...` 执行 `file normalize` 时把 `.cache` 路径段归一化为空，并报告 `file exists = 0`；PowerShell 和 Python 文件 API 同时确认文件存在。
 4. 运行的是明确指定的 `.venv`/基础 Python，不是 PATH 中的另一解释器；源代码模式尚未进入打包，因此不是 PyInstaller 配置造成。
 
 结论：当前 Codex bundled Python 的 Tcl 原生文件系统无法正确解析其自身位于隐藏 `.cache` 目录下的 Tcl 库路径，属于基础 Python/Tcl 发行环境不完整或不兼容。仅设置环境变量不能修复。

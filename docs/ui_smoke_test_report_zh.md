@@ -4,7 +4,7 @@
 
 - 测试时间：2026-07-04
 - 当前分支：`fix/gui-runtime-smoke-test`
-- Python 解释器：`C:\Users\10099\Documents\Codex\2026-07-03\agents-md-docs-project-status-zh\repo\.venv\Scripts\python.exe`
+- Python 解释器：`%USERPROFILE%\Documents\Codex\2026-07-03\agents-md-docs-project-status-zh\repo\.venv\Scripts\python.exe`
 - 启动命令：`.venv\Scripts\python.exe motor_calculator\app.py`
 
 ## 2. GUI 真实启动结果

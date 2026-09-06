@@ -102,7 +102,7 @@ The current high-DPI behavior is acceptable for this engineering-preview gate. T
 
 The increase from 480 to 486 is caused by six new runtime, work-area, DPI-scaling, and smoke-argument tests. There were no test failures.
 
-One intermediate run encountered `PermissionError` in pytest's default `%TEMP%\pytest-of-10099` directory after a restricted sandbox process created incompatible ACL state. The final full suite used a fresh unique pytest `--basetemp`; this was an execution-environment issue, not a product failure.
+One intermediate run encountered `PermissionError` in pytest's default `%TEMP%\pytest-of-<USER>` directory after a restricted sandbox process created incompatible ACL state. The final full suite used a fresh unique pytest `--basetemp`; this was an execution-environment issue, not a product failure.
 
 ## 8. Remaining deployment limitations
 
