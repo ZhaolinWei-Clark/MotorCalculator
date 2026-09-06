@@ -138,3 +138,92 @@ def build_reference_case(target: FEAValidationTarget):
         modelling=PHASE10A_REFERENCE_MODELLING,
         winding_factor_provenance="manual_user_input_reference_design",
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 10C: the geometry-consistent reference
+# ---------------------------------------------------------------------------
+
+PHASE10C_REFERENCE_ID = "phase10c_coreless_ssdr_self_consistent_v1"
+
+#: Why this case exists.
+#:
+#: Phase 10B compared an analytical model carrying a hand-entered winding factor
+#: of 0.93 against a solved winding whose geometry gives 0.8660254. Back-EMF is
+#: proportional to ``N * k_w * flux``, so that comparison could only ever test
+#: the product, and its apparent -0.22% agreement turned out to be a +7.39%
+#: winding-factor error cancelling a -7.06% flux error. Removing the winding
+#: factor mismatch is what lets the remaining residual be read as a magnetic
+#: model-form difference.
+PHASE10C_SELECTION_RATIONALE = (
+    "Identical to the Phase 10B reference in every source input except the "
+    "winding factor, which is resolved from the winding geometry by the "
+    "project's own AUTO implementation instead of being entered by hand. The "
+    "solver-visible geometry is unchanged, so the real Phase 10B field solution "
+    "remains valid for it."
+)
+
+PHASE10C_WINDING_FACTOR_MODE = "AUTO_GEOMETRY"
+
+
+def resolve_self_consistent_winding_factor():
+    """Resolve k_w from the winding geometry, via the approved AUTO path.
+
+    Returns the project's own ``WindingFactorResolution``. Nothing is hardcoded
+    here: the value comes from the slot EMF star for the declared slot/pole
+    combination and coil span, so it cannot drift away from the winding the FEA
+    actually meshes.
+    """
+
+    from ..motor_core.validation import parse_legacy_gui_params
+    from ..motor_core.winding_factor import WindingFactorMode, resolve_winding_factor
+
+    parameters = parse_legacy_gui_params(dict(PHASE10A_REFERENCE_PARAMETERS))
+    return resolve_winding_factor(
+        parameters,
+        mode=WindingFactorMode.AUTO,
+        coil_span_slots=PHASE10A_REFERENCE_MODELLING.coil_span_slots,
+    )
+
+
+def phase10c_reference_parameters() -> dict[str, Any]:
+    """Phase 10B's parameters with only the winding factor made self-consistent."""
+
+    resolution = resolve_self_consistent_winding_factor()
+    if resolution.mode.value != "auto":
+        raise ValueError(
+            "the self-consistent reference requires an AUTO winding factor; "
+            f"the resolver returned {resolution.mode.value} because: {resolution.reason_zh}"
+        )
+    parameters = dict(PHASE10A_REFERENCE_PARAMETERS)
+    parameters["k_w"] = resolution.value
+    return parameters
+
+
+def build_self_consistent_reference_case(target: FEAValidationTarget):
+    """Rebuild the Phase 10C case for one target, deterministically.
+
+    Every source input matches Phase 10B except ``k_w``. In particular the coil
+    span, slot and pole counts, magnet geometry, materials, mesh policy and
+    operating point are untouched, which is what keeps the solver-visible case
+    hash identical to Phase 10B's.
+    """
+
+    from ..motor_core.calculations import LegacyGuiMotorModelBridge
+    from ..motor_core.validation import parse_legacy_gui_params
+    from .case_builder import build_validation_case
+
+    resolution = resolve_self_consistent_winding_factor()
+    bridge = LegacyGuiMotorModelBridge(
+        parse_legacy_gui_params(phase10c_reference_parameters())
+    )
+    analysis = bridge.run_full_analysis()
+    return build_validation_case(
+        bridge.input_data,
+        analysis,
+        target=target,
+        modelling=PHASE10A_REFERENCE_MODELLING,
+        winding_factor_provenance=(
+            f"{PHASE10C_WINDING_FACTOR_MODE}: {resolution.reason_zh}"
+        ),
+    )

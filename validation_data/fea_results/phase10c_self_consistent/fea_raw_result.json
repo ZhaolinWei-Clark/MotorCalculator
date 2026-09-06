@@ -1,0 +1,575 @@
+{
+  "export_schema_version": "phase10a.fea.export.v1",
+  "result": {
+    "mean_radius_m": 0.052500000000000005,
+    "mechanical_speed_rpm": 2500.0,
+    "pole_pairs": 8,
+    "provenance": {
+      "analytical_fingerprint": "bbc698e7d54c9014ebc9b1f9874340b4575acf404f2a464489e8cd09b07b0262",
+      "case_id": "53fce1b79f0ea76509fbfe0edae7dc55516332602c3005ee775072a1bd8e3c78",
+      "extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
+      "is_mock": false,
+      "material_assumptions": [
+        "the analytical magnetic circuit carries no iron reluctance and no B-H data; the FEA core permeability is a declared FEA-only modelling parameter",
+        "the analytical model carries no rotor back-iron thickness; it is a declared FEA-only modelling parameter supplied per case",
+        "magnet and steel electrical conductivity are irrelevant to a magnetostatic solve and are not transferred",
+        "the analytical `leakage_factor` is a lumped scalar with no field-solver counterpart; the solver resolves leakage geometrically instead",
+        "the analytical Carter factor is a fixed table value keyed by the slot-type name and ignores the entered slot opening width and air gap; the solver resolves real slotting instead"
+      ],
+      "mesh_policy_name": "phase10a_default",
+      "operating_point_summary": {
+        "current_angle_electrical_deg": 0.0,
+        "mechanical_speed_rpm": 2500.0,
+        "phase_current_rms_a": 0.0,
+        "rotor_angle_span_mech_deg": 45.0,
+        "temperature_c": 80.0
+      },
+      "reported_element_count": 122529,
+      "requested_mesh_sizes_m": {
+        "air_domain": 0.01030835089459151,
+        "air_gap": 0.0003333333333333333,
+        "core": 0.0017180584824319182,
+        "global": 0.0017180584824319182,
+        "magnet": 0.00125,
+        "magnet_edge": 0.000625,
+        "slot_opening": 0.0003333333333333333,
+        "winding": 0.00125
+      },
+      "sample_count": 52,
+      "schema_version": "phase10a.fea.result.v1",
+      "sector_fraction": 0.125,
+      "solve_seconds": 594.764431500007,
+      "solver": "FEMM",
+      "solver_version": "4.2.0.0",
+      "symmetry_applied": false,
+      "timestamp_utc": "2026-09-06T19:08:39+00:00",
+      "warnings": [
+        "field solution reused from the Phase 10B campaign; the emitted solver scripts for both cases were verified byte-identical, so no rerun was required"
+      ]
+    },
+    "samples": [
+      {
+        "circumferential_force_n": 0.07024950598542642,
+        "element_count": 116900,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.013788357521592982,
+          "B": 0.013788333355742127,
+          "C": 1.0248668086863505e-07
+        },
+        "rotor_angle_mech_deg": 0.0
+      },
+      {
+        "circumferential_force_n": -0.8982419377013559,
+        "element_count": 115534,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.01467100583147057,
+          "B": 0.012699702766702783,
+          "C": 0.0018622781309622829
+        },
+        "rotor_angle_mech_deg": 0.8653846153846154
+      },
+      {
+        "circumferential_force_n": -0.7773658610879427,
+        "element_count": 114728,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.01533558486855786,
+          "B": 0.01142007307699383,
+          "C": 0.00370689166171404
+        },
+        "rotor_angle_mech_deg": 1.730769230769231
+      },
+      {
+        "circumferential_force_n": -0.6562737783654188,
+        "element_count": 115712,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.015774774056970642,
+          "B": 0.009973686389768595,
+          "C": 0.005515942697774278
+        },
+        "rotor_angle_mech_deg": 2.596153846153846
+      },
+      {
+        "circumferential_force_n": 0.06542950775177707,
+        "element_count": 118020,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.015974424382679018,
+          "B": 0.008386597088917444,
+          "C": 0.007266986297348044
+        },
+        "rotor_angle_mech_deg": 3.461538461538462
+      },
+      {
+        "circumferential_force_n": 0.2690476275975716,
+        "element_count": 122387,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.015934959253100595,
+          "B": 0.00669092038999815,
+          "C": 0.008928716317874712
+        },
+        "rotor_angle_mech_deg": 4.326923076923077
+      },
+      {
+        "circumferential_force_n": 0.2019789762362211,
+        "element_count": 118485,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.015654354634072762,
+          "B": 0.004917857186335469,
+          "C": 0.010473408585729812
+        },
+        "rotor_angle_mech_deg": 5.192307692307693
+      },
+      {
+        "circumferential_force_n": 0.977597579239443,
+        "element_count": 118677,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.01513949209206433,
+          "B": 0.0030945595287729492,
+          "C": 0.01186502892950922
+        },
+        "rotor_angle_mech_deg": 6.057692307692308
+      },
+      {
+        "circumferential_force_n": 1.038964508039599,
+        "element_count": 119340,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.014399249541842317,
+          "B": 0.0012421574133647906,
+          "C": 0.01308227108814504
+        },
+        "rotor_angle_mech_deg": 6.923076923076923
+      },
+      {
+        "circumferential_force_n": -0.2557352255553855,
+        "element_count": 121229,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.013446155065549293,
+          "B": -0.0006214694826707922,
+          "C": 0.014104250245054606
+        },
+        "rotor_angle_mech_deg": 7.788461538461538
+      },
+      {
+        "circumferential_force_n": -1.154285260289342,
+        "element_count": 118404,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.012292154426450026,
+          "B": -0.002479480090664661,
+          "C": 0.014916333199182763
+        },
+        "rotor_angle_mech_deg": 8.653846153846153
+      },
+      {
+        "circumferential_force_n": -0.9047608462208238,
+        "element_count": 116072,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.010955960190663533,
+          "B": -0.004315225928129266,
+          "C": 0.015508495548419488
+        },
+        "rotor_angle_mech_deg": 9.51923076923077
+      },
+      {
+        "circumferential_force_n": -0.09240337698570321,
+        "element_count": 120647,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.009459219273287587,
+          "B": -0.006106985337476352,
+          "C": 0.015868009973782755
+        },
+        "rotor_angle_mech_deg": 10.38461538461539
+      },
+      {
+        "circumferential_force_n": -0.02784724332025791,
+        "element_count": 119197,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.007832088655696675,
+          "B": -0.007831851492381456,
+          "C": 0.015987277273528444
+        },
+        "rotor_angle_mech_deg": 11.25
+      },
+      {
+        "circumferential_force_n": 0.00659743909744881,
+        "element_count": 119326,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.006107312980498211,
+          "B": -0.009458229368202849,
+          "C": 0.015868647161019638
+        },
+        "rotor_angle_mech_deg": 12.11538461538462
+      },
+      {
+        "circumferential_force_n": 0.6949240485392032,
+        "element_count": 115885,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.004315044584185762,
+          "B": -0.010955744086549899,
+          "C": 0.015509224424219238
+        },
+        "rotor_angle_mech_deg": 12.98076923076923
+      },
+      {
+        "circumferential_force_n": 1.048151958673373,
+        "element_count": 117319,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.0024791765606127433,
+          "B": -0.012291892973429901,
+          "C": 0.014917286627630661
+        },
+        "rotor_angle_mech_deg": 13.84615384615385
+      },
+      {
+        "circumferential_force_n": 0.3098079190668033,
+        "element_count": 121583,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.00062142447107857,
+          "B": -0.013445346393799426,
+          "C": 0.0141042868335531
+        },
+        "rotor_angle_mech_deg": 14.71153846153846
+      },
+      {
+        "circumferential_force_n": -0.7577621612127483,
+        "element_count": 120116,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.0012422307703723325,
+          "B": -0.014397983682390775,
+          "C": 0.013081915816745945
+        },
+        "rotor_angle_mech_deg": 15.57692307692308
+      },
+      {
+        "circumferential_force_n": -0.8631389038366901,
+        "element_count": 119565,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.003094707551692236,
+          "B": -0.01513786954415125,
+          "C": 0.01186533241491555
+        },
+        "rotor_angle_mech_deg": 16.44230769230769
+      },
+      {
+        "circumferential_force_n": -0.3222545044517463,
+        "element_count": 119317,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.004917449647248335,
+          "B": -0.015654314793905305,
+          "C": 0.010473540525625324
+        },
+        "rotor_angle_mech_deg": 17.30769230769231
+      },
+      {
+        "circumferential_force_n": -0.3299823487710932,
+        "element_count": 122256,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.0066907534371458315,
+          "B": -0.015934941660069382,
+          "C": 0.008929193997373975
+        },
+        "rotor_angle_mech_deg": 18.17307692307692
+      },
+      {
+        "circumferential_force_n": -0.05269432853548423,
+        "element_count": 120134,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.008387460790197887,
+          "B": -0.01597505217081479,
+          "C": 0.007266065718142524
+        },
+        "rotor_angle_mech_deg": 19.03846153846154
+      },
+      {
+        "circumferential_force_n": 0.4985254956513127,
+        "element_count": 116249,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.009973310978527525,
+          "B": -0.015774089032629245,
+          "C": 0.0055158013664769814
+        },
+        "rotor_angle_mech_deg": 19.90384615384615
+      },
+      {
+        "circumferential_force_n": 0.7424372064536471,
+        "element_count": 114676,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.011420405242072218,
+          "B": -0.015336048045454376,
+          "C": 0.00370670832717798
+        },
+        "rotor_angle_mech_deg": 20.76923076923077
+      },
+      {
+        "circumferential_force_n": 0.6501290330523678,
+        "element_count": 114995,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.012698661591170455,
+          "B": -0.014670965333034944,
+          "C": 0.0018616238989106269
+        },
+        "rotor_angle_mech_deg": 21.63461538461539
+      },
+      {
+        "circumferential_force_n": -0.0240894953549817,
+        "element_count": 117243,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.01378826823716768,
+          "B": -0.013788200047299044,
+          "C": -1.5715297547915568e-07
+        },
+        "rotor_angle_mech_deg": 22.5
+      },
+      {
+        "circumferential_force_n": -0.8279171008481749,
+        "element_count": 115743,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.014671069076769969,
+          "B": -0.012699629151531187,
+          "C": -0.0018621335145754918
+        },
+        "rotor_angle_mech_deg": 23.36538461538462
+      },
+      {
+        "circumferential_force_n": -0.7762117812072952,
+        "element_count": 114637,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.015335584196890512,
+          "B": -0.011420018807768407,
+          "C": -0.0037070414795341393
+        },
+        "rotor_angle_mech_deg": 24.23076923076923
+      },
+      {
+        "circumferential_force_n": -0.6894464861653481,
+        "element_count": 115242,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.015774911001333467,
+          "B": -0.009973591727133269,
+          "C": -0.005515778529883243
+        },
+        "rotor_angle_mech_deg": 25.09615384615385
+      },
+      {
+        "circumferential_force_n": 0.08191341737630685,
+        "element_count": 118245,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.015974629937613723,
+          "B": -0.00838646845810185,
+          "C": -0.007266939571664713
+        },
+        "rotor_angle_mech_deg": 25.96153846153846
+      },
+      {
+        "circumferential_force_n": 0.2955952219005876,
+        "element_count": 122086,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.01593508638617932,
+          "B": -0.0066908054848361185,
+          "C": -0.008928808183349068
+        },
+        "rotor_angle_mech_deg": 26.82692307692308
+      },
+      {
+        "circumferential_force_n": 0.2076280549176378,
+        "element_count": 118422,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.015654623545684962,
+          "B": -0.004917668653848473,
+          "C": -0.010473569009976388
+        },
+        "rotor_angle_mech_deg": 27.69230769230769
+      },
+      {
+        "circumferential_force_n": 0.9919060403461639,
+        "element_count": 118365,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.015139578847601438,
+          "B": -0.003094642845187037,
+          "C": -0.0118649907473426
+        },
+        "rotor_angle_mech_deg": 28.55769230769231
+      },
+      {
+        "circumferential_force_n": 1.043487259649492,
+        "element_count": 119922,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.014399103427011306,
+          "B": -0.00124222536234702,
+          "C": -0.013082162186561238
+        },
+        "rotor_angle_mech_deg": 29.42307692307692
+      },
+      {
+        "circumferential_force_n": -0.1868558191094175,
+        "element_count": 120197,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.013446230738653513,
+          "B": 0.0006215006426923969,
+          "C": -0.014104276903702855
+        },
+        "rotor_angle_mech_deg": 30.28846153846154
+      },
+      {
+        "circumferential_force_n": -1.136575741179752,
+        "element_count": 119196,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.012292229395209993,
+          "B": 0.0024795157244928336,
+          "C": -0.014916154741993148
+        },
+        "rotor_angle_mech_deg": 31.15384615384615
+      },
+      {
+        "circumferential_force_n": -0.8602525719797114,
+        "element_count": 116817,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.01095593115357433,
+          "B": 0.00431528117160576,
+          "C": -0.015507927640216168
+        },
+        "rotor_angle_mech_deg": 32.01923076923077
+      },
+      {
+        "circumferential_force_n": -0.05062043015229031,
+        "element_count": 119991,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.009459214807505256,
+          "B": 0.00610688502957701,
+          "C": -0.01586838460531355
+        },
+        "rotor_angle_mech_deg": 32.88461538461539
+      },
+      {
+        "circumferential_force_n": 0.05876587667991828,
+        "element_count": 119042,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.007831977119920563,
+          "B": 0.007831816087157857,
+          "C": -0.01598728761581461
+        },
+        "rotor_angle_mech_deg": 33.75
+      },
+      {
+        "circumferential_force_n": 0.09289256450466302,
+        "element_count": 120454,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.006107077035215665,
+          "B": 0.009458234215874505,
+          "C": -0.015868998063243017
+        },
+        "rotor_angle_mech_deg": 34.61538461538461
+      },
+      {
+        "circumferential_force_n": 0.7126608772048733,
+        "element_count": 116466,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.00431508738367738,
+          "B": 0.0109555721728033,
+          "C": -0.015508095140374807
+        },
+        "rotor_angle_mech_deg": 35.48076923076923
+      },
+      {
+        "circumferential_force_n": 1.05802763610216,
+        "element_count": 118071,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.0024791707330248636,
+          "B": 0.012291849730844276,
+          "C": -0.014917225376170337
+        },
+        "rotor_angle_mech_deg": 36.34615384615385
+      },
+      {
+        "circumferential_force_n": 0.2818992244279384,
+        "element_count": 121653,
+        "phase_flux_linkage_wb_turn": {
+          "A": 0.0006213849128215572,
+          "B": 0.013445069366236156,
+          "C": -0.014104532729535988
+        },
+        "rotor_angle_mech_deg": 37.21153846153846
+      },
+      {
+        "circumferential_force_n": -0.7583972121918606,
+        "element_count": 120116,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.0012420324696113918,
+          "B": 0.01439798983647743,
+          "C": -0.013081943288687213
+        },
+        "rotor_angle_mech_deg": 38.07692307692308
+      },
+      {
+        "circumferential_force_n": -0.9000897112564304,
+        "element_count": 119604,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.0030946487200454037,
+          "B": 0.015137762991592337,
+          "C": -0.011865577014523919
+        },
+        "rotor_angle_mech_deg": 38.94230769230769
+      },
+      {
+        "circumferential_force_n": -0.3177697594101281,
+        "element_count": 119154,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.004917369801167503,
+          "B": 0.015654381984845225,
+          "C": -0.010473760377060763
+        },
+        "rotor_angle_mech_deg": 39.80769230769231
+      },
+      {
+        "circumferential_force_n": -0.3731442147671378,
+        "element_count": 122529,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.0066907281092687685,
+          "B": 0.015934839605844995,
+          "C": -0.008929168832008514
+        },
+        "rotor_angle_mech_deg": 40.67307692307693
+      },
+      {
+        "circumferential_force_n": -0.06055196497834463,
+        "element_count": 120550,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.008387638531613912,
+          "B": 0.015975092090076783,
+          "C": -0.007265955406487044
+        },
+        "rotor_angle_mech_deg": 41.53846153846154
+      },
+      {
+        "circumferential_force_n": 0.4443944718652099,
+        "element_count": 116024,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.009973486955402294,
+          "B": 0.01577416906991328,
+          "C": -0.005515806999039765
+        },
+        "rotor_angle_mech_deg": 42.40384615384615
+      },
+      {
+        "circumferential_force_n": 0.6418933232678496,
+        "element_count": 114819,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.011420449310377443,
+          "B": 0.015336126766876394,
+          "C": -0.0037065205728277857
+        },
+        "rotor_angle_mech_deg": 43.26923076923077
+      },
+      {
+        "circumferential_force_n": 0.7317640139005127,
+        "element_count": 115186,
+        "phase_flux_linkage_wb_turn": {
+          "A": -0.012698602791486067,
+          "B": 0.014670934244834132,
+          "C": -0.0018615372565385512
+        },
+        "rotor_angle_mech_deg": 44.13461538461539
+      }
+    ],
+    "span_mech_deg": 45.0,
+    "target": "NO_LOAD_BACK_EMF"
+  }
+}

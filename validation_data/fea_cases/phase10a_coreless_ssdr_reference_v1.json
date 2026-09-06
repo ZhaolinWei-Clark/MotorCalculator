@@ -21,7 +21,7 @@
       },
       "application_version": "1.0.0-rc3",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
-      "case_id": "3d7fb452ba34420422f864d9331e2cfac48691f69b0b0b365ab5f7a627225459",
+      "case_id": "2b4324caa0affe9f2381acb501ee126a0ded3324ec1aab86525235b7986314c1",
       "geometry": {
         "air_domain_margin_m": 0.02061670178918302,
         "circumference_m": 0.3298672286269283,
@@ -228,7 +228,7 @@
       },
       "application_version": "1.0.0-rc3",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
-      "case_id": "0cba316ead56088f56c19f69a63387677a9cc75334e13a81b3390313709d7b2a",
+      "case_id": "5a32fe593c7abd9d85fff68a03b8da3bba7e67ec5e10edb5dcee4e69bc77b558",
       "geometry": {
         "air_domain_margin_m": 0.02061670178918302,
         "circumference_m": 0.3298672286269283,
@@ -436,7 +436,7 @@
       },
       "application_version": "1.0.0-rc3",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
-      "case_id": "4f5f6f03c71a35093445885feabb56fbf99fbc600226658bb910c56fa0b692ee",
+      "case_id": "53fce1b79f0ea76509fbfe0edae7dc55516332602c3005ee775072a1bd8e3c78",
       "geometry": {
         "air_domain_margin_m": 0.02061670178918302,
         "circumference_m": 0.3298672286269283,
