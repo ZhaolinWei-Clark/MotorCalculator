@@ -55,6 +55,36 @@ def slot_belt_index(slot_index: int, slots: int, pole_pairs: int, phases: int) -
     return ((residue * 4 * phases + slots) // (2 * slots)) % (2 * phases)
 
 
+def belt_to_phase_map(phases: int = DEFAULT_PHASES) -> dict[int, tuple[int, int]]:
+    """Map each belt onto ``(phase index, series sign)``.
+
+    The belts sit at successive multiples of ``180 / m`` electrical degrees, so
+    for three phases they are at 0, 60, 120, 180, 240 and 300 degrees. Phase
+    ``j`` is centred ``j * 360 / m`` degrees round, which is belt ``2j``, and its
+    reversed belt is 180 degrees away at ``2j + m``:
+
+        belt 0 -> A+   belt 1 -> C-   belt 2 -> B+
+        belt 3 -> A-   belt 4 -> C+   belt 5 -> B-
+
+    Taking ``PHASE_LABELS[belt % m]`` instead looks plausible and is wrong: it
+    yields A+, B+, C+, A-, B-, C-, which places the three phases 60 electrical
+    degrees apart rather than 120. The real solver showed exactly that -- three
+    flux-linkage waveforms of equal amplitude at 150, 90 and 30 degrees, whose
+    sum was not zero at any position.
+    """
+
+    mapping: dict[int, tuple[int, int]] = {}
+    for phase_index in range(phases):
+        mapping[(2 * phase_index) % (2 * phases)] = (phase_index, 1)
+        mapping[(2 * phase_index + phases) % (2 * phases)] = (phase_index, -1)
+    if len(mapping) != 2 * phases:
+        raise ValueError(
+            f"{phases} phases do not produce {2 * phases} distinct belts; the "
+            "belt allocation is only defined for an odd phase count"
+        )
+    return mapping
+
+
 def allocate_all_phases(
     slots: int, pole_pairs: int, phases: int = DEFAULT_PHASES
 ) -> tuple[tuple[str, ...], tuple[int, ...]]:
@@ -62,12 +92,14 @@ def allocate_all_phases(
 
     if phases > len(PHASE_LABELS):
         raise ValueError("only three-phase windings have declared FEA circuit labels")
+    mapping = belt_to_phase_map(phases)
     labels: list[str] = []
     signs: list[int] = []
     for slot_index in range(slots):
         belt = slot_belt_index(slot_index, slots, pole_pairs, phases)
-        labels.append(PHASE_LABELS[belt % phases])
-        signs.append(1 if belt < phases else -1)
+        phase_index, sign = mapping[belt]
+        labels.append(PHASE_LABELS[phase_index])
+        signs.append(sign)
     return tuple(labels), tuple(signs)
 
 
