@@ -49,12 +49,30 @@ TARGET_CHOICES_ZH = (
     (FEAValidationTarget.COGGING_TORQUE, "齿槽转矩"),
 )
 
+#: The Ke comparison the project currently stands behind, and the historical one
+#: it replaced. The historical number must never be shown on its own: -0.22%
+#: reads as an excellent result and is not one.
+PREFERRED_KE_COMPARISON_ZH = (
+    "当前比较（Phase 10C，自洽）：绕组系数由几何自动推导（AUTO_GEOMETRY，"
+    "k_w = 0.8660254），解析与 FEA 使用同一绕组几何。"
+    "Ke 残差 +7.15%，与磁通残差 +7.06% 同量级，指向磁路模型形式差异。"
+)
+
+HISTORICAL_KE_COMPARISON_ZH = (
+    "历史比较（Phase 10B，绕组系数不自洽）：解析侧手工输入 k_w = 0.93，"
+    "而所求解绕组几何为 k_w = 0.8660254。当时表观 Ke 残差仅 −0.22%，"
+    "但那是 +7.39% 的绕组系数误差与 −6.59% 的磁通误差相乘抵消的结果，"
+    "**不可作为磁路模型已被验证的依据**。仅作溯源保留。"
+)
+
 #: Which targets have actually been run against a real solver and compared.
 #: Phase 10B validated no-load back-EMF only; the other two can be executed but
 #: no campaign has been run for them, and the screen must not imply otherwise.
 TARGET_VALIDATION_STATUS_ZH = {
     FEAValidationTarget.NO_LOAD_BACK_EMF: (
-        "已在 Phase 10B 中以真实 FEMM 求解并完成对比（FEA_TIER_3，单一参考设计）。"
+        "已以真实 FEMM 求解并完成对比（FEA_TIER_3，单一参考设计）。"
+        "当前采用 Phase 10C 自洽比较；Phase 10B 的历史比较绕组系数不自洽，"
+        "其 −0.22% 表观一致性不可单独引用。"
     ),
     FEAValidationTarget.AVERAGE_TORQUE: (
         "NOT_YET_VALIDATED：尚未运行过真实转矩验证活动。"
@@ -133,6 +151,16 @@ class FEAValidationViewModel:
     def set_target(self, target: FEAValidationTarget) -> None:
         self.target = target
         self.last_run = None
+
+    @property
+    def ke_comparison_notice_zh(self) -> tuple[str, str]:
+        """The preferred Ke comparison and the historical one, in that order.
+
+        Returned together so a caller cannot render the historical figure
+        without the caveat that goes with it.
+        """
+
+        return (PREFERRED_KE_COMPARISON_ZH, HISTORICAL_KE_COMPARISON_ZH)
 
     @property
     def target_validation_status_zh(self) -> str:

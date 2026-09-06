@@ -76,6 +76,11 @@ class FEAValidationDialog:
         )
         self.solver_status_label.pack(fill=tk.X, padx=12, pady=(0, 8))
 
+        self.ke_notice_var = tk.StringVar(value="")
+        ttk.Label(
+            self.window, textvariable=self.ke_notice_var, wraplength=940, justify=tk.LEFT
+        ).pack(fill=tk.X, padx=12, pady=(0, 8))
+
         self._build_controls()
         self._build_output()
         self._build_actions()
@@ -194,6 +199,8 @@ class FEAValidationDialog:
             self.coil_span_var.set(str(coil_span))
 
         self.target_status_var.set(model.target_validation_status_zh)
+        preferred, historical = model.ke_comparison_notice_zh
+        self.ke_notice_var.set("\n".join((preferred, historical)))
         self._set_text(self.review_text, model.review_text_zh())
         self._set_text(
             self.results_text,

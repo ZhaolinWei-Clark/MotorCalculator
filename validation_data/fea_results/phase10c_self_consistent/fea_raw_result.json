@@ -42,7 +42,7 @@
       "solver": "FEMM",
       "solver_version": "4.2.0.0",
       "symmetry_applied": false,
-      "timestamp_utc": "2026-09-06T19:08:39+00:00",
+      "timestamp_utc": "2026-09-06T19:12:59+00:00",
       "warnings": [
         "field solution reused from the Phase 10B campaign; the emitted solver scripts for both cases were verified byte-identical, so no rerun was required"
       ]

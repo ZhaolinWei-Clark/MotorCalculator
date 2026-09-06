@@ -63,7 +63,20 @@ class KeErrorDecomposition:
 
     @property
     def flux_error_percent(self) -> float:
+        """Analytical relative to FEA, matching ``winding_factor_error_percent``."""
+
         return (self.flux_ratio - 1.0) * 100.0
+
+    @property
+    def flux_error_fea_vs_analytical_percent(self) -> float:
+        """FEA relative to analytical, matching the Ke error convention.
+
+        The reciprocal of :attr:`flux_error_percent`. Both are published because
+        mixing the two conventions makes a +7.06% and a -6.59% look like
+        different findings when they are the same one.
+        """
+
+        return (1.0 / self.flux_ratio - 1.0) * 100.0
 
     @property
     def historical_ke_error_percent(self) -> float:
