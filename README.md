@@ -8,7 +8,7 @@ numerical FEA validation for permanent-magnet machines.
 ![Platform Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
 ![Tests 1036 passed](https://img.shields.io/badge/tests-1036%20passed%2C%203%20skipped-2ea44f)
 ![Version 1.0.0-rc3](https://img.shields.io/badge/version-1.0.0--rc3-blue)
-![License not yet chosen](https://img.shields.io/badge/license-not%20yet%20chosen-lightgrey)
+![License Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 ---
 
@@ -380,9 +380,10 @@ experimental validation of this software, and no standards compliance is claimed
 
 ## License
 
-**No license has been chosen yet.** Until one is added, default copyright applies and
-no reuse rights are granted.
+Licensed under the **Apache License, Version 2.0** — see [`LICENSE`](LICENSE).
 
-Options are compared in
-[`docs/publication/license_options.md`](docs/publication/license_options.md) for an
-explicit decision.
+Attribution for third-party components, and the fact that FEMM is detected rather than
+bundled or redistributed, is recorded in [`NOTICE`](NOTICE).
+
+The reasoning behind this choice is kept in
+[`docs/publication/license_options.md`](docs/publication/license_options.md).

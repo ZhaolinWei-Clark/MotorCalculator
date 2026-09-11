@@ -1,6 +1,16 @@
 # License Options — Decision Support
 
-**Status: no license chosen. This document compares options; it does not select one.**
+> ## ✅ Decision: **Apache-2.0**
+>
+> Approved and applied. The repository root carries the unmodified Apache License 2.0
+> as [`LICENSE`](../../LICENSE), with third-party attribution in
+> [`NOTICE`](../../NOTICE).
+>
+> The comparison below is retained as the record of *why*, not as an open question.
+
+---
+
+**The analysis below was written before the decision, and is preserved unchanged.**
 
 Until a `LICENSE` file exists at the repository root, default copyright applies:
 the work is "all rights reserved". Publishing source publicly does **not** grant reuse
@@ -106,16 +116,16 @@ portfolio valuable.
 
 ---
 
-## 5. To apply a decision
+## 5. How the decision was applied
 
-Nothing has been added. Once a licence is chosen:
+| Step | Status |
+|---|---|
+| `LICENSE` at repository root, unmodified Apache-2.0 text | ✅ added |
+| Copyright line — `Copyright 2026 Zhaolin Wei` | ✅ set |
+| `NOTICE` covering the vendored Inno Setup translation (MIT, kirakira) | ✅ added |
+| README `License` section and badge | ✅ updated |
+| GitHub sidebar licence detection | automatic once `LICENSE` is on the default branch |
 
-1. Add a `LICENSE` file at the repository root with the unmodified upstream text
-2. Set the copyright line — year and holder name
-3. Add a `NOTICE` file if Apache-2.0 is chosen and attribution beyond `LICENSE` is
-   wanted (the vendored Inno Setup translation is the one candidate)
-4. Update the README `License` section and the licence badge
-5. Optionally set the licence in the GitHub repository settings so it is displayed in
-   the sidebar
-
-**This requires explicit approval. No licence will be added without it.**
+The `NOTICE` file also records that **FEMM is detected, not bundled or redistributed**,
+and lists the runtime dependencies with their own licences. No patent claim is made
+beyond the standard Apache-2.0 grant, and no third-party licence file was modified.
