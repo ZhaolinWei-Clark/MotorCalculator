@@ -30,12 +30,23 @@ from typing import Any, Mapping
 #: so changing a number the solver never sees invented a new machine and
 #: discarded a perfectly valid field solution, while the analytical fingerprint
 #: did not move at all. Digests are not comparable across versions.
-FEA_CASE_HASH_VERSION = "phase10c.fea.hash.v2"
+#:
+#: Bumped again for v1.0.0-rc4. v2 still carried ``application_version`` in
+#: ``case_id``, so a release-label change from ``1.0.0-rc3`` to ``1.0.0-rc4``
+#: -- which the solver cannot observe -- rehashed every case and orphaned the
+#: Phase 10B and 10C field solutions. Same defect as v1, different field. The
+#: build label is metadata about who asked the question, not part of the
+#: question; it stays in the analytical fingerprint, where a changed build may
+#: legitimately change the analytical prediction being compared against.
+FEA_CASE_HASH_VERSION = "rc4.fea.hash.v3"
 
 #: Fields excluded from ``case_id``. ``case_id`` is the digest itself, and the
-#: remaining entries are commentary or the analytical side of the comparison.
+#: remaining entries are commentary, build metadata, or the analytical side of
+#: the comparison. ``application_version`` is excluded because the solver never
+#: sees it: the same geometry, materials, winding, operating point and mesh
+#: policy describe the same machine whether rc3 or rc4 emitted the Lua.
 CASE_HASH_EXCLUDED_FIELDS = frozenset(
-    {"case_id", "analytical", "notes", "supportability"}
+    {"case_id", "analytical", "application_version", "notes", "supportability"}
 )
 
 #: Fields *within* a nested structure that are analytical rather than

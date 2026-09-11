@@ -19,9 +19,9 @@
         "flux_per_pole_wb": 0.0003429919194211033,
         "torque_constant_nm_per_phase_rms_a": 0.2704899819628649
       },
-      "application_version": "1.0.0-rc3",
+      "application_version": "1.0.0-rc4",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
-      "case_id": "2b4324caa0affe9f2381acb501ee126a0ded3324ec1aab86525235b7986314c1",
+      "case_id": "357ad0548395a5bb4b217661660d5f1e4ef8ddec02a5428f5207de740d82f2e0",
       "geometry": {
         "air_domain_margin_m": 0.02061670178918302,
         "circumference_m": 0.3298672286269283,
@@ -226,9 +226,9 @@
         "flux_per_pole_wb": 0.0003429919194211033,
         "torque_constant_nm_per_phase_rms_a": 0.2704899819628649
       },
-      "application_version": "1.0.0-rc3",
+      "application_version": "1.0.0-rc4",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
-      "case_id": "5a32fe593c7abd9d85fff68a03b8da3bba7e67ec5e10edb5dcee4e69bc77b558",
+      "case_id": "6613e84c87615da23c75642be75da7f452cd7d979e0d07933cfa105f975e7b67",
       "geometry": {
         "air_domain_margin_m": 0.02061670178918302,
         "circumference_m": 0.3298672286269283,
@@ -434,9 +434,9 @@
         "flux_per_pole_wb": 0.0003429919194211033,
         "torque_constant_nm_per_phase_rms_a": 0.2704899819628649
       },
-      "application_version": "1.0.0-rc3",
+      "application_version": "1.0.0-rc4",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
-      "case_id": "53fce1b79f0ea76509fbfe0edae7dc55516332602c3005ee775072a1bd8e3c78",
+      "case_id": "73adc05548850eda516d83ee08850bdb4f93a3fd33f090b3245ae1f8b2da2f3e",
       "geometry": {
         "air_domain_margin_m": 0.02061670178918302,
         "circumference_m": 0.3298672286269283,

@@ -249,7 +249,7 @@ def test_fea_equivalent_flux_divides_out_turns_and_geometric_winding_factor():
 
 
 def test_hash_version_records_the_changed_digest_definition():
-    assert FEA_CASE_HASH_VERSION == "phase10c.fea.hash.v2"
+    assert FEA_CASE_HASH_VERSION == "rc4.fea.hash.v3"
 
 
 def test_an_analytical_only_change_leaves_the_solver_visible_hash_alone():
