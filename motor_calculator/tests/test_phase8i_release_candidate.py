@@ -32,9 +32,9 @@ def _pmsm_case():
 
 
 def test_rc_version_uses_one_authoritative_prerelease_value() -> None:
-    assert APPLICATION_VERSION == "1.0.0-rc3"
+    assert APPLICATION_VERSION == "1.0.0-rc4"
     assert RELEASE_CHANNEL == "release-candidate"
-    assert windows_version_tuple() == (1, 0, 0, 3)
+    assert windows_version_tuple() == (1, 0, 0, 4)
 
 
 def test_dynamic_gui_mapping_is_available_only_after_current_pmsm_calculation() -> None:

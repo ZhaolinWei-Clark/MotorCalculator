@@ -34,10 +34,10 @@ INSTALLER_SOURCE = REPOSITORY_ROOT / "installer" / "MotorCalculator.iss"
 
 
 def test_authoritative_version_and_stable_application_identity() -> None:
-    assert APPLICATION_VERSION == "1.0.0-rc3"
+    assert APPLICATION_VERSION == "1.0.0-rc4"
     assert APPLICATION_NAME == "MotorCalculator"
     assert re.fullmatch(r"\d+\.\d+\.\d+(?:-rc\d+)?", APPLICATION_VERSION)
-    assert windows_version_tuple() == (1, 0, 0, 3)
+    assert windows_version_tuple() == (1, 0, 0, 4)
     assert str(uuid.UUID(APPLICATION_ID.strip("{}"))).upper() in APPLICATION_ID
 
 
