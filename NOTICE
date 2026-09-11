@@ -1,0 +1,50 @@
+MotorCalculator
+Copyright 2026 Zhaolin Wei
+
+This product includes software developed by the MotorCalculator project.
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file.
+
+--------------------------------------------------------------------------------
+Third-party components
+--------------------------------------------------------------------------------
+
+Inno Setup Simplified Chinese Translation
+  Files:     installer/third_party/ChineseSimplified.isl
+  Copyright: (c) 2019 - 2020 kirakira
+  License:   MIT (see installer/third_party/ChineseSimplified.LICENSE.txt)
+  Source:    https://github.com/kira-96/Inno-Setup-Chinese-Simplified-Translation
+
+  Used only for the Simplified Chinese user interface of the Windows installer.
+  Its MIT terms continue to apply to that file; the Apache-2.0 license covering
+  MotorCalculator does not supersede them.
+
+--------------------------------------------------------------------------------
+External tools that are NOT bundled or redistributed
+--------------------------------------------------------------------------------
+
+FEMM (Finite Element Method Magnetics)
+  https://www.femm.info/
+
+  MotorCalculator's finite-element validation features detect and drive an
+  existing FEMM installation on the user's machine through generated Lua
+  scripts. No FEMM source, binary, library or data file is included in this
+  repository or in any MotorCalculator distribution, and no right to
+  redistribute FEMM is claimed or granted. FEMM is subject to its own license
+  terms. The application runs normally without FEMM installed; only the
+  validation features become unavailable.
+
+--------------------------------------------------------------------------------
+Runtime dependencies
+--------------------------------------------------------------------------------
+
+The following are declared as dependencies and installed from PyPI rather than
+vendored into this repository. Each remains under its own license:
+
+  numpy         (BSD-3-Clause)
+  matplotlib    (Matplotlib License, BSD-style)  - optional, GUI plotting only
+  pytest        (MIT)                            - development only
+  PyInstaller   (GPL-2.0-or-later with a bundling exception)
+                                                 - packaging only; used as a
+                                                   build tool, not linked into
+                                                   the source distribution
