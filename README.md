@@ -7,7 +7,7 @@ numerical FEA validation for permanent-magnet machines.
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Platform Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
 ![Tests 1036 passed](https://img.shields.io/badge/tests-1036%20passed%2C%203%20skipped-2ea44f)
-![Version 1.0.0-rc3](https://img.shields.io/badge/version-1.0.0--rc3-blue)
+![Version 1.0.0-rc4](https://img.shields.io/badge/version-1.0.0--rc4-blue)
 ![License Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 ---

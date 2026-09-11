@@ -1,6 +1,13 @@
-# Release Strategy — v1.0.0-rc3
+# Release Strategy — v1.0.0-rc4
 
-**Status: plan only. No artifacts have been uploaded, and no binaries are committed.**
+**Status: artifacts built and verified locally. No tag created, nothing uploaded.**
+
+> **v1.0.0-rc3 is not to be published.** Its binaries were built from commit `8fe452e`
+> and predate the Phase 10A/10B/10C FEMM validation bridge by 22 commits — verified by
+> inspection of the packaged executable, in which `motor_calculator.fea` is absent.
+> Publishing them under notes describing the FEA bridge would misrepresent the download.
+> They are retained locally under `release/_historical_local_builds/`, classified
+> `HISTORICAL_LOCAL_BUILD` / `NOT_FOR_PUBLIC_RELEASE`.
 
 ---
 
@@ -8,97 +15,93 @@
 
 | Content | Where it goes |
 |---|---|
-| Source, tests, docs, validation evidence (112 KB) | Git repository |
+| Source, tests, docs, validation evidence | Git repository |
 | Windows installer, portable ZIP (≈ 70 MB) | **GitHub Releases** |
 | Build intermediates (`build/`, `dist/`, `release/`) | Neither — local only, gitignored |
 
-The repository currently tracks **3.35 MB** across 468 files with no binaries, no
-archives and no solver artifacts. Committing release binaries would permanently inflate
-the history for files that GitHub Releases hosts for free. That boundary is already
-enforced by `.gitignore` and should stay enforced.
+Committing release binaries would permanently inflate the history for files GitHub
+Releases hosts for free. That boundary is enforced by `.gitignore` and should stay
+enforced.
 
 ---
 
-## 2. Proposed release: `v1.0.0-rc3`
+## 2. Proposed release: `v1.0.0-rc4`
 
-**Pre-release: yes.** This is a release candidate, not a stable v1.0. Marking it as a
-pre-release on GitHub keeps that honest and stops it being presented as production-ready.
+**Pre-release: yes.** This is a release candidate, not a stable v1.0.
+
+**Build-source commit: `2d84f5671e309ea3a1dc32654c5fc1f00331ac1c`.** Source commit,
+packaged binaries, manifest, checksums and release notes all refer to this one build —
+the property rc3 did not have, and the reason rc4 exists.
 
 ### Assets
 
-Built locally under `release/` and verified against `release/release_manifest.json`:
+Verified against `release/release_manifest.json` and recomputed from the files on disk:
 
 | Asset | SHA-256 | Size |
 |---|---|---:|
-| `MotorCalculator-1.0.0-rc3-win64-setup.exe` | `d324d089240a7c7cc49f3d74230dc4d1d69fe559205911cb7d41462ca7e9e431` | 29,873,588 B |
-| `MotorCalculator-1.0.0-rc3-win64-portable.zip` | `3af0e67af0a18b159447e146405558849f80d7189f8c98cffc8e2864455fe472` | 41,335,354 B |
-| `SHA256SUMS.txt` | — | 308 B |
+| `MotorCalculator-1.0.0-rc4-win64-setup.exe` | `a8b99be015baef3d3a175fbc14d140097ff40af33abefea4e6990e5a2331f6f9` | 30,011,457 B |
+| `MotorCalculator-1.0.0-rc4-win64-portable.zip` | `9e9a2927bb8ed9e5ebb187e7edc91b3df548163c16020ad43a778794fd7b244f` | 41,483,822 B |
+| `SHA256SUMS.txt` | — | 219 B |
 
-Build environment: PyInstaller 6.16.0, Inno Setup 6.7.3, Python 3.12.10, Tcl/Tk 8.6.15,
+`SHA256SUMS.txt` lists only the two uploadable assets. The loose
+`dist/MotorCalculator/MotorCalculator.exe` is recorded in the manifest as build
+provenance but is **not** a release asset: it is an internal PyInstaller one-folder
+member and is not standalone. The portable ZIP is the portable asset.
+
+Build environment: Python 3.12.10, PyInstaller 6.16.0, Inno Setup 6.7.3, Tcl/Tk 8.6.15,
 stable AppId `{A5F90D43-686B-4DDB-9F67-CF96B7A4A33D}`.
 
-### Draft release notes
+### Verified for this build
 
-> **MotorCalculator v1.0.0-rc3** — release candidate
->
-> Electric machine and drive engineering workbench for axial-flux permanent-magnet
-> machines: analytical modeling, feasibility and optimization, a drive/control
-> simulation sandbox, and an automated FEMM numerical validation bridge.
->
-> **Highlights**
-> - Corrected PMSM voltage semantics on a single line-RMS basis (authoritative since rc3)
-> - Automated FEMM 4.2 validation bridge with deterministic case hashing and full
->   solver provenance
-> - First real numerical FEA evidence: no-load back-EMF, geometry-consistent residual
->   **+7.15 %** at `FEA_TIER_3`
-> - 1036 tests passing
->
-> **Validation status** — the FEA comparison is *numerical*, not experimental. No
-> physical motor has been tested. `FEA_TIER_3` is a 2D mean-radius AFPM slice and is not
-> a 3D equivalence claim. See the README for the full limitations list.
->
-> **Install** — run the setup executable, or unpack the portable ZIP. FEMM is **not**
-> bundled; install [FEMM 4.2](https://www.femm.info/) separately if you want the
-> validation features. The application runs normally without it.
->
-> **Verify** — checksums in `SHA256SUMS.txt`. Binaries are **unsigned**; Windows
-> SmartScreen will warn about an unknown publisher.
+| Check | Result |
+|---|---|
+| Source regression | 1036 passed, 3 skipped |
+| Real FEMM 4.2 integration | PASS (5 integration tests) |
+| FEA layer present in package | 20 runtime `motor_calculator.fea` modules in the packaged PYZ |
+| Source GUI smoke | PASS |
+| Packaged GUI smoke | PASS |
+| Portable ZIP smoke (extracted copy) | PASS |
+| Project save/load, crash recovery | PASS |
+| Contamination audit | clean — no FEMM, `.venv`, `.git`, `build/`, `tmp/`, logs, secrets or test modules |
+| Payload single root | `MotorCalculator/` |
+| Provenance | manifest `git_commit` == build HEAD, tree clean |
 
 ---
 
 ## 3. Known gaps to disclose
 
-These are already tracked in the release manifest and must not be quietly omitted:
+Tracked in the release manifest; must not be quietly omitted:
 
 - **Unsigned binaries** (`signed: false`) — SmartScreen will warn
-- **Clean-machine acceptance** is `BLOCKED_BY_ENVIRONMENT` — never verified on a
-  machine without a developer toolchain
-- **Defender scan** is `NOT_RERUN_FOR_RC3`
-- **Upgrade path tested rc1 → rc3**, not rc2 → rc3 — the rc2 installer was never built
+- **Clean-machine acceptance** is `BLOCKED_BY_ENVIRONMENT` — never verified on a machine
+  without a developer toolchain
+- **Defender scan** is `NOT_PERFORMED`
+- **Installer acceptance not run for rc4**: local install, Start Menu, desktop shortcut,
+  uninstall, reinstall and upgrade path are all `NOT_RUN`. The installer compiles and is
+  recorded `BUILT_UNTESTED_ON_CLEAN_MACHINE`. rc3 had local-install evidence that rc4
+  does not; running it requires installing the application on this machine.
 
 ---
 
 ## 4. Sequence when approved
 
-1. Choose and add a `LICENSE` (see [`license_options.md`](license_options.md)) —
-   ideally before the first public release
-2. Merge the portfolio documentation branch into `main`
-3. Create an annotated tag `v1.0.0-rc3` on the release commit
-4. Create the GitHub Release from that tag, marked **pre-release**
-5. Upload the three assets and paste the notes above
-6. Verify the published checksums match `release_manifest.json`
+1. Merge `release/v1.0.0-rc4` into `main`
+2. Create an annotated tag `v1.0.0-rc4` on the final build-source commit
+3. Create the GitHub Release from that tag, marked **pre-release**
+4. Upload the two assets plus `SHA256SUMS.txt`
+5. Verify the published checksums match `release_manifest.json`
 
 **Not started.** No tag has been created and no asset uploaded.
 
 ---
 
-## 5. Beyond rc3
+## 5. Beyond rc4
 
 A stable `v1.0.0` should not be published until at least:
 
-- a license exists
 - binaries are signed, or the unsigned status is prominently disclosed
 - clean-machine acceptance is actually performed
+- installer acceptance is re-run on the shipping build
 - the +7.15 % magnetic-circuit residual is either explained or accepted as a documented
   model limitation with a stated accuracy envelope
 
