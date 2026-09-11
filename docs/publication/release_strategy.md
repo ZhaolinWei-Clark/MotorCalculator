@@ -29,19 +29,27 @@ enforced.
 
 **Pre-release: yes.** This is a release candidate, not a stable v1.0.
 
-**Build-source commit: `2d84f5671e309ea3a1dc32654c5fc1f00331ac1c`.** Source commit,
-packaged binaries, manifest, checksums and release notes all refer to this one build —
-the property rc3 did not have, and the reason rc4 exists.
+**Build-source commit: recorded in `release/release_manifest.json` as `git_commit`,
+and embedded in the package itself as `_internal/build_info.json`.** Source commit,
+packaged binaries, manifest and checksums all refer to one build — the property rc3 did
+not have, and the reason rc4 exists.
+
+This document deliberately does **not** repeat the artifact hashes. It is itself build
+input, so any hash written here would describe the build that existed *before* this file
+was last edited, and could never be correct for the build that ships. The authority is
+`release/SHA256SUMS.txt` and `release/release_manifest.json`, which are generated from
+the final artifacts after the build.
 
 ### Assets
 
-Verified against `release/release_manifest.json` and recomputed from the files on disk:
+Every artifact is verified by recomputing its SHA-256 from the file on disk and
+comparing against both the manifest and `SHA256SUMS.txt`:
 
-| Asset | SHA-256 | Size |
-|---|---|---:|
-| `MotorCalculator-1.0.0-rc4-win64-setup.exe` | `a8b99be015baef3d3a175fbc14d140097ff40af33abefea4e6990e5a2331f6f9` | 30,011,457 B |
-| `MotorCalculator-1.0.0-rc4-win64-portable.zip` | `9e9a2927bb8ed9e5ebb187e7edc91b3df548163c16020ad43a778794fd7b244f` | 41,483,822 B |
-| `SHA256SUMS.txt` | — | 219 B |
+| Asset | Authority for size and SHA-256 |
+|---|---|
+| `MotorCalculator-1.0.0-rc4-win64-setup.exe` | `release/SHA256SUMS.txt`, `release/release_manifest.json` |
+| `MotorCalculator-1.0.0-rc4-win64-portable.zip` | `release/SHA256SUMS.txt`, `release/release_manifest.json` |
+| `SHA256SUMS.txt` | the two lines above are its entire contents |
 
 `SHA256SUMS.txt` lists only the two uploadable assets. The loose
 `dist/MotorCalculator/MotorCalculator.exe` is recorded in the manifest as build
