@@ -1,0 +1,144 @@
+{
+  "budget": {
+    "flat_top_to_fundamental_convention": 1.0317466933006936,
+    "observed": 1.0715430457760033,
+    "product": 1.071535602182102,
+    "sine_emf_rounding": 1.0006493103960283,
+    "unresolved_remainder": 0.9999930533878871,
+    "unresolved_remainder_percent": -0.0006946612112868067,
+    "waveform_and_axial_averaging": 0.9404528609450831,
+    "winding_factor_meshed_vs_star": 1.103607357600042
+  },
+  "calibration_performed": false,
+  "diagnostic_cases": [
+    {
+      "fea_vs_analytical_percent": -2.9690870514733514,
+      "flux_change_percent": 0.0,
+      "flux_wb": 0.0003429919194211033,
+      "label": "sigma_m = 1.15  (production default)",
+      "note": "reference"
+    },
+    {
+      "fea_vs_analytical_percent": -10.690379859048393,
+      "flux_change_percent": 8.645533141210349,
+      "flux_wb": 0.00037264539948632825,
+      "label": "sigma_m = 1.00",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -8.116615589856702,
+      "flux_change_percent": 5.6022408963585235,
+      "flux_wb": 0.0003622071530021174,
+      "label": "sigma_m = 1.05",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -5.5428513206650205,
+      "flux_change_percent": 2.724795640326949,
+      "flux_wb": 0.00035233774828816324,
+      "label": "sigma_m = 1.10",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -0.3953227822816374,
+      "flux_change_percent": -2.5839793281653978,
+      "flux_wb": 0.00033412907912598426,
+      "label": "sigma_m = 1.20",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -2.9690870514733514,
+      "flux_change_percent": 0.0,
+      "flux_wb": 0.0003429919194211033,
+      "label": "g_eff = h_coil + 2g          (production)",
+      "note": "reference"
+    },
+    {
+      "fea_vs_analytical_percent": 48.50619833236043,
+      "flux_change_percent": -34.66204506065858,
+      "flux_wb": 0.0002241039057569427,
+      "label": "g_eff = h_coil + 2g + 2*h_m/mu_r (magnet in gap)",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -13.778896982078415,
+      "flux_change_percent": 12.537313432835795,
+      "flux_wb": 0.0003859938914082266,
+      "label": "g_eff = h_coil only",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -1.0773703136174317,
+      "flux_change_percent": -1.9123195004553395,
+      "flux_wb": 0.00033643281806102745,
+      "label": "g_eff = h_coil + 2g, Carter 1.05",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -2.9690870514733514,
+      "flux_change_percent": 0.0,
+      "flux_wb": 0.0003429919194211033,
+      "label": "mu_r = 1.05  (production, = FEMM material)",
+      "note": "reference"
+    },
+    {
+      "fea_vs_analytical_percent": -4.770722039907516,
+      "flux_change_percent": 1.8918918918918726,
+      "flux_wb": 0.00034948095573447544,
+      "label": "mu_r = 1.00",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -1.1674520630391538,
+      "flux_change_percent": -1.8229166666666852,
+      "flux_wb": 0.000336739462556656,
+      "label": "mu_r = 1.10",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -2.9690870514733514,
+      "flux_change_percent": 0.0,
+      "flux_wb": 0.0003429919194211033,
+      "label": "alpha_p = 0.70  (production)",
+      "note": "reference"
+    },
+    {
+      "fea_vs_analytical_percent": 4.49482932918257,
+      "flux_change_percent": -7.142857142857162,
+      "flux_wb": 0.0003184924966053101,
+      "label": "alpha_p = 0.65",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -9.437814581375104,
+      "flux_change_percent": 7.1428571428571175,
+      "flux_wb": 0.0003674913422368963,
+      "label": "alpha_p = 0.75",
+      "note": ""
+    },
+    {
+      "fea_vs_analytical_percent": -15.09795117003917,
+      "flux_change_percent": 14.28571428571428,
+      "flux_wb": 0.00039199076505268943,
+      "label": "alpha_p = 0.80",
+      "note": ""
+    }
+  ],
+  "diagnostic_only": true,
+  "femm_b1_over_peak": 1.0423746017241067,
+  "femm_thd_stator_plane": 0.03367493406738282,
+  "ideal_rectangle_b1_over_peak": 1.1344647412136573,
+  "peak_flux_density_agreement_percent": -0.05922585972237826,
+  "production_defaults_mutated": false,
+  "reference_inputs": {
+    "alpha_p": 0.7,
+    "br": 1.28,
+    "carter": 1.0,
+    "g_eff": 0.007,
+    "h_m": 0.005,
+    "leakage": 1.15,
+    "mu_r": 1.05,
+    "tau_p_l": 0.0007215845626214057
+  },
+  "schema_version": "phase10d.residual_budget.v1"
+}

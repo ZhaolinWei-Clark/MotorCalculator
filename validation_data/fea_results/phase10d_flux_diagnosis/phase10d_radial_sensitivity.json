@@ -1,0 +1,40 @@
+{
+  "b1_inner_to_outer_spread_percent": 23.76862676692464,
+  "mean_radius_error_percent": 0.20486116147229172,
+  "mean_radius_slice_phi1_wb": 0.0003330040223886084,
+  "note": "three independent 2D slices; NOT a 3D solution",
+  "radially_integrated_phi1_wb": 0.00033232322117786133,
+  "schema_version": "phase10d.radial.v1",
+  "slices": [
+    {
+      "b1_coil_mean_t": 0.6219137597664959,
+      "b1_stator_plane_t": 0.588555496945113,
+      "magnet_thickness_over_pole_pitch": 0.3637827270671893,
+      "peak_abs_bn_stator_plane_t": 0.5779894232995978,
+      "phi1_coil_mean_wb": 0.00019031180757071045,
+      "pole_pitch_m": 0.013744467859455347,
+      "radius_m": 0.035,
+      "tag": "inner"
+    },
+    {
+      "b1_coil_mean_t": 0.7249067154037734,
+      "b1_stator_plane_t": 0.7074016403328478,
+      "magnet_thickness_over_pole_pitch": 0.2425218180447929,
+      "peak_abs_bn_stator_plane_t": 0.6786429225440604,
+      "phi1_coil_mean_wb": 0.00033292069677069204,
+      "pole_pitch_m": 0.02061670178918302,
+      "radius_m": 0.052500000000000005,
+      "tag": "mean"
+    },
+    {
+      "b1_coil_mean_t": 0.7697341201375426,
+      "b1_stator_plane_t": 0.7590046392883137,
+      "magnet_thickness_over_pole_pitch": 0.18189136353359464,
+      "peak_abs_bn_stator_plane_t": 0.7146478627937135,
+      "phi1_coil_mean_wb": 0.0004714136033676094,
+      "pole_pitch_m": 0.027488935718910694,
+      "radius_m": 0.07,
+      "tag": "outer"
+    }
+  ]
+}

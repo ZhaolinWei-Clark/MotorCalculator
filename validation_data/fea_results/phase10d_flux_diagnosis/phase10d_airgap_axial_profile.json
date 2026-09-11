@@ -1,0 +1,161 @@
+{
+  "analytical_flat_top_phi_wb": 0.0003429919194211033,
+  "case_id": "53fce1b79f0ea76509fbfe0edae7dc55516332602c3005ee775072a1bd8e3c78",
+  "coil_mean_vs_analytical_percent": -2.9690870514733514,
+  "coil_mean_vs_linkage_percent": -9.367113611215327,
+  "coil_surface_phi1_wb": 0.00034855864982374094,
+  "coil_thickness_mean_phi1_wb": 0.0003328081907539714,
+  "flux_linkage_derived_phi1_wb": 0.00036720466931433246,
+  "mechanical_air_gap_per_side_m": 0.001,
+  "midplane_vs_linkage_percent": -11.494817454967322,
+  "planes": [
+    {
+      "absolute_pole_flux_wb": 0.0003260145735047885,
+      "fundamental_amplitude_t": 0.7074001460997488,
+      "peak_abs_bn_t": 0.6786429225440604,
+      "phi1_from_a_wb": 0.00032499516289053354,
+      "phi1_from_bn_wb": 0.0003249619421145722,
+      "phi_peak_to_peak_from_a_wb": 0.00032596474003123045,
+      "plane_y_m": 0.0,
+      "region": "coil",
+      "thd": 0.03367493406738282
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003262470355367499,
+      "fundamental_amplitude_t": 0.7080201828882953,
+      "peak_abs_bn_t": 0.6790063272230599,
+      "phi1_from_a_wb": 0.00032523665715281666,
+      "phi1_from_bn_wb": 0.00032524677151431067,
+      "phi_peak_to_peak_from_a_wb": 0.0003265111674189693,
+      "plane_y_m": 0.00025,
+      "region": "coil",
+      "thd": 0.034155645775374596
+    },
+    {
+      "absolute_pole_flux_wb": 0.00032682649854337916,
+      "fundamental_amplitude_t": 0.7094565475007921,
+      "peak_abs_bn_t": 0.6799316581645531,
+      "phi1_from_a_wb": 0.0003258863674525922,
+      "phi1_from_bn_wb": 0.00032590660150817643,
+      "phi_peak_to_peak_from_a_wb": 0.00032726120943770077,
+      "plane_y_m": 0.0005,
+      "region": "coil",
+      "thd": 0.035411425854633964
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003278625413822509,
+      "fundamental_amplitude_t": 0.7120142359908852,
+      "peak_abs_bn_t": 0.6813894641999182,
+      "phi1_from_a_wb": 0.00032704294540267107,
+      "phi1_from_bn_wb": 0.00032708153965831295,
+      "phi_peak_to_peak_from_a_wb": 0.0003282598995570834,
+      "plane_y_m": 0.00075,
+      "region": "coil",
+      "thd": 0.037723095009003095
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003292430581717086,
+      "fundamental_amplitude_t": 0.7155604306538589,
+      "peak_abs_bn_t": 0.6831918430339037,
+      "phi1_from_a_wb": 0.00032864297683597255,
+      "phi1_from_bn_wb": 0.0003287105728316165,
+      "phi_peak_to_peak_from_a_wb": 0.0003294520828256492,
+      "plane_y_m": 0.001,
+      "region": "coil",
+      "thd": 0.04116911419633241
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003310656815413583,
+      "fundamental_amplitude_t": 0.7202211817815999,
+      "peak_abs_bn_t": 0.6852592914664223,
+      "phi1_from_a_wb": 0.0003307563491552113,
+      "phi1_from_bn_wb": 0.0003308516053809225,
+      "phi_peak_to_peak_from_a_wb": 0.00033085389573474596,
+      "plane_y_m": 0.00125,
+      "region": "coil",
+      "thd": 0.0462373031086391
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003333260824924847,
+      "fundamental_amplitude_t": 0.725966652457693,
+      "peak_abs_bn_t": 0.6881651667679782,
+      "phi1_from_a_wb": 0.00033332205642248885,
+      "phi1_from_bn_wb": 0.00033349093097275275,
+      "phi_peak_to_peak_from_a_wb": 0.00033329469333927584,
+      "plane_y_m": 0.0015,
+      "region": "coil",
+      "thd": 0.05258410783562506
+    },
+    {
+      "absolute_pole_flux_wb": 0.00033599955442491295,
+      "fundamental_amplitude_t": 0.7327984683651583,
+      "peak_abs_bn_t": 0.6914801821052861,
+      "phi1_from_a_wb": 0.0003364177202608286,
+      "phi1_from_bn_wb": 0.0003366292964052446,
+      "phi_peak_to_peak_from_a_wb": 0.00033591224286200525,
+      "plane_y_m": 0.00175,
+      "region": "coil",
+      "thd": 0.06065345657933933
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003389583653174475,
+      "fundamental_amplitude_t": 0.7404519062588377,
+      "peak_abs_bn_t": 0.695042968926804,
+      "phi1_from_a_wb": 0.00033997060773707826,
+      "phi1_from_bn_wb": 0.0003401450944376537,
+      "phi_peak_to_peak_from_a_wb": 0.0003388772645598242,
+      "plane_y_m": 0.002,
+      "region": "coil",
+      "thd": 0.07020470840055924
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003422603614642374,
+      "fundamental_amplitude_t": 0.749129676325344,
+      "peak_abs_bn_t": 0.6988800390976024,
+      "phi1_from_a_wb": 0.000344029320762918,
+      "phi1_from_bn_wb": 0.00034413144506195497,
+      "phi_peak_to_peak_from_a_wb": 0.00034215757454927973,
+      "plane_y_m": 0.00225,
+      "region": "coil",
+      "thd": 0.08255142280365732
+    },
+    {
+      "absolute_pole_flux_wb": 0.00034579044738766935,
+      "fundamental_amplitude_t": 0.7588002421271144,
+      "peak_abs_bn_t": 0.7030269969757887,
+      "phi1_from_a_wb": 0.00034855864982374094,
+      "phi1_from_bn_wb": 0.00034857386122714323,
+      "phi_peak_to_peak_from_a_wb": 0.0003458086957727229,
+      "plane_y_m": 0.0025,
+      "region": "coil",
+      "thd": 0.09825872164760771
+    },
+    {
+      "absolute_pole_flux_wb": 0.0003537044511937651,
+      "fundamental_amplitude_t": 0.781850244210606,
+      "peak_abs_bn_t": 0.7127590703547803,
+      "phi1_from_a_wb": 0.00035927333418366605,
+      "phi1_from_bn_wb": 0.00035916245593424717,
+      "phi_peak_to_peak_from_a_wb": 0.00035382970018164915,
+      "plane_y_m": 0.003,
+      "region": "mech gap",
+      "thd": 0.1469546387943721
+    },
+    {
+      "absolute_pole_flux_wb": 0.00036192738554085007,
+      "fundamental_amplitude_t": 0.8090793492275085,
+      "peak_abs_bn_t": 0.723199719607308,
+      "phi1_from_a_wb": 0.00037197595440264055,
+      "phi1_from_bn_wb": 0.0003716708260513867,
+      "phi_peak_to_peak_from_a_wb": 0.0003624973650017988,
+      "plane_y_m": 0.0035,
+      "region": "magnet face",
+      "thd": 0.24224673128114674
+    }
+  ],
+  "probe_version": "phase10d.femm.airgap.v2",
+  "sample_count": 4096,
+  "schema_version": "phase10d.airgap_profile.v1",
+  "stator_midplane_phi1_wb": 0.00032499516289053354,
+  "winding_region_thickness_m": 0.005
+}

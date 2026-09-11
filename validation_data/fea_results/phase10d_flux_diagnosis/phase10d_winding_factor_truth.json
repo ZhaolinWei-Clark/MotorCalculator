@@ -1,0 +1,26 @@
+{
+  "coil_side_width_m": 0.0035,
+  "femm_reported_flux_linkage_wb_turn": {
+    "A": -0.013788357521592982,
+    "B": 0.013788333355742127,
+    "C": 1.0248668086863505e-07
+  },
+  "finite_width_factor": 0.9881902167882565,
+  "meshed_coil_pitch_in_pole_pitches": 0.8364319392980217,
+  "meshed_coil_pitch_in_slot_pitches": 1.2546479089470326,
+  "meshed_coil_pitch_m": 0.017244467859455347,
+  "meshed_over_star_ratio": 1.103607357600042,
+  "pitch_factor_meshed": 0.9671741242201011,
+  "pole_pitch_m": 0.02061670178918302,
+  "reconstructed_flux_linkage_wb_turn": {
+    "A": -0.013798634743940046,
+    "B": 0.013792448360869737,
+    "C": 4.11070857263599e-07
+  },
+  "schema_version": "phase10d.winding_factor_truth.v1",
+  "slot_pitch_m": 0.013744467859455345,
+  "winding_factor_measured_from_field": 0.9575059394800115,
+  "winding_factor_meshed_geometry": 0.9557520074850537,
+  "winding_factor_routes_agreement_percent": 0.18351329437151787,
+  "winding_factor_slot_star_phase10c": 0.8660254037844386
+}

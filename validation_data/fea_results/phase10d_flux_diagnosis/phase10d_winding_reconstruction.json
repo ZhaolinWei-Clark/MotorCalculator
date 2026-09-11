@@ -1,0 +1,21 @@
+{
+  "femm_reported_flux_linkage_wb_turn": {
+    "A": -0.013788357521592982,
+    "B": 0.013788333355742127,
+    "C": 1.0248668086863505e-07
+  },
+  "reconstructed_flux_linkage_wb_turn": {
+    "A": -0.08624146714962529,
+    "B": 0.08620280225543586,
+    "C": 2.569192857897494e-06
+  },
+  "reconstruction_ratios": {
+    "A": 6.254658469260647,
+    "B": 6.251865256763383,
+    "C": 25.068553651284923
+  },
+  "schema_version": "phase10d.winding_reconstruction.v1",
+  "unit_turns_scale": 6.25,
+  "winding_factor_assumed": 0.8660254037844386,
+  "winding_factor_effective_implied": 0.9555310862212644
+}
