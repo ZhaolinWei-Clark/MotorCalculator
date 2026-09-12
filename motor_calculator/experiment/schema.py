@@ -90,6 +90,19 @@ class TestType(str, Enum):
     TORQUE_CURRENT = "TORQUE_CURRENT"
     EFFICIENCY = "EFFICIENCY"
 
+    # Phase 11B. Public-reference evidence shapes that the CREATOR PMSM data
+    # actually contains, and that the Phase 11A types could not represent.
+    #
+    # BACK_EMF_WAVEFORM is deliberately NOT the same thing as NO_LOAD_BACK_EMF.
+    # The latter is voltage against several speeds, fitted for a slope. The
+    # former is one angle-domain record at a single known speed, from which a
+    # fundamental is extracted. Overloading one onto the other would have meant
+    # a single-point ratio silently borrowing a regression's standing.
+    BACK_EMF_WAVEFORM = "BACK_EMF_WAVEFORM"
+    COGGING_TORQUE = "COGGING_TORQUE"
+    NO_LOAD_LOSS = "NO_LOAD_LOSS"
+    DRIVE_CYCLE = "DRIVE_CYCLE"
+
     # Declared, not implemented. Importing one is accepted and stored; it simply
     # has no analysis attached yet, and says so.
     INDUCTANCE = "INDUCTANCE"
@@ -106,6 +119,22 @@ IMPLEMENTED_TEST_TYPES = frozenset(
         TestType.NO_LOAD_BACK_EMF,
         TestType.TORQUE_CURRENT,
         TestType.EFFICIENCY,
+        # Phase 11B
+        TestType.BACK_EMF_WAVEFORM,
+        TestType.COGGING_TORQUE,
+        TestType.NO_LOAD_LOSS,
+        TestType.DRIVE_CYCLE,
+    }
+)
+
+#: Test types whose analysis needs a dedicated source adapter rather than the
+#: generic column-mapping importer. Their files are not simple column tables.
+ADAPTER_ONLY_TEST_TYPES = frozenset(
+    {
+        TestType.BACK_EMF_WAVEFORM,
+        TestType.COGGING_TORQUE,
+        TestType.NO_LOAD_LOSS,
+        TestType.DRIVE_CYCLE,
     }
 )
 
@@ -114,6 +143,10 @@ TEST_TYPE_LABELS_ZH = {
     TestType.NO_LOAD_BACK_EMF: "空载反电动势（Ke）",
     TestType.TORQUE_CURRENT: "转矩-电流",
     TestType.EFFICIENCY: "效率",
+    TestType.BACK_EMF_WAVEFORM: "反电动势波形（单一转速，角度域）",
+    TestType.COGGING_TORQUE: "齿槽转矩",
+    TestType.NO_LOAD_LOSS: "空载损耗",
+    TestType.DRIVE_CYCLE: "行驶工况测量",
     TestType.INDUCTANCE: "电感（尚未实现分析）",
     TestType.THERMAL: "温升（尚未实现分析）",
     TestType.TORQUE_SPEED: "转矩-转速包络（尚未实现分析）",
