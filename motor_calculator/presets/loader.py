@@ -45,6 +45,14 @@ def load_preset_payload(payload: Mapping[str, Any]) -> tuple[PresetDefinition, .
                 applicable_temperature_c=None if raw.get("applicable_temperature_c") is None else float(raw["applicable_temperature_c"]),
                 available=bool(raw.get("available", True)),
                 unavailable_reason=None if raw.get("unavailable_reason") is None else str(raw["unavailable_reason"]),
+                winding_authority=(
+                    None if raw.get("winding_authority") is None
+                    else str(raw["winding_authority"])
+                ),
+                coil_span_slots=(
+                    None if raw.get("coil_span_slots") is None
+                    else int(raw["coil_span_slots"])
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise PresetLoadError(f"Invalid preset record: {exc}") from exc
@@ -54,6 +62,24 @@ def load_preset_payload(payload: Mapping[str, Any]) -> tuple[PresetDefinition, .
             raise PresetLoadError("Preset version must be positive")
         if not preset.available and not preset.unavailable_reason:
             raise PresetLoadError("Unavailable presets require a reason")
+        if preset.winding_authority is not None:
+            from ..winding.authority import WindingAuthority
+
+            try:
+                declared = WindingAuthority(preset.winding_authority)
+            except ValueError as exc:
+                raise PresetLoadError(
+                    f"Unknown winding_authority {preset.winding_authority!r}"
+                ) from exc
+            if (
+                declared is WindingAuthority.AUTO_FROM_GEOMETRY
+                and preset.coil_span_slots is None
+            ):
+                raise PresetLoadError(
+                    "A preset declaring AUTO_FROM_GEOMETRY must supply coil_span_slots, "
+                    "because the legacy parameter schema carries no coil span and AUTO "
+                    "must never guess one"
+                )
         presets.append(preset)
     identifiers = [preset.preset_id for preset in presets]
     if len(identifiers) != len(set(identifiers)):

@@ -279,6 +279,7 @@ PRESET_NAMES = {
     "design.application_reference.v1": "应用默认值示例",
     "design.manufacturability_start.v1": "可制造性起始示例",
     "design.manufacturability_start.v2": "可制造性起始示例（修正电压基准，候选）",
+    "design.manufacturability_start.v3": "可制造性起始示例（绕组系数由几何推导）",
     "operating.application_reference.v1": "应用工作点示例",
 }
 

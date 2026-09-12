@@ -202,10 +202,16 @@ class MotorCalculatorAppMixin:
         self._apply_startup_example()
         self._initialize_project_support()
 
-    # Phase 9C: v2 is selected under the authoritative corrected voltage basis.
-    # v1 remains available as a legacy/reference starting example.
-    STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v2"
+    # Phase 10H.1: v3 is the same machine as v2 but takes its production winding
+    # factor from the slot-star geometry instead of the frozen manual 0.93, so
+    # the shipped first screen agrees with the new-project authority default.
+    # v1 and v2 are unchanged and remain selectable for historical
+    # reproducibility; nothing about them was overwritten.
+    STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v3"
     LEGACY_STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v1"
+    #: The RC3/RC4 startup example, retained so its published observations stay
+    #: reproducible. Explicitly LEGACY_MANUAL authority.
+    LEGACY_MANUAL_STARTUP_EXAMPLE_PRESET_ID = "design.manufacturability_start.v2"
 
     def _apply_startup_example(self) -> bool:
         """RC2: open on the audited manufacturability starting example.
@@ -236,6 +242,7 @@ class MotorCalculatorAppMixin:
                     )
             self._last_preset_id = preset.preset_id
             self._last_preset_version = preset.version
+            self._apply_preset_winding_authority(preset)
         except (MotorValidationError, MotorCalculationError, KeyError, TypeError, ValueError):
             logging.getLogger(__name__).warning(
                 "Startup example could not be applied; keeping frozen application defaults",
@@ -351,6 +358,33 @@ class MotorCalculatorAppMixin:
         for variable in (self._coil_span_slots_var, self._skew_slots_var):
             variable.trace_add("write", lambda *_args: self._refresh_winding_factor_summary())
         self._refresh_winding_factor_summary()
+
+    def _apply_preset_winding_authority(self, preset) -> None:
+        """Honour a preset's declared winding authority, if it declares one.
+
+        A preset that says nothing about authority leaves the current mode
+        alone, which is why every pre-10H.1 preset behaves exactly as before.
+        """
+
+        declared = getattr(preset, "winding_authority", None)
+        if declared is None or not hasattr(self, "_winding_factor_mode_var"):
+            return
+        from ..winding.authority import WindingAuthority
+
+        span = getattr(preset, "coil_span_slots", None)
+        if span is not None:
+            self._coil_span_slots_var.set(str(int(span)))
+        if WindingAuthority(declared) is WindingAuthority.AUTO_FROM_GEOMETRY:
+            self._winding_factor_mode_var.set(
+                WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.AUTO]
+            )
+            self._winding_factor_manual_provenance = WindingFactorProvenance.AUTO_GEOMETRY
+        else:
+            self._winding_factor_mode_var.set(
+                WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.MANUAL]
+            )
+            self._winding_factor_manual_provenance = WindingFactorProvenance.LEGACY_PROJECT
+        self._winding_factor_resolution = None
 
     def _selected_winding_factor_mode(self) -> WindingFactorMode:
         label = str(self._winding_factor_mode_var.get()).strip()
@@ -696,6 +730,20 @@ class MotorCalculatorAppMixin:
                     )
             self._last_preset_id = None
             self._last_preset_version = None
+            # Phase 10H.1. Resetting to APPLICATION_DEFAULTS must also reset the
+            # winding-factor authority, otherwise an AUTO session keeps deriving
+            # k_w from geometry while every other field has gone back to the
+            # frozen defaults, and "reset to defaults" no longer gives you the
+            # defaults. The frozen defaults carry a manual k_w, so the reset
+            # state is MANUAL.
+            if hasattr(self, "_winding_factor_mode_var"):
+                self._winding_factor_mode_var.set(
+                    WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.MANUAL]
+                )
+                self._coil_span_slots_var.set("")
+                self._skew_slots_var.set("0")
+                self._winding_factor_manual_provenance = WindingFactorProvenance.MANUAL_USER
+                self._winding_factor_resolution = None
         finally:
             self._project_suppress_dirty = False
         self._mark_ux_preference_changed()

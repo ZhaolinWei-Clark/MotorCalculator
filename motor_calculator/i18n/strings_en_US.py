@@ -276,6 +276,7 @@ PRESET_NAMES = {
     "design.application_reference.v1": "Application Default Example",
     "design.manufacturability_start.v1": "Manufacturability Starting Example",
     "design.manufacturability_start.v2": "Manufacturability Starting Example (corrected voltage basis, candidate)",
+    "design.manufacturability_start.v3": "Manufacturability Starting Example (geometry-derived winding factor)",
     "operating.application_reference.v1": "Application Operating Point",
 }
 

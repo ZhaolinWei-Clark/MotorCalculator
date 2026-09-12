@@ -1091,6 +1091,25 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         payload["rc2_first_launch_preset_id"] = app._last_preset_id
         # Phase 9C: startup must now open on the corrected-basis v2 example and
         # the authoritative voltage must be the corrected one.
+        # Phase 10H.1: the startup example is now v3, which declares
+        # AUTO_FROM_GEOMETRY. v2 stays reproducible and is checked separately.
+        payload["phase10h1_startup_preset_id"] = app._last_preset_id
+        payload["phase10h1_startup_is_v3"] = (
+            app._last_preset_id == "design.manufacturability_start.v3"
+        )
+        payload["phase10h1_startup_authority"] = app._selected_winding_factor_mode().value
+        _startup_resolution = app._latest_winding_factor_resolution()
+        payload["phase10h1_startup_kw"] = (
+            None if _startup_resolution is None else _startup_resolution.value
+        )
+        payload["phase10h1_startup_kw_is_geometry"] = (
+            _startup_resolution is not None
+            and abs(float(_startup_resolution.value) - 0.8660254037844386) < 1e-9
+        )
+        payload["phase10h1_startup_kw_is_not_legacy_manual"] = (
+            _startup_resolution is not None
+            and abs(float(_startup_resolution.value) - 0.93) > 1e-6
+        )
         payload["rc3_startup_preset_is_v2"] = (
             app._last_preset_id == "design.manufacturability_start.v2"
         )
@@ -1106,8 +1125,18 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             first_launch_assessment.legacy_voltage_margin_percent
         )
         payload["rc3_voltage_provenance"] = first_launch_assessment.voltage_model_provenance
-        if not payload["rc3_startup_preset_is_v2"]:
-            raise RuntimeError("RC3 startup must use design.manufacturability_start.v2")
+        # Phase 10H.1 moved the startup example from v2 to v3, which declares
+        # AUTO_FROM_GEOMETRY. The guard now protects the CURRENT startup preset;
+        # v2 is not abandoned, it is checked for reproducibility below.
+        if not payload["phase10h1_startup_is_v3"]:
+            raise RuntimeError(
+                "startup must use design.manufacturability_start.v3; "
+                f"got {app._last_preset_id!r}"
+            )
+        if not payload["phase10h1_startup_kw_is_geometry"]:
+            raise RuntimeError(
+                "the v3 startup example must resolve its winding factor from geometry"
+            )
         if payload["rc3_voltage_authority"] != "CORRECTED_SAME_BASIS_PMSM":
             raise RuntimeError("RC3 voltage authority must be the corrected same-basis path")
         payload["rc2_first_launch_no_severe"] = not any(

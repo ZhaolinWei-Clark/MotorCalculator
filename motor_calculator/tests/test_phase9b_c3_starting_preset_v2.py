@@ -135,15 +135,23 @@ def test_c3_v1_is_infeasible_on_the_corrected_basis_and_v2_is_not():
     assert a2.voltage_margin_percent > 0.0
 
 
-def test_v2_is_the_startup_default_after_phase9c_promotion():
-    """Phase 9C promoted v2; v1 remains available as a legacy reference."""
+def test_v2_remains_available_after_the_phase10h1_authority_move():
+    """Phase 9C promoted v2; Phase 10H.1 moved the startup default to v3.
+
+    v3 is the same machine as v2 and differs only in where its winding factor
+    comes from. What this test protects is unchanged: v2 must stay available and
+    reproducible, and v1 must stay available as the older legacy reference.
+    """
 
     import importlib
 
     mixin = importlib.import_module("gui.main_window").MotorCalculatorAppMixin
-    assert mixin.STARTUP_EXAMPLE_PRESET_ID == V2_ID
+    assert mixin.STARTUP_EXAMPLE_PRESET_ID == "design.manufacturability_start.v3"
+    assert mixin.LEGACY_MANUAL_STARTUP_EXAMPLE_PRESET_ID == V2_ID
     assert mixin.LEGACY_STARTUP_EXAMPLE_PRESET_ID == V1_ID
-    assert default_preset_registry().get(V1_ID).available
+    registry = default_preset_registry()
+    assert registry.get(V1_ID).available
+    assert registry.get(V2_ID).available
 
 
 def test_c3_no_validator_was_relaxed_to_admit_v2():

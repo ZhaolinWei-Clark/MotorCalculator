@@ -164,8 +164,10 @@
         "Uses a slotted SSDR AFPM PMSM starting point and an SVPWM-compatible voltage-envelope check."
       ],
       "notes": [
-        "Starting example only; not optimized, calibrated, or externally validated for manufacturing."
-      ]
+        "Starting example only; not optimized, calibrated, or externally validated for manufacturing.",
+        "Phase 10H.1: winding authority declared explicitly as LEGACY_MANUAL. This preset always used the frozen manual k_w = 0.93; the declaration makes that self-describing so the preset still reproduces its historical numbers when applied from a session that is currently on AUTO. No input value was changed."
+      ],
+      "winding_authority": "LEGACY_MANUAL"
     },
     {
       "preset_id": "design.manufacturability_start.v2",
@@ -192,8 +194,10 @@
       "notes": [
         "Candidate only. It does not become the startup default until the corrected voltage model is promoted.",
         "Observed: torque 3.1833 Nm, current density 4.2098 A/mm2, bare-copper slot occupancy 0.4003, corrected same-basis margin 19.2815%, no ERROR and no SEVERE DESIGN RISK.",
-        "Not optimized, calibrated, or externally validated for manufacturing."
-      ]
+        "Not optimized, calibrated, or externally validated for manufacturing.",
+        "Phase 10H.1: winding authority declared explicitly as LEGACY_MANUAL. This preset always used the frozen manual k_w = 0.93; the declaration makes that self-describing so the preset still reproduces its historical numbers when applied from a session that is currently on AUTO. No input value was changed."
+      ],
+      "winding_authority": "LEGACY_MANUAL"
     },
     {
       "preset_id": "design.application_reference.v1",
@@ -236,6 +240,38 @@
       ],
       "notes": [
         "Only operating-point fields change after user confirmation."
+      ]
+    },
+    {
+      "preset_id": "design.manufacturability_start.v3",
+      "version": 1,
+      "display_name": "Manufacturability Starting Example (geometry-authoritative winding factor)",
+      "category": "design_example",
+      "evidence_kind": "demonstration",
+      "values": {
+        "V_dc": 72.0,
+        "P_rated": 600.0,
+        "n_rated": 1800.0,
+        "N_ph_turns": 42,
+        "d_wire": 1.2,
+        "n_parallel": 3,
+        "slot_type": "半闭口槽",
+        "coreless": false
+      },
+      "winding_authority": "AUTO_FROM_GEOMETRY",
+      "coil_span_slots": 1,
+      "provenance": "Phase 10H.1. The same machine as v2, with the production winding factor taken from the slot-EMF star geometry (kd*kp*ks = 0.8660254) instead of the frozen APPLICATION_DEFAULTS manual 0.93. v1 and v2 are unchanged and remain available for historical reproducibility. The meshed FEA winding factor (0.9557520) is NOT used and cannot be: it is diagnostic only.",
+      "assumptions": [
+        "Uses a slotted SSDR AFPM PMSM starting point and the linear SVPWM-compatible line-RMS envelope Vdc/sqrt(2).",
+        "Voltage headroom is judged against the corrected requirement; the legacy requirement is retained only as a compatibility value.",
+        "Efficiency is reported under the current loss model, in which the conductor eddy term is EXPERIMENTAL and the magnetic loss term is an empirical rated-point lump.",
+        "Winding factor is derived from Q=24, 2p=16, m=3 and a one-slot coil span; the coil span is declared here because the legacy parameter schema has no field for it.",
+        "Changing the authority changes Ke, Kt, required voltage, voltage margin and current density. Those changes are intentional and quantified in the Phase 10H.1 document."
+      ],
+      "notes": [
+        "Differs from v2 ONLY in winding-factor authority. Same slots, poles, turns, wire and geometry.",
+        "Observed against v2: k_w 0.93 -> 0.8660254 (-6.879%), Ke and Kt -6.879%, required line-RMS voltage +1.953%, corrected margin 19.2815% -> 17.7050%, current density 4.2098 -> 4.5208 A/mm2. No ERROR and no SEVERE DESIGN RISK.",
+        "Not optimized and not calibrated. The winding factor is derived from geometry, not fitted."
       ]
     }
   ]

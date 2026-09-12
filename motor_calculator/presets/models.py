@@ -34,6 +34,14 @@ class PresetDefinition:
     applicable_temperature_c: float | None = None
     available: bool = True
     unavailable_reason: str | None = None
+    #: Phase 10H.1. Production winding-factor authority this preset declares.
+    #: ``None`` means the preset says nothing about authority, which is how
+    #: every pre-10H.1 preset behaves and why they are unaffected.
+    winding_authority: str | None = None
+    #: Coil span in slots, needed before AUTO can derive a winding factor. The
+    #: legacy parameter schema has no field for it, so a preset that declares
+    #: AUTO must supply it here.
+    coil_span_slots: int | None = None
 
 
 @dataclass(frozen=True)
