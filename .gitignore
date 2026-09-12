@@ -10,5 +10,8 @@ __pycache__/
 *.log
 /validation_data/user_feedback/feedback_records.jsonl
 /work/rc2_smoke/
-/work/phase10d/femm_workspace/
-/work/phase10e/femm_workspace/
+# Solver workspaces. FEMM writes .fem/.ans/.lua and multi-MB CSV sample
+# dumps; derived evidence is committed under validation_data/ instead.
+work/*/femm_workspace/
+*.ans
+*.fem
