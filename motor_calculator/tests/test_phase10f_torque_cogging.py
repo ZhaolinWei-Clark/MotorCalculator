@@ -416,26 +416,14 @@ def test_a_loaded_solve_carries_the_real_ampere_turns():
         if "mi_addcircprop" in line
     ]
 
-    from motor_calculator.fea.femm_lua import balanced_phase_currents
-
-    physical = balanced_phase_currents(
-        phase_rms_a=case.operating_point.phase_current_rms_a,
-        electrical_angle_deg=(
-            case.geometry.pole_pairs * case.operating_point.rotor_angle_start_mech_deg
-        ),
-        current_angle_electrical_deg=case.operating_point.current_angle_electrical_deg,
-        phase_names=tuple(sorted(set(case.winding.coil_phase_assignment))),
-    )
-    expected = [physical.values[name] * scale for name in sorted(physical.values)]
-    assert emitted == pytest.approx(expected, rel=1e-9, abs=1e-12)
-    # and the emitted values are NOT the unscaled physical currents.
-    unscaled = [physical.values[name] for name in sorted(physical.values)]
-    assert max(abs(v) for v in emitted) == pytest.approx(
-        max(abs(v) for v in unscaled) * scale, rel=1e-9
-    )
-    assert max(abs(v) for v in emitted) != pytest.approx(
-        max(abs(v) for v in unscaled), rel=1e-3
-    )
+    # Angle-invariant: for balanced three-phase currents the sum of squares is
+    # 3/2 of the peak squared, whatever the excitation angle. Phase 10G changed
+    # that angle to a geometry-derived value, and this test is about the turns
+    # scaling rather than the alignment, so it must not depend on it.
+    peak_from_emitted = math.sqrt(2.0 / 3.0 * sum(v * v for v in emitted))
+    physical_peak = case.operating_point.phase_current_rms_a * math.sqrt(2.0)
+    assert peak_from_emitted == pytest.approx(physical_peak * scale, rel=1e-9)
+    assert peak_from_emitted != pytest.approx(physical_peak, rel=1e-3)
 
 
 def test_the_no_load_campaign_scripts_are_unchanged_by_the_ampere_turns_fix():

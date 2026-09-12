@@ -1,0 +1,13 @@
+{
+  "analytical_electromagnetic_torque_nm": 3.0560000000000005,
+  "calibration_performed": false,
+  "derived_d_axis_from_phase_a_deg": 150.0,
+  "diagnostic_only": true,
+  "femm_mean_torque_nm": 3.270551319378043,
+  "hard_coded_offset_used": false,
+  "positive_iq_gives_positive_torque": true,
+  "residual_percent": 7.020658356611342,
+  "ripple_percent": 4.324763045632973,
+  "schema_version": "phase10g.torque_recheck.v1",
+  "solves": 25
+}

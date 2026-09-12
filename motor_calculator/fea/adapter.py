@@ -30,6 +30,7 @@ from typing import Protocol
 
 from .availability import FEMMAvailabilityReport, detect_femm
 from .femm_lua import balanced_phase_currents, build_position_script, unit_turns_scale
+from ..winding.electrical_axis import derive_electrical_axes
 from .geometry import build_slice_model
 from .hashing import compute_analytical_fingerprint
 from .models import FEAValidationCase, FEAValidationTarget
@@ -189,7 +190,23 @@ def generate_case_scripts(
             symmetry=case.symmetry,
             rotor_angle_mech_deg=angle,
         )
-        electrical_angle = case.geometry.pole_pairs * angle + electrical_alignment_offset_deg
+        # Phase 10G. ``balanced_phase_currents`` documents its electrical angle
+        # as measured from the phase-A flux-linkage maximum. This used to pass
+        # ``p * angle``, whose zero is the geometry builder's own origin and has
+        # no relationship to the phase-A axis; Phase 10F measured the resulting
+        # excitation sitting 150 electrical degrees from where it belonged and
+        # producing torque of the wrong sign.
+        #
+        # The angle is now derived from the meshed geometry: the phase of the
+        # magnet polarity distribution against the phase of phase A's conductor
+        # distribution. It already contains the rotor rotation, because the
+        # magnets move with the rotor. ``electrical_alignment_offset_deg`` is
+        # kept as an explicit additional offset for diagnostics.
+        electrical_angle = (
+            derive_electrical_axes(model, pole_pairs=case.geometry.pole_pairs)
+            .d_axis_from_phase_a_elec_deg
+            + electrical_alignment_offset_deg
+        )
         currents = balanced_phase_currents(
             phase_rms_a=case.operating_point.phase_current_rms_a,
             electrical_angle_deg=electrical_angle,
