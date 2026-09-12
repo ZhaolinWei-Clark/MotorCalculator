@@ -606,6 +606,11 @@ class MotorCalculatorAppMixin:
             # PROJECT_SCHEMA_VERSION does not move and every project written
             # before this phase still loads byte-identically.
             **self._validation_dataset_preferences(),
+            # Phase 12: inverter inputs. The capability curves themselves are
+            # derived and deterministic, so they are recomputed rather than
+            # stored -- storing them would create a second source of truth that
+            # goes stale the moment any design input changes.
+            **(getattr(self, "_capability_preferences", None) or {}),
         }
 
     def _validation_dataset_preferences(self) -> dict:
@@ -630,9 +635,23 @@ class MotorCalculatorAppMixin:
         self._last_preset_version = int(version) if version is not None else None
         self._restore_winding_factor_preferences(preferences)
         self._restore_validation_datasets(preferences)
+        self._restore_capability_preferences(preferences)
         self._update_input_unit_labels()
         self._guided_input_panel.set_preferences(restored)
         self._apply_input_mode_visibility()
+
+    def _restore_capability_preferences(self, preferences) -> None:
+        """Restore the inverter settings a project was saved with."""
+
+        from motor_calculator.capability.persistence import PREFIX
+
+        preferences = preferences or {}
+        self._capability_preferences = {
+            key: value for key, value in preferences.items() if str(key).startswith(PREFIX)
+        }
+        dialog = getattr(self, "_capability_dialog", None)
+        if dialog is not None and dialog.window.winfo_exists():
+            dialog.refresh()
 
     def _restore_validation_datasets(self, preferences) -> None:
         """Rebuild the project's dataset references.
@@ -910,6 +929,9 @@ class MotorCalculatorAppMixin:
         analysis_menu.add_command(
             label="验证数据管理...", command=self._open_validation_data_manager
         )
+        analysis_menu.add_command(
+            label="转矩-转速 / 弱磁能力...", command=self._open_capability_view
+        )
         menu_bar.add_cascade(label="分析", menu=analysis_menu)
         help_menu = tk.Menu(menu_bar, tearoff=False)
         help_menu.add_command(label=tr("menu.diagnostics"), command=self._export_runtime_diagnostics)
@@ -1054,6 +1076,49 @@ class MotorCalculatorAppMixin:
             return measured.value, math.sin(half) / half
         except Exception:  # noqa: BLE001 - the panel must open regardless
             return None, None
+
+    def _open_capability_view(self):
+        """Open the torque-speed / field-weakening capability view."""
+
+        from .capability_dialog import CapabilityDialog
+
+        existing = getattr(self, "_capability_dialog", None)
+        if existing is None or not existing.window.winfo_exists():
+            self._capability_dialog = CapabilityDialog(
+                self.root,
+                analysis_provider=lambda: getattr(self, "calc_results", None),
+                parameters_provider=self._get_params,
+                settings_provider=self._capability_settings,
+                on_settings_changed=self._set_capability_settings,
+                export_dir=self._runtime_paths.export_dir,
+            )
+        else:
+            existing.refresh()
+        return self._capability_dialog
+
+    def _capability_settings(self):
+        """The inverter settings for this project, defaulted from its own bus."""
+
+        from motor_calculator.capability.persistence import from_preferences
+
+        stored = getattr(self, "_capability_preferences", {}) or {}
+        try:
+            bus = float(self._collect_raw_params().get("V_dc") or 48.0)
+        except (TypeError, ValueError):
+            bus = 48.0
+        return from_preferences(stored, default_dc_bus_voltage_v=bus)
+
+    def _set_capability_settings(self, settings) -> None:
+        """Remember the inverter settings so they persist with the project."""
+
+        from motor_calculator.capability.persistence import to_preferences
+
+        payload = to_preferences(settings)
+        if payload != getattr(self, "_capability_preferences", None):
+            self._capability_preferences = payload
+            if not getattr(self, "_project_suppress_dirty", False):
+                self._project_manager.mark_dirty()
+                self._update_project_title()
 
     def _open_validation_data_manager(self):
         """Open the validation data manager. Imports nothing by itself."""

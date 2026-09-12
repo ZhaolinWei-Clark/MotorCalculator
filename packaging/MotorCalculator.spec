@@ -78,6 +78,21 @@ hidden_imports = [
     "motor_calculator.experiment.harmonics",
     "motor_calculator.experiment.origins",
     "motor_calculator.experiment.topology",
+    # Phase 12. The capability solver and its figures are imported lazily from
+    # the analysis menu, so static analysis sees none of them; without these the
+    # capability view would open onto an ImportError in the packaged build.
+    "motor_calculator.gui.capability_dialog",
+    "motor_calculator.plots.capability",
+    "motor_calculator.capability",
+    "motor_calculator.capability.conventions",
+    "motor_calculator.capability.envelope",
+    "motor_calculator.capability.export",
+    "motor_calculator.capability.feasibility",
+    "motor_calculator.capability.limits",
+    "motor_calculator.capability.parameters",
+    "motor_calculator.capability.persistence",
+    "motor_calculator.capability.solver",
+    "motor_calculator.capability.steady_state",
     "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:
