@@ -160,6 +160,141 @@ def _find_all(text, needle):
         start = index + 1
 
 
+def _exercise_phase11b_public_reference(root, app, dialog) -> dict[str, Any]:
+    """Phase 11B: the CREATOR public-reference view.
+
+    The repository ships no raw measurements, so the state the application must
+    handle correctly is "source registered, data absent". That is exercised
+    unconditionally. When a developer machine happens to have a local copy, the
+    extraction is exercised too.
+    """
+
+    import os
+
+    from motor_calculator.experiment import creator_evidence as evidence
+    from motor_calculator.experiment import creator_source as creator
+    from motor_calculator.experiment.topology import AFPM_NOT_VALIDATED, PIPELINE_VALIDATED
+
+    results: dict[str, Any] = {}
+
+    tab_labels = tuple(
+        str(dialog.tabs.tab(index, "text")) for index in range(dialog.tabs.index("end"))
+    )
+    results["phase11b_public_reference_tab_present"] = "\u516c\u5f00\u53c2\u8003\u6e90" in tab_labels
+
+    # --- The shipped state: registered source, no local data. ---------------
+    dialog.creator_root_var.set("")
+    report = dialog.refresh_public_reference()
+    root.update()
+    results["phase11b_no_data_state"] = report.state
+    results["phase11b_no_data_is_clean"] = report.state == evidence.DATA_NOT_CONFIGURED
+    results["phase11b_no_data_has_no_values"] = (
+        report.back_emf is None and report.cogging is None and report.no_load is None
+    )
+    results["phase11b_metadata_without_data"] = (
+        report.summary.doi == creator.DATASET_DOI
+        and report.summary.license_name == creator.LICENSE_NAME
+    )
+    results["phase11b_compatibility"] = report.compatibility.status.value
+    results["phase11b_different_machine"] = report.is_different_machine
+    results["phase11b_afpm_claim"] = report.afpm_claim
+    results["phase11b_afpm_not_validated"] = report.afpm_claim == AFPM_NOT_VALIDATED
+
+    rendered = {
+        key: widget.get("1.0", "end") for key, widget in dialog.creator_views.items()
+    }
+    results["phase11b_source_view_rendered"] = creator.DATASET_DOI in rendered["source"]
+    results["phase11b_source_states_topology"] = "RADIAL_FLUX_INSET_PMSM" in rendered["source"]
+    results["phase11b_source_states_licence"] = "CC BY-NC 4.0" in rendered["source"]
+    results["phase11b_source_states_different_machine"] = (
+        "DIFFERENT_MACHINE" in rendered["source"]
+    )
+    results["phase11b_all_views_render_without_data"] = all(
+        text.strip() for text in rendered.values()
+    )
+    # Parameter origins are metadata and must render with no data present.
+    results["phase11b_parameter_origins_rendered"] = (
+        "\u6709\u9650\u5143\u8ba1\u7b97" in rendered["parameters"]
+        and "\u6765\u6e90\u672a\u77e5" in rendered["parameters"]
+    )
+    results["phase11b_lambda_flag_rendered"] = (
+        "PARAMETER_PROVENANCE_UNRESOLVED" in rendered["parameters"]
+    )
+    results["phase11b_state_banner"] = dialog.creator_state_var.get()
+
+    # --- Step 19: the topology firewall, through a real production path. -----
+    refusal = dialog.create_project_from_public_source()
+    root.update()
+    results["phase11b_project_construction_refused"] = bool(refusal)
+    results["phase11b_refusal_names_topology"] = bool(
+        refusal and "RADIAL_FLUX_INSET_PMSM" in refusal
+    )
+    results["phase11b_refusal_names_axial"] = bool(refusal and "axial-flux" in refusal)
+
+    # --- Optional: a local copy of the dataset, if this machine has one. -----
+    configured = str(os.environ.get("MOTORCALC_CREATOR_DATASET_ROOT", "")).strip()
+    default_root = r"D:/File/Project/Codex_电机项目/PM_synchronous_motor"
+    candidate = configured or default_root
+    has_local = (
+        Path(candidate) / creator.RELATIVE_PATHS["back_emf"]
+    ).is_file()
+    results["phase11b_local_dataset_present"] = has_local
+    if has_local:
+        dialog.creator_root_var.set(candidate)
+        loaded = dialog.refresh_public_reference()
+        root.update()
+        results["phase11b_data_state"] = loaded.state
+        results["phase11b_back_emf_fundamental_v"] = (
+            None if loaded.back_emf is None else loaded.back_emf.fundamental_peak_v
+        )
+        results["phase11b_publication_reproduced"] = bool(
+            loaded.publication_check and loaded.publication_check.reproduced
+        )
+        results["phase11b_publication_deviation_percent"] = (
+            None if loaded.publication_check is None
+            else loaded.publication_check.difference_percent
+        )
+        results["phase11b_single_speed_ke"] = (
+            None if loaded.single_speed_ke is None
+            else loaded.single_speed_ke.value_v_per_rad_s
+        )
+        results["phase11b_ke_has_no_r_squared"] = (
+            loaded.single_speed_ke is not None and loaded.single_speed_ke.r_squared is None
+        )
+        results["phase11b_cogging_max_abs"] = (
+            None if loaded.cogging is None else loaded.cogging.max_abs_nm
+        )
+        results["phase11b_cogging_peak_to_peak"] = (
+            None if loaded.cogging is None else loaded.cogging.peak_to_peak_nm
+        )
+        results["phase11b_cogging_flag"] = (
+            None if loaded.cogging is None else loaded.cogging.published_scalar_flag
+        )
+        results["phase11b_no_load_mean_residual_percent"] = (
+            None if loaded.no_load is None else loaded.no_load.mean_abs_residual_percent
+        )
+        results["phase11b_pipeline_claim"] = loaded.pipeline_claim
+        results["phase11b_pipeline_validated"] = loaded.pipeline_claim == PIPELINE_VALIDATED
+        # Even with a perfect reproduction, the AFPM claim must not move.
+        results["phase11b_afpm_still_not_validated"] = (
+            loaded.afpm_claim == AFPM_NOT_VALIDATED and loaded.is_different_machine
+        )
+        loaded_text = dialog.creator_views["back_emf"].get("1.0", "end")
+        results["phase11b_view_shows_fundamental"] = "\u57fa\u6ce2\u5cf0\u503c" in loaded_text
+        results["phase11b_view_shows_provenance"] = (
+            "MEASUREMENT_DERIVED_SINGLE_SPEED" in loaded_text
+        )
+        results["phase11b_view_shows_afpm_disclaimer"] = AFPM_NOT_VALIDATED in loaded_text
+        cogging_text = dialog.creator_views["cogging"].get("1.0", "end")
+        results["phase11b_cogging_view_shows_ambiguity"] = (
+            "PUBLISHED_SCALAR_DEFINITION_AMBIGUOUS" in cogging_text
+        )
+        dialog.creator_root_var.set("")
+        dialog.refresh_public_reference()
+        root.update()
+    return results
+
+
 def _exercise_phase11a_validation_data(root, app, output: Path) -> dict[str, Any]:
     """Phase 11A: File -> New authority, the dashboard summary, and the data manager."""
 
@@ -369,6 +504,9 @@ def _phase11a_body(root, app, output: Path, results: dict[str, Any]) -> dict[str
     results["phase11a_same_machine_still_supported"] = (
         claims.get("smoke.ke.1") == "EXPERIMENTALLY_SUPPORTED"
     )
+
+    # Phase 11B: the public-reference view lives in the same dialog.
+    results.update(_exercise_phase11b_public_reference(root, app, dialog))
 
     # Step 23: the report export. VALIDATED may only appear as NOT_VALIDATED or
     # inside the affirmative claim for the same-machine dataset.
@@ -1652,6 +1790,22 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
                 "phase11a_missing_file_is_reported",
                 "phase11a_missing_file_keeps_metadata",
                 "phase11a_session_restored_for_later_sections",
+                "phase11b_public_reference_tab_present",
+                "phase11b_no_data_is_clean",
+                "phase11b_no_data_has_no_values",
+                "phase11b_metadata_without_data",
+                "phase11b_different_machine",
+                "phase11b_afpm_not_validated",
+                "phase11b_source_view_rendered",
+                "phase11b_source_states_topology",
+                "phase11b_source_states_licence",
+                "phase11b_source_states_different_machine",
+                "phase11b_all_views_render_without_data",
+                "phase11b_parameter_origins_rendered",
+                "phase11b_lambda_flag_rendered",
+                "phase11b_project_construction_refused",
+                "phase11b_refusal_names_topology",
+                "phase11b_refusal_names_axial",
             )
         ):
             raise RuntimeError("Phase 11A validation-data GUI smoke did not pass every gate")
@@ -1671,6 +1825,21 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             )
         if payload["phase11a_comparison_calibration"] != "NONE":
             raise RuntimeError("Phase 11A: the calibration status must remain NONE")
+        if payload.get("phase11b_local_dataset_present"):
+            for name in (
+                "phase11b_publication_reproduced",
+                "phase11b_pipeline_validated",
+                "phase11b_afpm_still_not_validated",
+                "phase11b_ke_has_no_r_squared",
+                "phase11b_view_shows_fundamental",
+                "phase11b_view_shows_provenance",
+                "phase11b_view_shows_afpm_disclaimer",
+                "phase11b_cogging_view_shows_ambiguity",
+            ):
+                if not payload[name]:
+                    raise RuntimeError(
+                        f"Phase 11B public-reference GUI smoke gate failed: {name}"
+                    )
         dialog_results = _exercise_dialogs(root, app, screenshot)
         records_before, records_after = _submit_smoke_feedback(app, main_window_module)
         confidence_export = app._runtime_paths.export_dir / "phase8a2_smoke_confidence.json"
