@@ -589,3 +589,18 @@ def test_the_winding_package_never_writes_into_the_analytical_kernel():
         source = path.read_text(encoding="utf-8")
         for forbidden in ("curve_fit", "least_squares", "polyfit", "calibrat"):
             assert forbidden not in source.lower(), f"{path.name} must not contain {forbidden}"
+
+
+def test_the_packaged_build_declares_the_lazily_imported_winding_dialog():
+    """The menu entry imports it lazily; without the hidden import the packaged
+    build would open onto an ImportError."""
+
+    spec = (REPOSITORY_ROOT / "packaging" / "MotorCalculator.spec").read_text(encoding="utf-8")
+    for module in (
+        "motor_calculator.gui.winding_dialog",
+        "motor_calculator.winding.electrical_axis",
+        "motor_calculator.winding.slot_fill",
+        "motor_calculator.winding.report",
+        "motor_calculator.winding.panel_text",
+    ):
+        assert module in spec, module

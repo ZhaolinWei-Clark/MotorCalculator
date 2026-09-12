@@ -30,6 +30,15 @@ hidden_imports = [
     # winding factor -- falling back silently to the entered value.
     "motor_calculator.fea.meshed_winding",
     "motor_calculator.fea.diagnostics",
+    # Phase 10G. The winding engineering dialog is imported lazily from the
+    # analysis menu, so static analysis cannot see it and the packaged build
+    # would open the menu entry onto an ImportError.
+    "motor_calculator.gui.winding_dialog",
+    "motor_calculator.winding",
+    "motor_calculator.winding.electrical_axis",
+    "motor_calculator.winding.report",
+    "motor_calculator.winding.slot_fill",
+    "motor_calculator.winding.panel_text",
     "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:
