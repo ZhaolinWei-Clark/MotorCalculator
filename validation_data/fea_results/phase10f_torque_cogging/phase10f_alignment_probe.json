@@ -1,0 +1,136 @@
+{
+  "best_mean_torque_nm": 3.273801661057128,
+  "best_offset_deg": 150,
+  "best_ratio_to_analytical": 1.0712701770474893,
+  "bridge_offset_deg": 0,
+  "calibration_performed": false,
+  "diagnostic_only": true,
+  "femm_measured_design_a_nm": -0.457035,
+  "method": "T = sum_k e_k i_k / omega_mech for a non-salient machine, with e_k from the reused no-load flux-linkage sweep and i_k from the bridge's own balanced_phase_currents",
+  "new_femm_solves": 0,
+  "predicted_mean_at_bridge_offset_nm": -2.835190204742416,
+  "same_basis_analytical_torque_nm": 3.0560000000000005,
+  "schema_version": "phase10f.alignment.v1",
+  "sweep": [
+    {
+      "mean_torque_nm": -2.835190204742416,
+      "offset_deg": 0,
+      "ratio_to_analytical": -0.9277454858450312
+    },
+    {
+      "mean_torque_nm": -2.3149199999143724,
+      "offset_deg": 15,
+      "ratio_to_analytical": -0.7574999999719804
+    },
+    {
+      "mean_torque_nm": -1.636891822678344,
+      "offset_deg": 30,
+      "ratio_to_analytical": -0.5356321409287774
+    },
+    {
+      "mean_torque_nm": -0.8473121728184247,
+      "offset_deg": 45,
+      "ratio_to_analytical": -0.2772618366552437
+    },
+    {
+      "mean_torque_nm": 1.040136949867861e-05,
+      "offset_deg": 60,
+      "ratio_to_analytical": 3.403589495640906e-06
+    },
+    {
+      "mean_torque_nm": 0.8473322667212797,
+      "offset_deg": 75,
+      "ratio_to_analytical": 0.27726841188523543
+    },
+    {
+      "mean_torque_nm": 1.6369098383787841,
+      "offset_deg": 90,
+      "ratio_to_analytical": 0.535638036118712
+    },
+    {
+      "mean_torque_nm": 2.314934709672184,
+      "offset_deg": 105,
+      "ratio_to_analytical": 0.7575048133744057
+    },
+    {
+      "mean_torque_nm": 2.8352006061119135,
+      "offset_deg": 120,
+      "ratio_to_analytical": 0.9277488894345265
+    },
+    {
+      "mean_torque_nm": 3.162252266635652,
+      "offset_deg": 135,
+      "ratio_to_analytical": 1.0347684118572158
+    },
+    {
+      "mean_torque_nm": 3.273801661057128,
+      "offset_deg": 150,
+      "ratio_to_analytical": 1.0712701770474893
+    },
+    {
+      "mean_torque_nm": 3.162246882490609,
+      "offset_deg": 165,
+      "ratio_to_analytical": 1.0347666500296495
+    },
+    {
+      "mean_torque_nm": 2.835190204742416,
+      "offset_deg": 180,
+      "ratio_to_analytical": 0.9277454858450312
+    },
+    {
+      "mean_torque_nm": 2.314919999914372,
+      "offset_deg": 195,
+      "ratio_to_analytical": 0.7574999999719803
+    },
+    {
+      "mean_torque_nm": 1.636891822678344,
+      "offset_deg": 210,
+      "ratio_to_analytical": 0.5356321409287774
+    },
+    {
+      "mean_torque_nm": 0.8473121728184249,
+      "offset_deg": 225,
+      "ratio_to_analytical": 0.2772618366552437
+    },
+    {
+      "mean_torque_nm": -1.0401369498556612e-05,
+      "offset_deg": 240,
+      "ratio_to_analytical": -3.403589495600985e-06
+    },
+    {
+      "mean_torque_nm": -0.8473322667212793,
+      "offset_deg": 255,
+      "ratio_to_analytical": -0.2772684118852353
+    },
+    {
+      "mean_torque_nm": -1.636909838378784,
+      "offset_deg": 270,
+      "ratio_to_analytical": -0.535638036118712
+    },
+    {
+      "mean_torque_nm": -2.314934709672184,
+      "offset_deg": 285,
+      "ratio_to_analytical": -0.7575048133744057
+    },
+    {
+      "mean_torque_nm": -2.835200606111914,
+      "offset_deg": 300,
+      "ratio_to_analytical": -0.9277488894345267
+    },
+    {
+      "mean_torque_nm": -3.162252266635652,
+      "offset_deg": 315,
+      "ratio_to_analytical": -1.0347684118572158
+    },
+    {
+      "mean_torque_nm": -3.2738016610571283,
+      "offset_deg": 330,
+      "ratio_to_analytical": -1.0712701770474895
+    },
+    {
+      "mean_torque_nm": -3.162246882490609,
+      "offset_deg": 345,
+      "ratio_to_analytical": -1.0347666500296495
+    }
+  ]
+}

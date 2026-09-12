@@ -373,3 +373,105 @@ def test_no_torque_correction_factor_exists_anywhere_in_the_bridge():
         source = path.read_text(encoding="utf-8").lower()
         for forbidden in ("torque_correction", "torque_scale_factor", "torque_fudge"):
             assert forbidden not in source, f"{path.name} must not carry {forbidden}"
+
+
+# ---------------------------------------------------------------------------
+# Ampere-turns in a loaded solve
+# ---------------------------------------------------------------------------
+
+
+def test_a_loaded_solve_carries_the_real_ampere_turns():
+    """Unit turns are exact for no-load flux linkage and wrong for a loaded solve.
+
+    The winding regions carry unit turns so FEMM's integer ``turns`` property
+    cannot truncate a fractional coil. Flux linkage is linear in turns and is
+    rescaled after extraction, so that is exact at no load. The armature field
+    is not: a model wound with 1 turn instead of N carries 1/N of the MMF, and
+    every torque derived from it comes out 1/N too small.
+    """
+
+    import tempfile
+
+    from motor_calculator.fea.adapter import _mesh_size_map, generate_case_scripts
+    from motor_calculator.fea.femm_lua import unit_turns_scale
+    from motor_calculator.fea.geometry import build_slice_model
+
+    case = build_self_consistent_reference_case(FEAValidationTarget.AVERAGE_TORQUE)
+    model = build_slice_model(
+        case.geometry,
+        slot_layers=case.winding.slot_layers(),
+        mesh_sizes=_mesh_size_map(case),
+        symmetry=case.symmetry,
+        rotor_angle_mech_deg=0.0,
+    )
+    scale = unit_turns_scale(model)
+    assert scale > 1.0, "this case is supposed to have fractional turns per coil"
+
+    script = Path(generate_case_scripts(case, Path(tempfile.mkdtemp()))[0]).read_text(
+        encoding="utf-8"
+    )
+    emitted = [
+        float(line.split(",")[1])
+        for line in script.splitlines()
+        if "mi_addcircprop" in line
+    ]
+
+    from motor_calculator.fea.femm_lua import balanced_phase_currents
+
+    physical = balanced_phase_currents(
+        phase_rms_a=case.operating_point.phase_current_rms_a,
+        electrical_angle_deg=(
+            case.geometry.pole_pairs * case.operating_point.rotor_angle_start_mech_deg
+        ),
+        current_angle_electrical_deg=case.operating_point.current_angle_electrical_deg,
+        phase_names=tuple(sorted(set(case.winding.coil_phase_assignment))),
+    )
+    expected = [physical.values[name] * scale for name in sorted(physical.values)]
+    assert emitted == pytest.approx(expected, rel=1e-9, abs=1e-12)
+    # and the emitted values are NOT the unscaled physical currents.
+    unscaled = [physical.values[name] for name in sorted(physical.values)]
+    assert max(abs(v) for v in emitted) == pytest.approx(
+        max(abs(v) for v in unscaled) * scale, rel=1e-9
+    )
+    assert max(abs(v) for v in emitted) != pytest.approx(
+        max(abs(v) for v in unscaled), rel=1e-3
+    )
+
+
+def test_the_no_load_campaign_scripts_are_unchanged_by_the_ampere_turns_fix():
+    """Phase 10C and 10D both rest on these scripts being byte-identical."""
+
+    import hashlib
+    import tempfile
+
+    from motor_calculator.fea.adapter import generate_case_scripts
+
+    case = build_self_consistent_reference_case(FEAValidationTarget.NO_LOAD_BACK_EMF)
+    workspace = Path(tempfile.mkdtemp())
+    texts = [
+        Path(path).read_text(encoding="utf-8")
+        for path in generate_case_scripts(case, workspace)
+    ]
+    normalised = [
+        text.replace(str(workspace).replace("\\", "/"), "<WORKSPACE>").replace(
+            case.case_id, "<CASE_ID>"
+        )
+        for text in texts
+    ]
+    digest = hashlib.sha256("".join(normalised).encode()).hexdigest()
+    assert digest == (
+        "8fbb95e97f092f59c0384b2a34864b5c8f7e02e2251489352d76a466d9cb96e9"
+    ), "the no-load campaign scripts must not change"
+
+
+def test_zero_current_scales_to_zero_current():
+    """The fix must be inert at no load, which is why the hash above holds."""
+
+    from motor_calculator.fea.femm_lua import balanced_phase_currents
+
+    currents = balanced_phase_currents(
+        phase_rms_a=0.0, electrical_angle_deg=37.0,
+        current_angle_electrical_deg=90.0, phase_names=("A", "B", "C"),
+    )
+    for value in currents.values.values():
+        assert value * 6.25 == 0.0

@@ -419,9 +419,29 @@ def build_position_script(
         ),
     ]
     lines.extend(_material_definitions(materials, case.geometry.is_coreless))
+    # Phase 10F. The winding regions carry unit turns so FEMM's integer ``turns``
+    # property cannot truncate a fractional coil (see ``unit_turns_scale``). For a
+    # no-load sweep that is exact: flux linkage is linear in turns and is rescaled
+    # after extraction.
+    #
+    # For a LOADED solve it is not. The field the armature produces depends on
+    # ampere-turns, and a model wound with 1 turn instead of N carries 1/N of the
+    # real MMF, so the armature field and every torque derived from it come out
+    # 1/N too small. Measured on the Phase 10A reference case: the block-integral
+    # torque was 6.2034x below the energy-conservation value against a turns scale
+    # of exactly 6.25, agreeing to 0.745%.
+    #
+    # Scaling the circuit current by the same factor restores the ampere-turns
+    # exactly, and leaves a no-load script byte-identical because the current is
+    # zero either way.
+    #
+    # The emitted comment below is deliberately left unchanged: Phase 10C and
+    # 10D both rest on the no-load campaign scripts being byte-identical across
+    # revisions, and that property is worth more than a nicer comment.
+    turns_scale = unit_turns_scale(model)
     lines.append("-- Circuits: series connected, one per phase")
     for name in phase_names:
-        current = phase_currents.values.get(name, 0.0)
+        current = phase_currents.values.get(name, 0.0) * turns_scale
         lines.append(f"mi_addcircprop({_lua_string(name)}, {_num(current)}, 1)")
     lines.extend(emit_geometry_lua(model, materials, is_coreless=case.geometry.is_coreless))
 

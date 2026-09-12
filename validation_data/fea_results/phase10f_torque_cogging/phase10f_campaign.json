@@ -1,0 +1,141 @@
+{
+  "ampere_turns_fix_applied": true,
+  "calibration_performed": false,
+  "cogging": [
+    {
+      "element_count_max": 91667,
+      "element_count_min": 84690,
+      "harmonics_nm": {
+        "6": 0.0038488580066828944,
+        "12": 0.0037824929227718955
+      },
+      "max_negative_nm": -0.10685428377262837,
+      "max_positive_nm": 0.08015996013187807,
+      "mean_nm": -0.007714779766727684,
+      "mesh_scale": 1.6,
+      "mesh_tier": "COARSE",
+      "peak_to_peak_nm": 0.18701424390450644,
+      "phase_current_rms_a": 0.0,
+      "sample_count": 24,
+      "seconds": 178.05953299999237,
+      "span_mech_deg": 7.5
+    },
+    {
+      "element_count_max": 121877,
+      "element_count_min": 114094,
+      "harmonics_nm": {
+        "6": 0.0030314836319800267,
+        "12": 0.0019009536424495238
+      },
+      "max_negative_nm": -0.057235429639223644,
+      "max_positive_nm": 0.06155070196903468,
+      "mean_nm": 0.0006980049673087226,
+      "mesh_scale": 1.0,
+      "mesh_tier": "BASE",
+      "peak_to_peak_nm": 0.11878613160825832,
+      "phase_current_rms_a": 0.0,
+      "sample_count": 24,
+      "seconds": 235.0158866999991,
+      "span_mech_deg": 7.5
+    },
+    {
+      "element_count_max": 215225,
+      "element_count_min": 210968,
+      "harmonics_nm": {
+        "6": 0.0033374434232222045,
+        "12": 0.0025540830108602545
+      },
+      "max_negative_nm": -0.03185016163741746,
+      "max_positive_nm": 0.03123151051420812,
+      "mean_nm": -0.00020883182666379938,
+      "mesh_scale": 0.625,
+      "mesh_tier": "FINE",
+      "peak_to_peak_nm": 0.06308167215162558,
+      "phase_current_rms_a": 0.0,
+      "sample_count": 24,
+      "seconds": 529.1534161000018,
+      "span_mech_deg": 7.5
+    }
+  ],
+  "derived_d_axis_offset_deg": 150.0,
+  "designs": [
+    {
+      "alpha_p": 0.7,
+      "analytical_electromagnetic_torque_nm": 3.0560000000000005,
+      "back_emf_phase_rms_v": 21.980938947848085,
+      "current_angle_electrical_deg": 90.0,
+      "design": "A_baseline",
+      "element_count_max": 121820,
+      "element_count_min": 115157,
+      "femm_max_torque_nm": 3.3306304884185733,
+      "femm_mean_torque_nm": 3.27055099601794,
+      "femm_min_torque_nm": 3.1891700152030005,
+      "femm_peak_to_peak_nm": 0.14146047321557287,
+      "femm_ripple_percent": 4.325279544266642,
+      "harmonics_nm": {
+        "6": 0.053062125576210005,
+        "12": 0.015238067108515812
+      },
+      "omega_mech_rad_s": 261.79938779914943,
+      "phase_current_rms_a": 12.132616824853242,
+      "production_rated_shaft_torque_nm": 3.0560000000000005,
+      "residual_percent": 7.020647775456146,
+      "seconds": 252.7434893000027,
+      "solve_count": 25
+    },
+    {
+      "alpha_p": 0.6,
+      "analytical_electromagnetic_torque_nm": 3.0560000000000005,
+      "back_emf_phase_rms_v": 18.84080481244121,
+      "current_angle_electrical_deg": 90.0,
+      "design": "B_narrow_arc",
+      "element_count_max": 129640,
+      "element_count_min": 120942,
+      "femm_max_torque_nm": 3.8252713460286825,
+      "femm_mean_torque_nm": 3.4674316892465784,
+      "femm_min_torque_nm": 3.127790709021501,
+      "femm_peak_to_peak_nm": 0.6974806370071813,
+      "femm_ripple_percent": 20.115194746885802,
+      "harmonics_nm": {
+        "6": 0.043386878009235436,
+        "12": 0.05232314373791385
+      },
+      "omega_mech_rad_s": 261.79938779914943,
+      "phase_current_rms_a": 14.154719628995451,
+      "production_rated_shaft_torque_nm": 3.0560000000000005,
+      "residual_percent": 13.463078836602671,
+      "seconds": 262.3226367999887,
+      "solve_count": 25
+    },
+    {
+      "alpha_p": 0.85,
+      "analytical_electromagnetic_torque_nm": 3.0560000000000005,
+      "back_emf_phase_rms_v": 26.480420623450808,
+      "current_angle_electrical_deg": 90.0,
+      "design": "C_wide_arc_thick_gap",
+      "element_count_max": 128106,
+      "element_count_min": 121533,
+      "femm_max_torque_nm": 2.6571506995997476,
+      "femm_mean_torque_nm": 2.6193007732288014,
+      "femm_min_torque_nm": 2.576989853219961,
+      "femm_peak_to_peak_nm": 0.08016084637978649,
+      "femm_ripple_percent": 3.0603910478357377,
+      "harmonics_nm": {
+        "6": 0.00842315397187417,
+        "12": 0.029644950013511286
+      },
+      "omega_mech_rad_s": 261.79938779914943,
+      "phase_current_rms_a": 10.07107528603827,
+      "production_rated_shaft_torque_nm": 3.0560000000000005,
+      "residual_percent": -14.289896163979021,
+      "seconds": 252.196686700001,
+      "solve_count": 25
+    }
+  ],
+  "diagnostic_only": true,
+  "same_basis_rule": "FEMM electromagnetic torque is compared against T_em = 3 * E_phase_rms * I_phase_rms / omega_mech, NOT against the production rated_torque_nm = P_rated / omega_mech, which is a shaft torque derived from a rated-power input",
+  "schema_version": "phase10f.torque_cogging.v1",
+  "torque_sample_count": 25,
+  "torque_sample_rationale": "one electrical period at 25 equally spaced rotor positions: the mean is exact for every harmonic below 25, and the 6th and 12th ripple harmonics are resolved at 4.2 and 2.1 samples per cycle. The repository default of 73 additionally resolves harmonics 13-18, which this phase does not ask about, at three times the solve cost.",
+  "total_femm_solves": 147
+}
