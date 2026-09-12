@@ -1069,10 +1069,25 @@ class MotorCalculatorAppMixin:
                 analytical_provider=self._analytical_reference_values,
                 export_dir=self._runtime_paths.export_dir,
                 on_changed=self._mark_validation_datasets_changed,
+                creator_dataset_root=self._public_reference_root(),
             )
         else:
             existing.refresh()
         return self._validation_data_dialog
+
+    def _public_reference_root(self) -> str | None:
+        """Where the user keeps their own copy of the CREATOR dataset.
+
+        The repository ships no raw measurements, so this is normally unset and
+        the public-reference view says so. An environment variable keeps the
+        path out of the project file, which would otherwise carry a machine-
+        specific absolute path into every copy of the project.
+        """
+
+        import os
+
+        value = str(os.environ.get("MOTORCALC_CREATOR_DATASET_ROOT", "")).strip()
+        return value or None
 
     def _mark_validation_datasets_changed(self) -> None:
         """A dataset was added or removed: the project is dirty."""

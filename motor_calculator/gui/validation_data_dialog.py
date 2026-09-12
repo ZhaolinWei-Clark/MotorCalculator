@@ -81,6 +81,7 @@ class ValidationDataDialog:
         analytical_provider: Callable[[], Mapping[str, float | None]] | None = None,
         export_dir: Path | None = None,
         on_changed: Callable[[], None] | None = None,
+        creator_dataset_root: str | Path | None = None,
     ) -> None:
         self.service = service
         self._parameters_provider = parameters_provider
@@ -88,6 +89,10 @@ class ValidationDataDialog:
         self._export_dir = Path(export_dir) if export_dir else Path.cwd()
         self._on_changed = on_changed
         self._last_overview = None
+        # Phase 11B. The raw public dataset is never shipped, so this is empty
+        # until a user points it at their own copy.
+        self._creator_root = creator_dataset_root
+        self._creator_report = None
 
         self.window = tk.Toplevel(master)
         self.window.title("验证数据管理")
@@ -110,6 +115,7 @@ class ValidationDataDialog:
         self._build_manual_tab()
         self._build_metadata_tab()
         self._build_results_tab()
+        self._build_public_reference_tab()
 
         ttk.Button(self.window, text="关闭", command=self.window.destroy).pack(
             side=tk.RIGHT, padx=10, pady=(0, 10)
@@ -230,6 +236,146 @@ class ValidationDataDialog:
         self.results_text = tk.Text(frame, wrap=tk.WORD)
         self.results_text.pack(fill=tk.BOTH, expand=True)
         self.results_text.configure(state=tk.DISABLED)
+
+    def _build_public_reference_tab(self) -> None:
+        """Phase 11B: the registered public reference sources.
+
+        Kept separate from the imported-dataset tabs because a registered source
+        is metadata that exists whether or not any data is present locally. The
+        repository ships no raw measurements, so "registered but not configured"
+        is the normal state and has to read as information, not as an error.
+        """
+
+        frame = ttk.Frame(self.tabs, padding=8)
+        self.tabs.add(frame, text="公开参考源")
+
+        row = ttk.Frame(frame)
+        row.pack(fill=tk.X, pady=(0, 6))
+        ttk.Label(row, text="数据集目录").pack(side=tk.LEFT)
+        self.creator_root_var = tk.StringVar(value=str(self._creator_root or ""))
+        self.creator_root_entry = ttk.Entry(row, textvariable=self.creator_root_var, width=54)
+        self.creator_root_entry.pack(side=tk.LEFT, padx=(4, 6))
+        self.creator_browse_button = ttk.Button(
+            row, text="浏览...", command=self.browse_creator_root
+        )
+        self.creator_browse_button.pack(side=tk.LEFT)
+        self.creator_load_button = ttk.Button(
+            row, text="读取", command=self.refresh_public_reference
+        )
+        self.creator_load_button.pack(side=tk.LEFT, padx=(6, 0))
+        # Phase 11B Step 19: a live consumer of the topology firewall. The button
+        # exists so the refusal is a production path a user can actually reach,
+        # rather than a library function nothing calls.
+        self.creator_project_button = ttk.Button(
+            row, text="据此建立项目", command=self.create_project_from_public_source
+        )
+        self.creator_project_button.pack(side=tk.LEFT, padx=(12, 0))
+
+        self.creator_state_var = tk.StringVar(value="")
+        ttk.Label(
+            frame, textvariable=self.creator_state_var, wraplength=900,
+            justify=tk.LEFT, foreground="#8a6d1f",
+        ).pack(anchor=tk.W, pady=(0, 6))
+
+        self.creator_tabs = ttk.Notebook(frame)
+        self.creator_tabs.pack(fill=tk.BOTH, expand=True)
+        self.creator_views: dict[str, tk.Text] = {}
+        for key, label in (
+            ("source", "来源与机器"),
+            ("back_emf", "反电动势波形"),
+            ("cogging", "齿槽转矩"),
+            ("no_load", "空载损耗"),
+            ("parameters", "等效电路参数"),
+            ("drive_cycle", "行驶工况"),
+        ):
+            tab = ttk.Frame(self.creator_tabs, padding=6)
+            self.creator_tabs.add(tab, text=label)
+            widget = tk.Text(tab, wrap=tk.NONE, height=22)
+            scroll = ttk.Scrollbar(tab, orient=tk.VERTICAL, command=widget.yview)
+            widget.configure(yscrollcommand=scroll.set, state=tk.DISABLED)
+            scroll.pack(side=tk.RIGHT, fill=tk.Y)
+            widget.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+            self.creator_views[key] = widget
+
+    # ------------------------------------------------------------------
+    # Public reference (Phase 11B)
+    # ------------------------------------------------------------------
+
+    def browse_creator_root(self, path: str | Path | None = None):
+        if path is None:
+            path = filedialog.askdirectory(
+                parent=self.window, title="选择 CREATOR PMSM 数据集目录"
+            )
+            if not path:
+                return None
+        self.creator_root_var.set(str(path))
+        return self.refresh_public_reference()
+
+    def build_public_reference_report(self):
+        """The CREATOR evidence report, present or absent. Headless."""
+
+        from ..experiment.creator_evidence import build_report
+
+        root = str(self.creator_root_var.get()).strip() if hasattr(self, "creator_root_var") else ""
+        try:
+            parameters = dict(self._parameters_provider())
+        except Exception:  # noqa: BLE001 - the view must render regardless
+            parameters = {}
+        return build_report(root or None, parameters)
+
+    def render_public_reference(self, report) -> dict:
+        """Every public-reference view's text, keyed by tab."""
+
+        from ..experiment import creator_evidence as evidence
+
+        return {
+            "source": evidence.render_header_zh(report),
+            "back_emf": evidence.render_back_emf_zh(report),
+            "cogging": evidence.render_cogging_zh(report),
+            "no_load": evidence.render_no_load_zh(report),
+            "parameters": evidence.render_parameters_zh(report),
+            "drive_cycle": evidence.render_drive_cycle_zh(report),
+        }
+
+    def refresh_public_reference(self):
+        report = self.build_public_reference_report()
+        self._creator_report = report
+        self.creator_state_var.set(
+            f"{report.state}　|　机器一致性：{report.compatibility.status.value}"
+            f"　|　{report.afpm_claim}"
+        )
+        for key, text in self.render_public_reference(report).items():
+            widget = self.creator_views[key]
+            widget.configure(state=tk.NORMAL)
+            widget.delete("1.0", "end")
+            widget.insert("1.0", text)
+            widget.configure(state=tk.DISABLED)
+        return report
+
+    def create_project_from_public_source(self):
+        """Refuse to build an AFPM project from a radial-flux source.
+
+        Phase 11B-A established that the production kernel is axial-flux only,
+        so there is no assignment of CREATOR's radial geometry to the AFPM
+        fields that preserves the physics. The refusal is explicit and names the
+        reason; silently producing a project would be far worse, because the
+        numbers would look valid.
+        """
+
+        from ..experiment.topology import (
+            TopologyMismatchError,
+            reject_afpm_project_construction,
+        )
+
+        report = getattr(self, "_creator_report", None) or self.build_public_reference_report()
+        try:
+            reject_afpm_project_construction(
+                report.summary.topology, context="AFPM project construction"
+            )
+        except TopologyMismatchError as error:
+            messagebox.showerror("拓扑不匹配", str(error), parent=self.window)
+            return str(error)
+        return None
 
     # ------------------------------------------------------------------
     # Headless-testable content
@@ -597,6 +743,7 @@ class ValidationDataDialog:
         self.results_text.insert("1.0", self.render_results_zh(overview))
         self.results_text.configure(state=tk.DISABLED)
         self._refresh_metadata_text()
+        self.refresh_public_reference()
 
 
 def _value(entry) -> str:

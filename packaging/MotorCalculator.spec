@@ -68,6 +68,16 @@ hidden_imports = [
     "motor_calculator.experiment.sources",
     "motor_calculator.experiment.templates",
     "motor_calculator.experiment.units",
+    # Phase 11B. The CREATOR public-reference modules are reached only through
+    # the validation dialog's own lazy imports, so static analysis sees none of
+    # them; without these the public-reference tab would open onto an
+    # ImportError in the packaged build.
+    "motor_calculator.experiment.creator_adapter",
+    "motor_calculator.experiment.creator_evidence",
+    "motor_calculator.experiment.creator_source",
+    "motor_calculator.experiment.harmonics",
+    "motor_calculator.experiment.origins",
+    "motor_calculator.experiment.topology",
     "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:
