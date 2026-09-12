@@ -44,6 +44,30 @@ hidden_imports = [
     "motor_calculator.winding.persistence",
     "motor_calculator.winding.export",
     "motor_calculator.winding.feasibility",
+    # Phase 11A. The winding evaluation and dashboard summary are imported
+    # lazily from inside GUI methods; without these the packaged dashboard would
+    # silently lose its manufacturability line.
+    "motor_calculator.winding.evaluation",
+    "motor_calculator.winding.dashboard_summary",
+    # Phase 11A. The validation data manager is imported lazily from the
+    # analysis menu, and its analysis modules are reached only through the
+    # service, so static analysis sees none of them.
+    "motor_calculator.gui.validation_data_dialog",
+    "motor_calculator.experiment",
+    "motor_calculator.experiment.analysis",
+    "motor_calculator.experiment.columns",
+    "motor_calculator.experiment.comparison",
+    "motor_calculator.experiment.compatibility",
+    "motor_calculator.experiment.csv_import",
+    "motor_calculator.experiment.persistence",
+    "motor_calculator.experiment.public_reference",
+    "motor_calculator.experiment.regression",
+    "motor_calculator.experiment.report",
+    "motor_calculator.experiment.schema",
+    "motor_calculator.experiment.service",
+    "motor_calculator.experiment.sources",
+    "motor_calculator.experiment.templates",
+    "motor_calculator.experiment.units",
     "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:
