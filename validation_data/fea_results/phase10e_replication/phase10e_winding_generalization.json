@@ -1,0 +1,107 @@
+{
+  "all_exceed_one_percent": true,
+  "all_same_direction": false,
+  "combinations": [
+    {
+      "coil_span_slots": 1,
+      "layer_width_m": 0.003497967070231385,
+      "meshed_over_star": 1.1035776943339533,
+      "meshed_over_star_percent": 10.357769433395326,
+      "pole_pairs": 8,
+      "pole_pitch_m": 0.02061670178918302,
+      "slot_pitch_m": 0.013744467859455345,
+      "slots": 24,
+      "winding_factor_ideal_slot_star": 0.8660254037844386,
+      "winding_factor_meshed_geometry": 0.9557263183430617
+    },
+    {
+      "coil_span_slots": 4,
+      "layer_width_m": 0.003497967070231385,
+      "meshed_over_star": 1.0719807345741037,
+      "meshed_over_star_percent": 7.19807345741037,
+      "pole_pairs": 2,
+      "pole_pitch_m": 0.08246680715673207,
+      "slot_pitch_m": 0.013744467859455345,
+      "slots": 24,
+      "winding_factor_ideal_slot_star": 0.8365163037378077,
+      "winding_factor_meshed_geometry": 0.8967293617640691
+    },
+    {
+      "coil_span_slots": 3,
+      "layer_width_m": 0.003497967070231385,
+      "meshed_over_star": 0.9882038832072678,
+      "meshed_over_star_percent": -1.179611679273218,
+      "pole_pairs": 4,
+      "pole_pitch_m": 0.04123340357836604,
+      "slot_pitch_m": 0.013744467859455345,
+      "slots": 24,
+      "winding_factor_ideal_slot_star": 1.0,
+      "winding_factor_meshed_geometry": 0.9882038832072678
+    },
+    {
+      "coil_span_slots": 6,
+      "layer_width_m": 0.0023319780468209236,
+      "meshed_over_star": 1.0322149769882516,
+      "meshed_over_star_percent": 3.22149769882516,
+      "pole_pairs": 3,
+      "pole_pitch_m": 0.05497787143782138,
+      "slot_pitch_m": 0.00916297857297023,
+      "slots": 36,
+      "winding_factor_ideal_slot_star": 0.9659258262890681,
+      "winding_factor_meshed_geometry": 0.9970431045553284
+    },
+    {
+      "coil_span_slots": 1,
+      "layer_width_m": 0.00699593414046277,
+      "meshed_over_star": 1.0494053335740205,
+      "meshed_over_star_percent": 4.940533357402055,
+      "pole_pairs": 5,
+      "pole_pitch_m": 0.03298672286269283,
+      "slot_pitch_m": 0.02748893571891069,
+      "slots": 12,
+      "winding_factor_ideal_slot_star": 0.9330127018922195,
+      "winding_factor_meshed_geometry": 0.9791085056580029
+    },
+    {
+      "coil_span_slots": 2,
+      "layer_width_m": 0.0017489835351156926,
+      "meshed_over_star": 1.0711776698746607,
+      "meshed_over_star_percent": 7.117766987466068,
+      "pole_pairs": 10,
+      "pole_pitch_m": 0.016493361431346415,
+      "slot_pitch_m": 0.006872233929727673,
+      "slots": 48,
+      "winding_factor_ideal_slot_star": 0.9250306488875355,
+      "winding_factor_meshed_geometry": 0.9908721750379956
+    },
+    {
+      "coil_span_slots": 3,
+      "layer_width_m": 0.004663956093641847,
+      "meshed_over_star": 0.9882038832072678,
+      "meshed_over_star_percent": -1.179611679273218,
+      "pole_pairs": 3,
+      "pole_pitch_m": 0.05497787143782138,
+      "slot_pitch_m": 0.01832595714594046,
+      "slots": 18,
+      "winding_factor_ideal_slot_star": 1.0,
+      "winding_factor_meshed_geometry": 0.9882038832072678
+    },
+    {
+      "coil_span_slots": 3,
+      "layer_width_m": 0.0023319780468209236,
+      "meshed_over_star": 0.9882038832072678,
+      "meshed_over_star_percent": -1.179611679273218,
+      "pole_pairs": 6,
+      "pole_pitch_m": 0.02748893571891069,
+      "slot_pitch_m": 0.00916297857297023,
+      "slots": 36,
+      "winding_factor_ideal_slot_star": 1.0,
+      "winding_factor_meshed_geometry": 0.9882038832072678
+    }
+  ],
+  "femm_solves": 0,
+  "max_abs_percent": 10.357769433395326,
+  "min_abs_percent": 1.179611679273218,
+  "note": "both factors are geometric; this is exact arithmetic, not a measurement",
+  "schema_version": "phase10e.winding_generalization.v1"
+}
