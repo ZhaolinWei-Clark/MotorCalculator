@@ -11,6 +11,9 @@ from pathlib import Path
 from typing import Any
 
 
+from tkinter import messagebox
+
+
 def _window_fits_screen(window) -> bool:
     window.update_idletasks()
     return (
@@ -148,6 +151,281 @@ def _exercise_dialogs(root, app, screenshot_base: Path) -> dict[str, Any]:
         "uncertainty_dialog_screenshot": str(uncertainty_screenshot),
         "uncertainty_dialog_screenshot_error": uncertainty_screenshot_error,
     }
+
+
+def _find_all(text, needle):
+    start = 0
+    while (index := text.find(needle, start)) != -1:
+        yield index
+        start = index + 1
+
+
+def _exercise_phase11a_validation_data(root, app, output: Path) -> dict[str, Any]:
+    """Phase 11A: File -> New authority, the dashboard summary, and the data manager."""
+
+    from motor_calculator.experiment.comparison import NO_EXPERIMENTAL_DATA
+    from motor_calculator.experiment.persistence import DatasetAvailability, DatasetStore
+    from motor_calculator.experiment.schema import DatasetMetadata, MachineIdentity, TestType
+    from motor_calculator.experiment.service import ValidationDataService
+    from motor_calculator.experiment.sources import DatasetSourceType
+    from motor_calculator.motor_core.winding_factor import (
+        WINDING_FACTOR_MODE_LABELS_ZH,
+        WindingFactorMode,
+    )
+
+    results: dict[str, Any] = {}
+
+    # File -> New prompts when the project is dirty, and the earlier workflows
+    # leave it dirty. Discard, the way the other sections that drive this path
+    # do, so the smoke never blocks on a modal nobody can click.
+    original_prompt = messagebox.askyesnocancel
+    messagebox.askyesnocancel = lambda *_args, **_kwargs: False
+    try:
+        return _phase11a_body(root, app, output, results)
+    finally:
+        messagebox.askyesnocancel = original_prompt
+
+
+def _phase11a_body(root, app, output: Path, results: dict[str, Any]) -> dict[str, Any]:
+    from motor_calculator.experiment.comparison import NO_EXPERIMENTAL_DATA
+    from motor_calculator.experiment.persistence import DatasetAvailability, DatasetStore
+    from motor_calculator.experiment.schema import DatasetMetadata, MachineIdentity, TestType
+    from motor_calculator.experiment.service import ValidationDataService
+    from motor_calculator.experiment.sources import DatasetSourceType
+    from motor_calculator.motor_core.winding_factor import (
+        WINDING_FACTOR_MODE_LABELS_ZH,
+        WindingFactorMode,
+    )
+
+    # --- Step 1: File -> New must be live, not merely library code. ----------
+    # Force MANUAL first, so an AUTO result after File -> New can only have come
+    # from the new-project path itself rather than from leftover session state.
+    app._winding_factor_mode_var.set(WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.MANUAL])
+    app._refresh_winding_factor_summary()
+    root.update()
+    results["phase11a_authority_before_new"] = app._selected_winding_factor_mode().value
+
+    if not app._new_project():
+        raise RuntimeError("Phase 11A: File -> New was cancelled unexpectedly")
+    root.update()
+    results["phase11a_new_project_authority"] = app._selected_winding_factor_mode().value
+    results["phase11a_new_project_is_auto"] = (
+        app._selected_winding_factor_mode() is WindingFactorMode.AUTO
+    )
+    resolution = app._latest_winding_factor_resolution()
+    results["phase11a_new_project_kw"] = None if resolution is None else resolution.value
+    results["phase11a_new_project_kw_is_geometry"] = (
+        resolution is not None
+        and resolution.value is not None
+        and abs(float(resolution.value) - 0.8660254037844386) < 1e-9
+    )
+    results["phase11a_new_project_declares_authority"] = (
+        app._new_project_ui_preferences().get("winding.authority") == "AUTO_FROM_GEOMETRY"
+    )
+
+    # --- Step 2: the dashboard manufacturability summary. --------------------
+    app.run_analysis()
+    root.update()
+    summary = app.results_dashboard.winding_summary
+    results["phase11a_dashboard_summary_present"] = summary is not None
+    if summary is not None:
+        results["phase11a_dashboard_authority"] = summary.authority
+        results["phase11a_dashboard_kw"] = summary.production_winding_factor
+        results["phase11a_dashboard_fill_status"] = summary.fill_status
+        results["phase11a_dashboard_envelope_fill"] = summary.usable_envelope_fill
+        results["phase11a_dashboard_never_meshed"] = (
+            summary.provenance != "MESHED_GEOMETRY_FEA_DIAGNOSTIC_ONLY"
+        )
+        results["phase11a_dashboard_matches_input_authority"] = (
+            summary.authority == "AUTO_FROM_GEOMETRY"
+        )
+    rendered_summary = app.results_dashboard._winding_summary_var.get()
+    results["phase11a_dashboard_summary_rendered"] = "\u751f\u4ea7\u7ed5\u7ec4\u7cfb\u6570" in rendered_summary
+    results["phase11a_dashboard_points_at_full_panel"] = "\u7ed5\u7ec4\u5de5\u7a0b" in rendered_summary
+
+    # --- Steps 17-19: the validation data manager. ---------------------------
+    menu = app._project_analysis_menu
+    labels = [
+        str(menu.entrycget(index, "label"))
+        for index in range(menu.index("end") + 1)
+        if menu.type(index) == "command"
+    ]
+    results["phase11a_menu_entry_present"] = "\u9a8c\u8bc1\u6570\u636e\u7ba1\u7406..." in labels
+
+    dialog = app._open_validation_data_manager()
+    root.update()
+    results["phase11a_dialog_opened"] = bool(dialog.window.winfo_exists())
+    results["phase11a_dialog_fits_screen"] = _window_fits_screen(dialog.window)
+
+    # Step 19: with no datasets the state must say so, and show no numbers.
+    overview = dialog.build_overview()
+    results["phase11a_no_data_state"] = overview.state
+    results["phase11a_no_data_is_explicit"] = overview.state == NO_EXPERIMENTAL_DATA
+    results["phase11a_no_data_has_no_comparisons"] = not overview.comparisons
+    results["phase11a_no_data_no_affirmative_claim"] = not overview.has_any_affirmative_claim
+    empty_text = dialog.results_text.get("1.0", "end")
+    results["phase11a_no_data_text_shown"] = "NO_EXPERIMENTAL_DATA" in empty_text
+    results["phase11a_no_data_says_no_pass"] = "\u9a8c\u8bc1\u901a\u8fc7" in empty_text
+    results["phase11a_dataset_list_empty"] = dialog.dataset_rows() == ()
+
+    # Step 8: export a template, and prove our own parser accepts it back.
+    template_path = output.with_name(output.stem + "-ke-template.csv")
+    template_path.unlink(missing_ok=True)
+    dialog.export_measurement_template(template_path)
+    results["phase11a_template_exported"] = template_path.is_file()
+
+    # Step 5: import a filled-in template through the real dialog action.
+    measurement_path = output.with_name(output.stem + "-ke-measurements.csv")
+    measurement_path.write_text(
+        template_path.read_text(encoding="utf-8")
+        + "600,13.856,,24.0\n1200,27.713,,24.5\n1800,41.569,,25.1\n2400,55.426,,25.4\n",
+        encoding="utf-8",
+    )
+    parameters = app._get_params()
+    own_machine = MachineIdentity(
+        topology="AFPM_DUAL_ROTOR_SINGLE_STATOR",
+        pole_count=int(parameters["p"]) * 2,
+        slot_count=int(parameters["slots"]),
+        phases=3,
+        connection="WYE",
+        turns_per_phase=int(parameters["N_ph_turns"]),
+        rated_speed_rpm=float(parameters["n_rated"]),
+        rated_power_w=float(parameters["P_rated"]),
+    )
+    loaded = dialog.import_dataset(
+        measurement_path,
+        metadata=DatasetMetadata(
+            dataset_id="smoke.ke.1",
+            title="GUI smoke Ke run",
+            source_type=DatasetSourceType.USER_EXPERIMENT,
+            test_type=TestType.NO_LOAD_BACK_EMF,
+            machine=own_machine,
+        ),
+        comparison_config={"connection": "WYE"},
+    )
+    root.update()
+    results["phase11a_csv_imported"] = loaded is not None
+    results["phase11a_import_had_no_errors"] = bool(loaded and not loaded.import_errors)
+    results["phase11a_imported_sample_count"] = 0 if loaded is None else len(loaded.rows)
+    results["phase11a_dataset_listed"] = len(dialog.dataset_rows()) == 1
+    results["phase11a_dataset_hash_recorded"] = bool(
+        loaded and loaded.metadata.raw_file_hash != "UNKNOWN"
+    )
+
+    # Step 18: the comparison view, on one explicit basis.
+    comparisons = dialog.build_comparisons()
+    results["phase11a_comparison_built"] = len(comparisons) == 1
+    if comparisons:
+        comparison = comparisons[0]
+        results["phase11a_comparison_quantity"] = comparison.quantity
+        results["phase11a_comparison_basis"] = comparison.basis_zh
+        results["phase11a_comparison_claim"] = comparison.overall_claim.value
+        results["phase11a_comparison_samples"] = comparison.measured.sample_count
+        results["phase11a_comparison_machine"] = (
+            None if comparison.compatibility is None else comparison.compatibility.status.value
+        )
+        results["phase11a_comparison_evidence_label"] = comparison.measured.evidence_label
+        results["phase11a_comparison_has_analytical"] = (
+            comparison.analytical is not None and comparison.analytical.value is not None
+        )
+        results["phase11a_comparison_calibration"] = comparison.calibration_status
+        results["phase11a_comparison_residual_count"] = len(comparison.residuals)
+    dialog.refresh()
+    root.update()
+    rendered = dialog.results_text.get("1.0", "end")
+    results["phase11a_comparison_rendered"] = "\u53cd\u7535\u52a8\u52bf\u5e38\u6570" in rendered
+    results["phase11a_comparison_shows_machine_compatibility"] = "\u673a\u5668\u4e00\u81f4\u6027" in rendered
+    results["phase11a_comparison_shows_sample_count"] = "\u6837\u672c\u6570" in rendered
+
+    # A different machine's real data must not validate this design.
+    other_path = output.with_name(output.stem + "-other-machine.csv")
+    other_path.write_text(
+        "speed_rpm,line_voltage_rms_v\n600,13.856\n1200,27.713\n1800,41.569\n",
+        encoding="utf-8",
+    )
+    dialog.import_dataset(
+        other_path,
+        metadata=DatasetMetadata(
+            dataset_id="smoke.ke.other",
+            title="published data, different machine",
+            source_type=DatasetSourceType.PUBLIC_REFERENCE_EXPERIMENT,
+            test_type=TestType.NO_LOAD_BACK_EMF,
+            machine=MachineIdentity(
+                topology="RADIAL_FLUX_INNER_ROTOR", pole_count=20,
+                slot_count=24, phases=3, connection="WYE",
+            ),
+        ),
+        comparison_config={"connection": "WYE"},
+    )
+    root.update()
+    claims = {
+        comparison.dataset.dataset_id: comparison.overall_claim.value
+        for comparison in dialog.build_comparisons()
+    }
+    results["phase11a_other_machine_claim"] = claims.get("smoke.ke.other")
+    results["phase11a_other_machine_not_validated"] = (
+        claims.get("smoke.ke.other") == "METHODOLOGY_REFERENCE_ONLY"
+    )
+    results["phase11a_same_machine_still_supported"] = (
+        claims.get("smoke.ke.1") == "EXPERIMENTALLY_SUPPORTED"
+    )
+
+    # Step 23: the report export. VALIDATED may only appear as NOT_VALIDATED or
+    # inside the affirmative claim for the same-machine dataset.
+    report_dir = output.parent / "phase11a_report"
+    exported = dialog.export_report(report_dir)
+    report_text = exported.text_path.read_text(encoding="utf-8")
+    results["phase11a_report_exported"] = exported.json_path.is_file()
+    results["phase11a_report_has_citation_block"] = "\u518d\u5206\u53d1\u8bb8\u53ef" in report_text
+    results["phase11a_report_marks_other_machine"] = "DIFFERENT_MACHINE" in report_text
+    results["phase11a_report_validated_word_is_guarded"] = all(
+        report_text[index - 4 : index] == "NOT_"
+        for index in _find_all(report_text, "VALIDATED")
+    )
+
+    # Step 22: save/load must carry the dataset references.
+    project_path = output.with_name(output.stem + "-phase11a.motorproj")
+    project_path.unlink(missing_ok=True)
+    if not app._save_project_to_path(project_path, save_as=True):
+        raise RuntimeError("Phase 11A: saving the project with datasets failed")
+    saved_preferences = app._ui_preferences_payload()
+    results["phase11a_datasets_persisted"] = "experiment.datasets" in saved_preferences
+    results["phase11a_project_holds_reference_not_samples"] = (
+        "41.569" not in saved_preferences.get("experiment.datasets", "")
+    )
+    dialog.window.destroy()
+
+    app._validation_data_service.datasets = []
+    if not app._open_project_path(project_path, prompt_for_unsaved=False):
+        raise RuntimeError("Phase 11A: reopening the project failed")
+    root.update()
+    restored_ids = sorted(item.dataset_id for item in app._validation_data_service.datasets)
+    results["phase11a_datasets_restored"] = restored_ids == ["smoke.ke.1", "smoke.ke.other"]
+    restored = app._validation_data_service.get("smoke.ke.1")
+    results["phase11a_restored_samples"] = 0 if restored is None else len(restored.rows)
+    results["phase11a_restored_metadata_intact"] = bool(
+        restored is not None
+        and restored.metadata.machine.pole_count == int(parameters["p"]) * 2
+    )
+
+    # A missing data file must degrade, never raise.
+    orphan = ValidationDataService(DatasetStore(output.parent / "phase11a_empty_store"))
+    orphan.restore(saved_preferences)
+    results["phase11a_missing_file_is_reported"] = bool(orphan.datasets) and all(
+        item.availability is DatasetAvailability.MISSING for item in orphan.datasets
+    )
+    results["phase11a_missing_file_keeps_metadata"] = all(
+        item.metadata.title for item in orphan.datasets
+    )
+
+    # Reopening a project clears the analysis results, and the sections that run
+    # after this one expect a calculated session. Leave the app as we found it.
+    app.run_analysis()
+    root.update()
+    results["phase11a_session_restored_for_later_sections"] = (
+        getattr(app, "calc_results", None) is not None
+    )
+    return results
 
 
 def _exercise_project_workflow(root, app, main_window_module, output: Path) -> dict[str, Any]:
@@ -1329,6 +1607,70 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             )
         ):
             raise RuntimeError("recovery GUI smoke did not pass every recovery gate")
+        phase11a_results = _exercise_phase11a_validation_data(root, app, output)
+        payload.update(phase11a_results)
+        if not all(
+            phase11a_results[name]
+            for name in (
+                "phase11a_new_project_is_auto",
+                "phase11a_new_project_kw_is_geometry",
+                "phase11a_new_project_declares_authority",
+                "phase11a_dashboard_summary_present",
+                "phase11a_dashboard_summary_rendered",
+                "phase11a_dashboard_points_at_full_panel",
+                "phase11a_dashboard_never_meshed",
+                "phase11a_dashboard_matches_input_authority",
+                "phase11a_menu_entry_present",
+                "phase11a_dialog_opened",
+                "phase11a_dialog_fits_screen",
+                "phase11a_no_data_is_explicit",
+                "phase11a_no_data_has_no_comparisons",
+                "phase11a_no_data_no_affirmative_claim",
+                "phase11a_no_data_text_shown",
+                "phase11a_no_data_says_no_pass",
+                "phase11a_dataset_list_empty",
+                "phase11a_template_exported",
+                "phase11a_csv_imported",
+                "phase11a_import_had_no_errors",
+                "phase11a_dataset_listed",
+                "phase11a_dataset_hash_recorded",
+                "phase11a_comparison_built",
+                "phase11a_comparison_has_analytical",
+                "phase11a_comparison_rendered",
+                "phase11a_comparison_shows_machine_compatibility",
+                "phase11a_comparison_shows_sample_count",
+                "phase11a_other_machine_not_validated",
+                "phase11a_same_machine_still_supported",
+                "phase11a_report_exported",
+                "phase11a_report_has_citation_block",
+                "phase11a_report_marks_other_machine",
+                "phase11a_report_validated_word_is_guarded",
+                "phase11a_datasets_persisted",
+                "phase11a_project_holds_reference_not_samples",
+                "phase11a_datasets_restored",
+                "phase11a_restored_metadata_intact",
+                "phase11a_missing_file_is_reported",
+                "phase11a_missing_file_keeps_metadata",
+                "phase11a_session_restored_for_later_sections",
+            )
+        ):
+            raise RuntimeError("Phase 11A validation-data GUI smoke did not pass every gate")
+        if payload["phase11a_authority_before_new"] != "manual":
+            raise RuntimeError(
+                "Phase 11A: the File -> New check must start from MANUAL, otherwise "
+                "an AUTO result proves nothing about the new-project path"
+            )
+        if payload["phase11a_imported_sample_count"] != 4:
+            raise RuntimeError(
+                "Phase 11A: the imported Ke dataset must keep all four speed points"
+            )
+        if payload["phase11a_comparison_evidence_label"] != "EXPERIMENTAL_MEASUREMENT":
+            raise RuntimeError(
+                "Phase 11A: a same-machine user experiment must carry the "
+                "EXPERIMENTAL_MEASUREMENT label"
+            )
+        if payload["phase11a_comparison_calibration"] != "NONE":
+            raise RuntimeError("Phase 11A: the calibration status must remain NONE")
         dialog_results = _exercise_dialogs(root, app, screenshot)
         records_before, records_after = _submit_smoke_feedback(app, main_window_module)
         confidence_export = app._runtime_paths.export_dir / "phase8a2_smoke_confidence.json"
