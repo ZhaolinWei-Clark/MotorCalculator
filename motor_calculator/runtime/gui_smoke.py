@@ -933,6 +933,39 @@ def _exercise_phase10a_fea_validation(root, app, output: Path) -> dict[str, Any]
     results["phase10f_no_cogging_rows_on_a_back_emf_target"] = not diagnostics.cogging
     results["phase10f_torque_section_declared"] = "转矩验证" in dict(diagnostics.sections)
     results["phase10f_cogging_section_declared"] = "齿槽转矩" in dict(diagnostics.sections)
+    # Phase 10G: the winding engineering view must open from the analysis menu,
+    # render, and label every value with where it came from.
+    from motor_calculator.winding.slot_fill import Provenance
+
+    winding_dialog = app._open_winding_engineering()
+    root.update()
+    results["phase10g_winding_dialog_opened"] = bool(winding_dialog.window.winfo_exists())
+    results["phase10g_winding_dialog_fits_screen"] = _window_fits_screen(winding_dialog.window)
+    sections, winding_warnings, winding_notes = winding_dialog.build_sections()
+    section_titles = [title for title, _rows in sections]
+    results["phase10g_winding_sections"] = section_titles
+    results["phase10g_winding_factor_section_present"] = "绕组系数" in section_titles
+    rendered_winding = winding_dialog.text.get("1.0", "end")
+    results["phase10g_winding_rendered"] = len(rendered_winding.strip()) > 0
+    every_row = [row for _title, rows in sections for row in rows]
+    results["phase10g_every_row_has_provenance"] = all(
+        row.provenance is not None for row in every_row
+    )
+    # Either the slot utilisation is computed, or the panel says why it is not.
+    # Never neither, and never both: a slotless machine must not be shown an
+    # invented slot fill, and a slotted one must not silently lose it.
+    has_slot_section = "槽利用率" in section_titles
+    declined_for_slotless = any("无槽" in message for message in winding_warnings)
+    results["phase10g_slot_fill_present_or_explained"] = (
+        has_slot_section != declined_for_slotless
+    )
+    results["phase10g_slot_fill_computed"] = has_slot_section
+    results["phase10g_slot_fill_declined_for_slotless"] = declined_for_slotless
+    results["phase10g_assumptions_are_labelled"] = any(
+        row.provenance == Provenance.ENGINEERING_ASSUMPTION for row in every_row
+    ) or not any(title == "槽利用率" for title in section_titles)
+    winding_dialog.window.destroy()
+
     results["phase10f_new_labels_are_not_affirmative"] = all(
         label not in EvidenceLabel.AFFIRMATIVE
         for label in (

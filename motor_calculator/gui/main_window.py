@@ -809,6 +809,7 @@ class MotorCalculatorAppMixin:
             label="敏感性分析...", command=lambda: self._open_analysis_center("sensitivity")
         )
         analysis_menu.add_separator()
+        analysis_menu.add_command(label="绕组工程...", command=self._open_winding_engineering)
         analysis_menu.add_command(label="FEA 验证...", command=self._open_fea_validation)
         menu_bar.add_cascade(label="分析", menu=analysis_menu)
         help_menu = tk.Menu(menu_bar, tearoff=False)
@@ -852,6 +853,50 @@ class MotorCalculatorAppMixin:
             )
         self._analysis_center.select_analysis(analysis_name)
         return self._analysis_center
+
+    def _open_winding_engineering(self):
+        """Open the winding engineering view. Computes only; changes nothing."""
+
+        from .winding_dialog import WindingEngineeringDialog
+
+        existing = getattr(self, "_winding_dialog", None)
+        if existing is None or not existing.window.winfo_exists():
+            self._winding_dialog = WindingEngineeringDialog(
+                self.root,
+                parameters_provider=self._get_params,
+                meshed_factor_provider=self._meshed_winding_factors,
+            )
+        else:
+            existing.refresh()
+        return self._winding_dialog
+
+    def _meshed_winding_factors(self):
+        """``(meshed k_w, finite width factor)`` for the current design, or ``(None, None)``.
+
+        Requires building a solver slice model, which needs the FEA-only
+        modelling parameters. When those are unavailable the winding panel shows
+        the ideal factors and says the meshed ones are not available, rather than
+        substituting one for the other.
+        """
+
+        import math
+
+        try:
+            from ..fea.meshed_winding import meshed_winding_factor_for_case
+            from ..fea.models import FEAValidationTarget
+            from ..fea.reference_cases import build_self_consistent_reference_case
+
+            case = build_self_consistent_reference_case(
+                FEAValidationTarget.NO_LOAD_BACK_EMF
+            )
+            measured = meshed_winding_factor_for_case(case)
+            width = measured.representative_coil_side_width_m
+            if width is None:
+                return measured.value, None
+            half = math.pi / case.geometry.pole_pitch_m * width / 2.0
+            return measured.value, math.sin(half) / half
+        except Exception:  # noqa: BLE001 - the panel must open regardless
+            return None, None
 
     def _open_fea_validation(self):
         """Open the FEA validation bridge. Never runs a solver by itself."""
