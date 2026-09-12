@@ -287,10 +287,10 @@ def test_phase_a_still_matches_the_analytical_slot_star(slots, pole_pairs):
 def test_the_comparison_reports_entered_against_solved_winding_factor():
     """A back-EMF match can be two offsetting errors rather than two right models."""
 
-    from motor_calculator.fea.comparison import _geometric_winding_factor
+    from motor_calculator.fea.comparison import _ideal_slot_star_winding_factor
 
     case = _case()
-    geometric = _geometric_winding_factor(case)
+    geometric = _ideal_slot_star_winding_factor(case)
     expected = compute_fundamental_winding_factor(
         slots=24, pole_pairs=8, coil_span_slots=case.winding.coil_span_slots
     ).fundamental_winding_factor

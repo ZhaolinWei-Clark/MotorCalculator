@@ -241,12 +241,17 @@ def sample_statistics(
     )
 
 
-def _geometric_winding_factor(case: FEAValidationCase) -> float | None:
-    """Fundamental winding factor of the winding the solver actually meshed.
+def _ideal_slot_star_winding_factor(case: FEAValidationCase) -> float | None:
+    """Fundamental winding factor of the *idealised* winding.
 
-    Derived from the slot/pole combination and the declared coil span with the
-    project's own slot-EMF-star implementation, which Phase 10B does not modify.
-    ``None`` when that combination has no balanced symmetric winding.
+    The slot-EMF star treats coil sides as filaments at slot centres, a whole
+    number of slot pitches apart. That is a statement about the slot/pole
+    combination, not about the conductor layout a solver meshes. ``None`` when
+    the combination has no balanced symmetric winding.
+
+    Phase 10B and 10C used this value to interpret solver output. Phase 10D
+    showed the meshed layout is a different winding; see
+    :func:`_meshed_geometry_winding_factor`.
     """
 
     from ..motor_core.winding_factor import (
@@ -264,6 +269,40 @@ def _geometric_winding_factor(case: FEAValidationCase) -> float | None:
     except (WindingFactorError, ValueError):
         return None
     return breakdown.fundamental_winding_factor
+
+
+def _meshed_geometry_winding_factor(case: FEAValidationCase) -> float | None:
+    """Fundamental winding factor of the winding the solver actually meshes.
+
+    Measured by projecting the conductor regions of the built slice model onto
+    the fundamental, so it follows the real coil-side placement and the finite
+    region width rather than an idealised slot-centre filament. ``None`` when the
+    model cannot be built for this case.
+
+    This is the factor any inversion of a solved flux linkage must divide by: a
+    linkage produced by the meshed winding carries the meshed winding's
+    projection, not the star's.
+    """
+
+    from .meshed_winding import meshed_winding_factor_for_case
+
+    try:
+        return meshed_winding_factor_for_case(case).value
+    except (ValueError, KeyError, IndexError, AttributeError):
+        return None
+
+
+def _flux_inversion_winding_factor(case: FEAValidationCase) -> float:
+    """The winding factor a solved flux linkage must be divided by.
+
+    The meshed value when it can be measured. Falling back to the entered
+    analytical value keeps the row computable for a case whose model cannot be
+    built, and the row's notes say which was used, so a fallback can never be
+    mistaken for a measurement.
+    """
+
+    meshed = _meshed_geometry_winding_factor(case)
+    return meshed if meshed is not None else case.winding.winding_factor_analytical
 
 
 def _stale_reasons(case: FEAValidationCase, result: FEARawResult) -> tuple[str, ...]:
@@ -339,13 +378,21 @@ def build_comparison(
                 fea_value=(
                     extraction.flux_linkage_fundamental_peak_wb_turn
                     / float(case.winding.turns_per_phase)
-                    / case.winding.winding_factor_analytical
+                    / _flux_inversion_winding_factor(case)
                     if case.winding.turns_per_phase
                     else None
                 ),
                 notes=(
-                    "this row divides out the analytical turns and winding factor, so it "
-                    "is not an independent measurement of either",
+                    "this row divides out the analytical turns and the MESHED winding "
+                    "factor, so it is not an independent measurement of either",
+                    "Phase 10D: a flux linkage produced by the meshed winding carries "
+                    "the meshed winding's fundamental projection. Phase 10B and 10C "
+                    "divided by the slot-star value instead, which made this row read "
+                    "about 10 % high; those historical numbers are superseded, not "
+                    "wrong at the time they were recorded",
+                    "the analytical value is a flat-top lumped pole flux while the FEA "
+                    "value is a fundamental-equivalent flux; the two are different "
+                    "quantities and the difference is a convention, not an error",
                 ),
             )
         )
@@ -354,24 +401,51 @@ def build_comparison(
         # not match the winding the solver actually meshed, an agreeing Ke can be
         # two offsetting errors rather than two correct sub-models, so the two
         # winding factors are reported side by side.
-        geometric = _geometric_winding_factor(case)
+        meshed = _meshed_geometry_winding_factor(case)
+        ideal_star = _ideal_slot_star_winding_factor(case)
         metrics.append(
             compare_metric(
-                quantity="winding_factor_entered_vs_solved_geometry",
+                quantity="winding_factor_entered_vs_meshed_geometry",
                 unit="dimensionless",
                 basis=(
                     "fundamental winding factor entered in the analytical model "
-                    "against the one implied by the coil span and slot/pole "
-                    "combination actually meshed"
+                    "against the fundamental projection of the conductor regions "
+                    "the solver actually meshes"
                 ),
                 analytical_value=case.winding.winding_factor_analytical,
-                fea_value=geometric,
+                fea_value=meshed,
                 notes=(
-                    "the second value is computed from the solved winding geometry, "
+                    "the second value is computed from the meshed winding geometry, "
                     "not measured from the field",
                     "a mismatch here means the back-EMF agreement above is the product "
                     "of the winding factor error and the flux error, and neither "
                     "factor is individually validated by it",
+                ),
+            )
+        )
+        # The idealised slot star is kept as a separate, explicitly named row.
+        # It is the value Phase 10B and 10C interpreted results with, so an
+        # auditor reading old evidence needs to see it alongside the meshed one
+        # rather than have it silently replaced.
+        metrics.append(
+            compare_metric(
+                quantity="winding_factor_ideal_slot_star_vs_meshed_geometry",
+                unit="dimensionless",
+                basis=(
+                    "idealised slot-EMF-star winding factor, which treats coil "
+                    "sides as filaments at slot centres a whole number of slot "
+                    "pitches apart, against the meshed conductor projection"
+                ),
+                analytical_value=ideal_star,
+                fea_value=meshed,
+                notes=(
+                    "DEFINITION_CONVENTION_MISMATCH, not a defect in either value: "
+                    "they describe different windings",
+                    "the side-by-side double layer places the two sides of a coil one "
+                    "slot pitch PLUS one layer width apart, and each side has a finite "
+                    "width; the star models neither",
+                    "Phase 10B and 10C interpreted solver output with the star value; "
+                    "that interpretation is HISTORICAL_INTERPRETATION_SUPERSEDED",
                 ),
             )
         )
