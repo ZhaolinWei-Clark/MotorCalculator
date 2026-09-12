@@ -166,6 +166,23 @@ class ResultsDashboard(ttk.Frame):
             explanation.pack(anchor="w", pady=(3, 0))
             self._metric_widgets[key] = (card, value, status, explanation)
 
+        # Phase 11A: the winding/manufacturability line. Phases 10G/10H put the
+        # full winding engineering behind a menu item, which meant a user who
+        # never opened it could run a design whose conductors do not fit the
+        # slot and see nothing about it here. This is the condensed version, not
+        # a second copy of that panel.
+        winding = ttk.LabelFrame(content, text="绕组与可制造性", padding=8)
+        winding.pack(fill=tk.X, pady=(10, 0))
+        self._winding_summary_var = tk.StringVar(value="尚未运行计算")
+        self._winding_summary_label = ttk.Label(
+            winding,
+            textvariable=self._winding_summary_var,
+            justify=tk.LEFT,
+            wraplength=900,
+        )
+        self._winding_summary_label.pack(anchor="w")
+        self.winding_summary = None
+
         gauges = ttk.LabelFrame(content, text="工程范围视图", padding=8)
         gauges.pack(fill=tk.X, pady=(10, 0))
         for column in range(3):
@@ -290,6 +307,31 @@ class ResultsDashboard(ttk.Frame):
         self._clear_sweep("输入或计算结果已更新；请按需重新生成曲线。")
         self.last_initial_render_seconds = time.perf_counter() - started
 
+    def set_winding_summary(self, summary) -> None:
+        """Show the condensed winding status, or say it is unavailable.
+
+        ``None`` means the winding could not be evaluated at all, which is shown
+        as such. It is never rendered as a zero or as an absence of problems.
+        """
+
+        from motor_calculator.winding.dashboard_summary import render_winding_dashboard_summary_zh
+
+        self.winding_summary = summary
+        if summary is None:
+            self._winding_summary_var.set(
+                "绕组与可制造性：不可用（缺少槽数、极对数或绕组几何）。"
+            )
+            self._winding_summary_label.configure(foreground="#666666")
+            return
+        self._winding_summary_var.set(render_winding_dashboard_summary_zh(summary))
+        self._winding_summary_label.configure(
+            foreground=(
+                "#a4443e"
+                if summary.has_blocking_issue
+                else ("#8a6d1f" if summary.has_warning else "#333333")
+            )
+        )
+
     def _populate_losses(self, data: DashboardData) -> None:
         self.loss_tree.delete(*self.loss_tree.get_children())
         for metric in data.loss_metrics:
@@ -358,6 +400,9 @@ class ResultsDashboard(ttk.Frame):
     def clear(self) -> None:
         self.data = None
         self._has_displayed_snapshot = False
+        self.winding_summary = None
+        self._winding_summary_var.set("尚未运行计算")
+        self._winding_summary_label.configure(foreground="#666666")
         self._source_var.set("尚未运行计算")
         self._design_var.set("尚无设计状态")
         for key in self._metric_widgets:

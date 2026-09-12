@@ -21,15 +21,10 @@ from ..winding.authority import (
     WindingAuthority,
     resolve_production_winding_factor,
 )
-from ..winding.feasibility import winding_manufacturability_issues
+from ..winding.evaluation import evaluate_winding
 from ..winding.panel_text import build_winding_panel_rows, render_winding_panel_zh
-from ..winding.report import build_winding_report
-from ..winding.slot_fill import (
-    DEFAULT_PACKING_FACTOR,
-    ConductorSpec,
-    SlotGeometry,
-    compute_slot_fill,
-)
+from ..winding.persistence import WindingProjectState
+from ..winding.slot_fill import DEFAULT_PACKING_FACTOR
 
 #: Declared allowances. Engineering assumptions, shown as editable inputs so a
 #: user is never silently held to a number they did not choose.
@@ -190,15 +185,15 @@ class WindingEngineeringDialog:
             return fallback
 
     def build_sections(self):
-        """Compute the panel content. Separated so it can be tested headlessly."""
+        """Compute the panel content. Separated so it can be tested headlessly.
+
+        Phase 11A moved the assembly itself into ``winding.evaluation`` so the
+        main dashboard shows the same numbers this panel does, computed once.
+        This method now supplies the dialog's editable assumptions and renders
+        the result.
+        """
 
         parameters = dict(self._parameters_provider())
-        warnings: list[str] = []
-
-        slots = int(parameters.get("slots") or 0)
-        pole_pairs = int(parameters.get("p") or 0)
-        if slots <= 0 or pole_pairs <= 0:
-            return (), ("缺少槽数或极对数，无法计算绕组。",), ()
 
         meshed = width_factor = None
         if self._meshed_factor_provider is not None:
@@ -207,77 +202,40 @@ class WindingEngineeringDialog:
             except Exception:  # noqa: BLE001 - a failed probe must not break the view
                 meshed = width_factor = None
 
-        layers = max(1, int(self._float(self.layers_var, 2.0)))
-        report = build_winding_report(
-            slots=slots,
-            pole_pairs=pole_pairs,
-            coil_span_slots=float(parameters.get("coil_span_slots") or 1),
-            layers=layers,
-            parallel_paths=int(parameters.get("n_parallel") or 1),
-            entered_winding_factor=(
-                float(parameters["k_w"]) if parameters.get("k_w") is not None else None
-            ),
-            entered_provenance="USER_INPUT",
+        evaluation = evaluate_winding(
+            parameters,
+            authority=self.selected_authority(),
+            manual_winding_factor=self._manual_kw(parameters),
+            assumptions=self.assumptions(),
             meshed_winding_factor=meshed,
             finite_width_factor=width_factor,
         )
+        self._evaluation = evaluation
+        self._production = evaluation.production
+        if evaluation.report is None:
+            return (), evaluation.warnings, ()
 
-        fill = None
-        coreless = bool(parameters.get("coreless")) or str(parameters.get("slot_type")) == "无槽"
-        if coreless:
-            warnings.append(NO_SLOT_GEOMETRY_MESSAGE_ZH)
-        else:
-            try:
-                geometry = SlotGeometry(
-                    slot_count=slots,
-                    top_width_mm=float(parameters["w_slot_top"]),
-                    bottom_width_mm=float(parameters["w_slot_bottom"]),
-                    depth_mm=float(parameters["h_slot"]),
-                    wedge_height_mm=float(parameters.get("h_wedge") or 0.0),
-                    liner_thickness_mm=self._float(self.liner_var, DEFAULT_LINER_THICKNESS_MM),
-                    clearance_mm=self._float(self.clearance_var, DEFAULT_CLEARANCE_MM),
-                )
-                bare = float(parameters["d_wire"])
-                conductor = ConductorSpec(
-                    bare_diameter_mm=bare,
-                    insulated_diameter_mm=bare
-                    * self._float(self.insulation_var, DEFAULT_INSULATION_RATIO),
-                    parallel_strands=int(parameters.get("n_parallel") or 1),
-                )
-                turns_per_phase = float(parameters["N_ph_turns"])
-                turns_per_coil_side = turns_per_phase * report.phases / slots
-                fill = compute_slot_fill(
-                    geometry=geometry,
-                    conductor=conductor,
-                    turns_per_coil=turns_per_coil_side,
-                    coil_sides_per_slot=layers,
-                    packing_factor=self._float(self.packing_var, DEFAULT_PACKING_FACTOR),
-                )
-                warnings.extend(fill.warnings)
-            except (KeyError, TypeError, ValueError) as error:
-                warnings.append(f"槽利用率无法计算：{error}")
-
-        # Phase 10H: resolve the production winding factor through the single
-        # authority. The meshed value is never passed to it.
-        production = resolve_production_winding_factor(
-            authority=self.selected_authority(),
-            manual_value=self._manual_kw(parameters),
-            slots=slots,
-            pole_pairs=pole_pairs,
-            coil_span_slots=parameters.get("coil_span_slots") or 1,
-            phases=report.phases,
-        )
-        self._production = production
-        warnings.extend(production.warnings)
-        for issue in winding_manufacturability_issues(fill=fill, production=production):
+        warnings = list(evaluation.warnings)
+        for issue in evaluation.issues:
             warnings.append(f"[{issue.code}/{issue.severity}] {issue.message_zh}")
 
-        sections = build_winding_panel_rows(report=report, fill=fill)
+        sections = build_winding_panel_rows(report=evaluation.report, fill=evaluation.fill)
         sections = sections + ((
             "生产绕组系数权威",
-            _authority_rows(production),
+            _authority_rows(evaluation.production),
         ),)
-        return sections, tuple(warnings), report.notes_zh
+        return sections, tuple(warnings), evaluation.report.notes_zh
+
+    def assumptions(self) -> WindingProjectState:
+        """The editable engineering allowances, as a winding state."""
+
+        return WindingProjectState(
+            layers=max(1, int(self._float(self.layers_var, 2.0))),
+            insulation_ratio=self._float(self.insulation_var, DEFAULT_INSULATION_RATIO),
+            liner_thickness_mm=self._float(self.liner_var, DEFAULT_LINER_THICKNESS_MM),
+            clearance_mm=self._float(self.clearance_var, DEFAULT_CLEARANCE_MM),
+            packing_factor=self._float(self.packing_var, DEFAULT_PACKING_FACTOR),
+        )
 
     def selected_authority(self) -> WindingAuthority:
         label = str(self.authority_var.get()).strip()

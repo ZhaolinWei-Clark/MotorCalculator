@@ -186,3 +186,62 @@ def new_project_state(
         manual_winding_factor=manual_winding_factor,
         coil_span_slots=int(coil_span_slots) if coil_span_slots else None,
     )
+
+
+# ---------------------------------------------------------------------------
+# Phase 11A: the bridge between the authority model and the RC2 ui_preferences
+# keys the GUI actually persists.
+# ---------------------------------------------------------------------------
+
+#: The RC2 keys ``ui_preferences`` already carries for the winding factor. They
+#: are reused rather than duplicated so no project-schema change is needed and
+#: every existing file keeps loading exactly as before.
+RC2_MODE_KEY = "winding_factor_mode"
+RC2_COIL_SPAN_KEY = "coil_span_slots"
+RC2_SKEW_KEY = "skew_slots"
+
+
+def new_project_ui_preferences(
+    *,
+    slots=None,
+    pole_pairs=None,
+    coil_span_slots=None,
+    manual_winding_factor=None,
+    skew_slots: float = 0.0,
+) -> dict[str, Any]:
+    """The ``ui_preferences`` a project created *now* should be born with.
+
+    This is the production consumer of :func:`new_project_state` that Phase 10H
+    specified but never wired in. Without it, ``File -> New`` produced a
+    document with no winding keys at all -- which is precisely the signal
+    :func:`from_preferences` reads as "this project predates the semantics" --
+    so every brand-new project was classified ``LEGACY_MANUAL``.
+
+    A *new* document saying nothing and an *old file* saying nothing are not the
+    same statement, and that is the whole bug. Loading still treats silence as
+    legacy; only creation is changed.
+
+    ``AUTO`` is emitted only when the geometry genuinely supports a derivation.
+    When it does not, the manual value is preserved and the mode stays manual:
+    no winding factor is ever invented here.
+    """
+
+    from ..motor_core.winding_factor import WindingFactorMode
+
+    state = new_project_state(
+        slots=slots,
+        pole_pairs=pole_pairs,
+        coil_span_slots=coil_span_slots,
+        manual_winding_factor=manual_winding_factor,
+    )
+    is_auto = state.authority is WindingAuthority.AUTO_FROM_GEOMETRY
+    return {
+        RC2_MODE_KEY: (
+            WindingFactorMode.AUTO if is_auto else WindingFactorMode.MANUAL
+        ).value,
+        RC2_COIL_SPAN_KEY: (
+            "" if state.coil_span_slots is None else str(int(state.coil_span_slots))
+        ),
+        RC2_SKEW_KEY: str(float(skew_slots)),
+        AUTHORITY_KEY: state.authority.value,
+    }

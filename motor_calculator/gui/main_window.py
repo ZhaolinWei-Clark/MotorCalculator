@@ -100,6 +100,8 @@ from .feedback_dialog import (
 )
 from .recovery_dialog import RecoveryBrowserDialog
 from .uncertainty_dialog import UncertaintyAssumptionDialog
+from motor_calculator.experiment.persistence import DatasetStore
+from motor_calculator.experiment.service import ValidationDataService
 from .analysis_dialogs import AnalysisCenterDialog
 
 from motor_calculator.validation.confidence_summary import (
@@ -599,7 +601,16 @@ class MotorCalculatorAppMixin:
             "winding_factor_mode": self._selected_winding_factor_mode().value,
             "coil_span_slots": str(self._coil_span_slots_var.get()).strip(),
             "skew_slots": str(self._skew_slots_var.get()).strip(),
+            # Phase 11A: measurement-dataset references. Same reasoning as the
+            # winding keys -- flat scalars in the existing optional map, so
+            # PROJECT_SCHEMA_VERSION does not move and every project written
+            # before this phase still loads byte-identically.
+            **self._validation_dataset_preferences(),
         }
+
+    def _validation_dataset_preferences(self) -> dict:
+        service = getattr(self, "_validation_data_service", None)
+        return {} if service is None else service.to_preferences()
 
     def _restore_ui_preferences(self, preferences) -> None:
         try:
@@ -618,9 +629,30 @@ class MotorCalculatorAppMixin:
         version = preferences.get("preset_version")
         self._last_preset_version = int(version) if version is not None else None
         self._restore_winding_factor_preferences(preferences)
+        self._restore_validation_datasets(preferences)
         self._update_input_unit_labels()
         self._guided_input_panel.set_preferences(restored)
         self._apply_input_mode_visibility()
+
+    def _restore_validation_datasets(self, preferences) -> None:
+        """Rebuild the project's dataset references.
+
+        A missing or altered data file never raises: the dataset is restored in
+        that state with its metadata intact, because the metadata is what tells
+        the user what was lost.
+        """
+
+        service = getattr(self, "_validation_data_service", None)
+        if service is None:
+            return
+        warnings = service.restore(preferences)
+        if warnings:
+            logging.getLogger(__name__).warning(
+                "validation datasets restored with problems: %s", "; ".join(warnings)
+            )
+        dialog = getattr(self, "_validation_data_dialog", None)
+        if dialog is not None and dialog.window.winfo_exists():
+            dialog.refresh()
 
     def _apply_preset_by_id(self, preset_id: str) -> bool:
         preset = self._preset_registry.get(preset_id)
@@ -789,7 +821,19 @@ class MotorCalculatorAppMixin:
         self._project_notes = ""
         self._project_validation_record_ids: list[str] = []
         self._project_default_inputs = dict(self._get_params())
+        # Phase 11A: remember the winding geometry a new project starts from,
+        # so File -> New can *derive* its authority rather than snapshotting
+        # whatever mode the session happens to be in.
+        self._project_default_coil_span_slots = str(
+            self._coil_span_slots_var.get()
+        ).strip() if hasattr(self, "_coil_span_slots_var") else ""
         recent_store = RecentProjectStore(self._runtime_paths.user_data_dir / "recent_projects.json")
+        # Phase 11A: the measurement-dataset store. Application-controlled and
+        # content-addressed, so a project file holds a small reference instead
+        # of an arbitrary amount of somebody else's data.
+        self._validation_data_service = ValidationDataService(
+            DatasetStore(self._runtime_paths.user_data_dir / "measurement_datasets")
+        )
         self._project_manager = ProjectManager(recent_store)
         self._recovery_manager = RecoveryManager(self._runtime_paths.user_data_dir / "recovery")
         initial_recovery_scan = self._recovery_manager.scan()
@@ -804,7 +848,11 @@ class MotorCalculatorAppMixin:
         self._recovery_status_var = tk.StringVar(
             value=recovery_startup_warning or tr("status.recovery_active")
         )
-        document = create_project_document("Untitled", self._project_default_inputs)
+        document = create_project_document(
+            "Untitled",
+            self._project_default_inputs,
+            ui_preferences=self._new_project_ui_preferences(),
+        )
         self._project_manager.new_project(document)
         self._create_project_menu()
         self._project_traces = [
@@ -859,6 +907,9 @@ class MotorCalculatorAppMixin:
         analysis_menu.add_separator()
         analysis_menu.add_command(label="绕组工程...", command=self._open_winding_engineering)
         analysis_menu.add_command(label="FEA 验证...", command=self._open_fea_validation)
+        analysis_menu.add_command(
+            label="验证数据管理...", command=self._open_validation_data_manager
+        )
         menu_bar.add_cascade(label="分析", menu=analysis_menu)
         help_menu = tk.Menu(menu_bar, tearoff=False)
         help_menu.add_command(label=tr("menu.diagnostics"), command=self._export_runtime_diagnostics)
@@ -901,6 +952,64 @@ class MotorCalculatorAppMixin:
             )
         self._analysis_center.select_analysis(analysis_name)
         return self._analysis_center
+
+    def current_winding_evaluation(self):
+        """Evaluate the winding for the current design, or ``None``.
+
+        Uses the same ``winding.evaluation`` entry point the winding engineering
+        dialog uses, with the same authority the input panel is set to, so the
+        dashboard line and the panel can never disagree about a number.
+        """
+
+        from motor_calculator.winding.authority import WindingAuthority
+        from motor_calculator.winding.evaluation import evaluate_winding
+        from motor_calculator.motor_core.winding_factor import WindingFactorMode
+
+        try:
+            parameters = self._get_params()
+        except (MotorValidationError, MotorCalculationError, KeyError, ValueError):
+            return None
+        mode = (
+            self._selected_winding_factor_mode()
+            if hasattr(self, "_winding_factor_mode_var")
+            else WindingFactorMode.MANUAL
+        )
+        authority = (
+            WindingAuthority.AUTO_FROM_GEOMETRY
+            if mode is WindingFactorMode.AUTO
+            else WindingAuthority.MANUAL_OVERRIDE
+        )
+        span = str(getattr(self, "_coil_span_slots_var", None) and self._coil_span_slots_var.get() or "").strip()
+        if span:
+            parameters = dict(parameters)
+            parameters.setdefault("coil_span_slots", span)
+        try:
+            return evaluate_winding(
+                parameters,
+                authority=authority,
+                manual_winding_factor=self._entered_winding_factor(),
+            )
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def _entered_winding_factor(self):
+        """The `k_w` the user actually typed, not the AUTO-resolved value."""
+
+        try:
+            raw = self._collect_raw_params().get("k_w")
+            return None if raw in (None, "") else float(raw)
+        except (TypeError, ValueError):
+            return None
+
+    def _winding_dashboard_summary(self):
+        """The condensed winding status for the dashboard, or ``None``."""
+
+        from motor_calculator.winding.dashboard_summary import build_winding_dashboard_summary
+
+        evaluation = self.current_winding_evaluation()
+        if evaluation is None or not evaluation.is_available:
+            return None
+        return build_winding_dashboard_summary(evaluation)
 
     def _open_winding_engineering(self):
         """Open the winding engineering view. Computes only; changes nothing."""
@@ -945,6 +1054,71 @@ class MotorCalculatorAppMixin:
             return measured.value, math.sin(half) / half
         except Exception:  # noqa: BLE001 - the panel must open regardless
             return None, None
+
+    def _open_validation_data_manager(self):
+        """Open the validation data manager. Imports nothing by itself."""
+
+        from .validation_data_dialog import ValidationDataDialog
+
+        existing = getattr(self, "_validation_data_dialog", None)
+        if existing is None or not existing.window.winfo_exists():
+            self._validation_data_dialog = ValidationDataDialog(
+                self.root,
+                service=self._validation_data_service,
+                parameters_provider=self._get_params,
+                analytical_provider=self._analytical_reference_values,
+                export_dir=self._runtime_paths.export_dir,
+                on_changed=self._mark_validation_datasets_changed,
+            )
+        else:
+            existing.refresh()
+        return self._validation_data_dialog
+
+    def _mark_validation_datasets_changed(self) -> None:
+        """A dataset was added or removed: the project is dirty."""
+
+        if not getattr(self, "_project_suppress_dirty", False):
+            self._project_manager.mark_dirty()
+            self._update_project_title()
+
+    def _analytical_reference_values(self) -> dict:
+        """This project's own values for the quantities a bench test measures.
+
+        Returned on the bases the comparison layer expects: Ke as phase RMS per
+        mechanical rad/s, Kt per phase RMS amp. Anything not currently computed
+        is ``None`` rather than a stand-in, so the comparison shows a gap
+        instead of a number nobody produced.
+        """
+
+        import math
+
+        values: dict = {
+            "ke_phase_rms_v_per_rad_s": None,
+            "kt_nm_per_a": None,
+            "phase_resistance_ohm": None,
+            "efficiency": None,
+            "fea_ke_phase_rms_v_per_rad_s": None,
+        }
+        result = getattr(self, "calc_results", None)
+        if result is None:
+            return values
+        try:
+            speed_rpm = float(result.performance.mechanical_speed_rpm)
+            omega = speed_rpm * 2.0 * math.pi / 60.0
+            if omega:
+                values["ke_phase_rms_v_per_rad_s"] = (
+                    float(result.electrical.back_emf_phase_rms_v) / omega
+                )
+            values["kt_nm_per_a"] = float(
+                result.electrical.legacy_torque_constant_nm_per_phase_rms_a
+            )
+            values["phase_resistance_ohm"] = float(result.electrical.phase_resistance_ohm)
+            values["efficiency"] = float(result.performance.efficiency_percent) / 100.0
+        except (AttributeError, TypeError, ValueError, ZeroDivisionError):
+            logging.getLogger(__name__).warning(
+                "analytical reference values unavailable", exc_info=True
+            )
+        return values
 
     def _open_fea_validation(self):
         """Open the FEA validation bridge. Never runs a solver by itself."""
@@ -1179,13 +1353,48 @@ class MotorCalculatorAppMixin:
             decision = UnsavedChangesDecision.DISCARD
         return self._project_manager.can_abandon(decision, save_callback=self._save_project)
 
+    def _new_project_ui_preferences(self) -> dict:
+        """The winding preferences a brand-new project is born with.
+
+        Phase 10H built ``new_project_state()`` and tested it, but never gave it
+        a production consumer, so ``File -> New`` created a document carrying no
+        winding keys -- the exact signal ``from_preferences`` reads as "predates
+        these semantics" -- and every new project came up LEGACY_MANUAL while the
+        shipped startup example was AUTO. Deriving the block here closes that.
+
+        Loading is untouched: an existing file that says nothing is still
+        legacy. Only creation now says something.
+        """
+
+        from motor_calculator.winding.persistence import new_project_ui_preferences
+
+        defaults = self._project_default_inputs
+        # Only the winding keys are emitted. Everything else stays absent, so a
+        # new project still resets the preset identity and display units exactly
+        # as it did before; this change adds a statement, it does not carry
+        # session state into a fresh document.
+        return dict(
+            new_project_ui_preferences(
+                slots=defaults.get("slots"),
+                pole_pairs=defaults.get("p"),
+                coil_span_slots=(
+                    getattr(self, "_project_default_coil_span_slots", "") or None
+                ),
+                manual_winding_factor=defaults.get("k_w"),
+            )
+        )
+
     def _new_project(self) -> bool:
         previous = self._project_manager.current_project
         if not self._confirm_abandon_changes():
             return False
         if previous is not None:
             self._cleanup_project_recovery(previous.metadata.project_uuid)
-        document = create_project_document("Untitled", self._project_default_inputs)
+        document = create_project_document(
+            "Untitled",
+            self._project_default_inputs,
+            ui_preferences=self._new_project_ui_preferences(),
+        )
         self._project_manager.new_project(document)
         self._apply_project_document(document)
         return True
@@ -1855,6 +2064,7 @@ class MotorCalculatorAppMixin:
                 dashboard_data,
                 rated_speed_rpm=float(params["n_rated"]),
             )
+            self.results_dashboard.set_winding_summary(self._winding_dashboard_summary())
             self._latest_result_snapshot = build_result_snapshot(
                 params,
                 self.calc_results.to_dict(),
