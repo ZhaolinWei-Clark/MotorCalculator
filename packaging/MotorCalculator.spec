@@ -39,6 +39,11 @@ hidden_imports = [
     "motor_calculator.winding.report",
     "motor_calculator.winding.slot_fill",
     "motor_calculator.winding.panel_text",
+    # Phase 10H
+    "motor_calculator.winding.authority",
+    "motor_calculator.winding.persistence",
+    "motor_calculator.winding.export",
+    "motor_calculator.winding.feasibility",
     "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:

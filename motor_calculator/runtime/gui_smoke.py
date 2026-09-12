@@ -964,6 +964,35 @@ def _exercise_phase10a_fea_validation(root, app, output: Path) -> dict[str, Any]
     results["phase10g_assumptions_are_labelled"] = any(
         row.provenance == Provenance.ENGINEERING_ASSUMPTION for row in every_row
     ) or not any(title == "槽利用率" for title in section_titles)
+    # Phase 10H: authority mode must be explicit, switchable, and never silent.
+    from motor_calculator.winding.authority import AUTHORITY_LABELS_ZH, WindingAuthority
+
+    results["phase10h_authority_control_present"] = hasattr(winding_dialog, "authority_combo")
+    results["phase10h_default_authority"] = winding_dialog.selected_authority().value
+    winding_dialog.authority_var.set(AUTHORITY_LABELS_ZH[WindingAuthority.AUTO_FROM_GEOMETRY])
+    winding_dialog._on_authority_changed()
+    root.update()
+    auto_state = winding_dialog._production
+    results["phase10h_auto_authority"] = auto_state.authority.value
+    results["phase10h_auto_uses_geometry"] = (
+        auto_state.value is not None
+        and auto_state.geometry_value is not None
+        and abs(auto_state.value - auto_state.geometry_value) < 1e-12
+    )
+    results["phase10h_auto_disables_manual_entry"] = (
+        str(winding_dialog.manual_kw_entry.cget("state")) == "disabled"
+    )
+    results["phase10h_switch_warns"] = "重新计算" in winding_dialog.authority_status_var.get()
+    winding_dialog.authority_var.set(AUTHORITY_LABELS_ZH[WindingAuthority.MANUAL_OVERRIDE])
+    winding_dialog._on_authority_changed()
+    root.update()
+    results["phase10h_manual_enables_entry"] = (
+        str(winding_dialog.manual_kw_entry.cget("state")) == "normal"
+    )
+    results["phase10h_manual_authority"] = winding_dialog._production.authority.value
+    results["phase10h_production_never_meshed"] = (
+        winding_dialog._production.provenance != "MESHED_GEOMETRY_FEA_DIAGNOSTIC_ONLY"
+    )
     winding_dialog.window.destroy()
 
     results["phase10f_new_labels_are_not_affirmative"] = all(

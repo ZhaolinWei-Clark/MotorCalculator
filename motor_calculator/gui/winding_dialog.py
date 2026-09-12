@@ -16,6 +16,12 @@ import tkinter as tk
 from tkinter import ttk
 from typing import Callable, Mapping
 
+from ..winding.authority import (
+    AUTHORITY_LABELS_ZH,
+    WindingAuthority,
+    resolve_production_winding_factor,
+)
+from ..winding.feasibility import winding_manufacturability_issues
 from ..winding.panel_text import build_winding_panel_rows, render_winding_panel_zh
 from ..winding.report import build_winding_report
 from ..winding.slot_fill import (
@@ -35,6 +41,43 @@ NO_SLOT_GEOMETRY_MESSAGE_ZH = (
     "当前设计为无槽（无铁芯）结构，没有槽几何，因此不计算槽利用率。\n"
     "绕组系数部分仍然有效。"
 )
+
+
+def _authority_rows(production):
+    """Rows describing which winding factor production used, and why."""
+
+    from ..winding.panel_text import PanelRow
+
+    provenance = {
+        WindingAuthority.AUTO_FROM_GEOMETRY: "GEOMETRY_DERIVED",
+        WindingAuthority.MANUAL_OVERRIDE: "MANUAL_OVERRIDE",
+        WindingAuthority.LEGACY_MANUAL: "MANUAL_OVERRIDE",
+        WindingAuthority.UNRESOLVED: "USER_INPUT",
+    }[production.authority]
+    rows = [
+        PanelRow("权威模式", AUTHORITY_LABELS_ZH[production.authority], provenance),
+        PanelRow(
+            "生产绕组系数",
+            "未解析" if production.value is None else f"{production.value:.6f}",
+            provenance,
+            production.reason_zh,
+        ),
+        PanelRow(
+            "几何推导值",
+            "不可用" if production.geometry_value is None else f"{production.geometry_value:.6f}",
+            "GEOMETRY_DERIVED",
+        ),
+    ]
+    if production.manual_value is not None:
+        rows.append(PanelRow("手动值", f"{production.manual_value:.6f}", "MANUAL_OVERRIDE"))
+    if production.overrides_geometry and production.geometry_delta_percent is not None:
+        rows.append(
+            PanelRow(
+                "手动相对几何", f"{production.geometry_delta_percent:+.3f} %",
+                "MANUAL_OVERRIDE", "手动值正在覆盖几何推导结果",
+            )
+        )
+    return tuple(rows)
 
 
 class WindingEngineeringDialog:
@@ -78,6 +121,38 @@ class WindingEngineeringDialog:
         self.insulation_var = tk.StringVar(value=f"{DEFAULT_INSULATION_RATIO:.3f}")
         self.packing_var = tk.StringVar(value=f"{DEFAULT_PACKING_FACTOR:.2f}")
         self.layers_var = tk.StringVar(value="2")
+
+        # Phase 10H. The production winding-factor authority. Changing it
+        # changes Ke, Kt, voltage and feasibility, so it is an explicit control
+        # with a warning rather than a silent default.
+        authority_frame = ttk.LabelFrame(self.window, text="生产绕组系数权威")
+        authority_frame.pack(fill=tk.X, padx=10, pady=(0, 8))
+        self.authority_var = tk.StringVar(
+            value=AUTHORITY_LABELS_ZH[WindingAuthority.LEGACY_MANUAL]
+        )
+        ttk.Label(authority_frame, text="模式：").grid(row=0, column=0, sticky=tk.W, padx=(8, 2), pady=6)
+        self.authority_combo = ttk.Combobox(
+            authority_frame,
+            textvariable=self.authority_var,
+            values=[
+                AUTHORITY_LABELS_ZH[WindingAuthority.AUTO_FROM_GEOMETRY],
+                AUTHORITY_LABELS_ZH[WindingAuthority.MANUAL_OVERRIDE],
+                AUTHORITY_LABELS_ZH[WindingAuthority.LEGACY_MANUAL],
+            ],
+            state="readonly",
+            width=26,
+        )
+        self.authority_combo.grid(row=0, column=1, sticky=tk.W, padx=(0, 12), pady=6)
+        self.authority_combo.bind("<<ComboboxSelected>>", lambda _event: self._on_authority_changed())
+        ttk.Label(authority_frame, text="手动 kw：").grid(row=0, column=2, sticky=tk.W, padx=(8, 2), pady=6)
+        self.manual_kw_var = tk.StringVar(value="")
+        self.manual_kw_entry = ttk.Entry(authority_frame, textvariable=self.manual_kw_var, width=10)
+        self.manual_kw_entry.grid(row=0, column=3, sticky=tk.W, padx=(0, 12), pady=6)
+        self.authority_status_var = tk.StringVar(value="")
+        ttk.Label(
+            authority_frame, textvariable=self.authority_status_var,
+            wraplength=820, justify=tk.LEFT, foreground="#8a5a00",
+        ).grid(row=1, column=0, columnspan=6, sticky=tk.W, padx=8, pady=(0, 6))
 
         for column, (label, variable) in enumerate(
             (
@@ -182,8 +257,66 @@ class WindingEngineeringDialog:
             except (KeyError, TypeError, ValueError) as error:
                 warnings.append(f"槽利用率无法计算：{error}")
 
+        # Phase 10H: resolve the production winding factor through the single
+        # authority. The meshed value is never passed to it.
+        production = resolve_production_winding_factor(
+            authority=self.selected_authority(),
+            manual_value=self._manual_kw(parameters),
+            slots=slots,
+            pole_pairs=pole_pairs,
+            coil_span_slots=parameters.get("coil_span_slots") or 1,
+            phases=report.phases,
+        )
+        self._production = production
+        warnings.extend(production.warnings)
+        for issue in winding_manufacturability_issues(fill=fill, production=production):
+            warnings.append(f"[{issue.code}/{issue.severity}] {issue.message_zh}")
+
         sections = build_winding_panel_rows(report=report, fill=fill)
+        sections = sections + ((
+            "生产绕组系数权威",
+            _authority_rows(production),
+        ),)
         return sections, tuple(warnings), report.notes_zh
+
+    def selected_authority(self) -> WindingAuthority:
+        label = str(self.authority_var.get()).strip()
+        for authority, text in AUTHORITY_LABELS_ZH.items():
+            if text == label:
+                return authority
+        return WindingAuthority.LEGACY_MANUAL
+
+    def _manual_kw(self, parameters):
+        raw = str(self.manual_kw_var.get()).strip()
+        if raw:
+            try:
+                return float(raw)
+            except ValueError:
+                pass
+        value = parameters.get("k_w")
+        return float(value) if value is not None else None
+
+    def _on_authority_changed(self) -> None:
+        """Never switch silently: say that results will be recalculated."""
+
+        authority = self.selected_authority()
+        editable = authority is not WindingAuthority.AUTO_FROM_GEOMETRY
+        self.manual_kw_entry.configure(state=tk.NORMAL if editable else tk.DISABLED)
+        if authority is WindingAuthority.AUTO_FROM_GEOMETRY:
+            self.authority_status_var.set(
+                "切换为自动模式后，生产绕组系数将改用几何推导值，"
+                "Ke、Kt、电压需求、电压裕度与可行性判定都会随之重新计算。"
+            )
+        elif authority is WindingAuthority.MANUAL_OVERRIDE:
+            self.authority_status_var.set(
+                "手动覆盖：输入值将取代几何推导值，面板会同时显示二者之差。"
+            )
+        else:
+            self.authority_status_var.set(
+                "历史项目手动值：按原样保留存储的绕组系数，不会自动改用几何值。"
+                "可在上方显式切换模式进行迁移。"
+            )
+        self.refresh()
 
     def refresh(self) -> None:
         sections, warnings, notes = self.build_sections()
