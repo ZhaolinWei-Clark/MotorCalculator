@@ -295,6 +295,116 @@ def _exercise_phase11b_public_reference(root, app, dialog) -> dict[str, Any]:
     return results
 
 
+def _exercise_phase12_capability(root, app, output: Path) -> dict[str, Any]:
+    """Phase 12: the torque-speed / field-weakening capability view."""
+
+    from motor_calculator.capability.export import CALIBRATION_STATUS, EVIDENCE_STATEMENT
+    from motor_calculator.capability.limits import MODULATION_LABELS_ZH, Modulation
+
+    results: dict[str, Any] = {}
+
+    menu = app._project_analysis_menu
+    labels = [
+        str(menu.entrycget(index, "label"))
+        for index in range(menu.index("end") + 1)
+        if menu.type(index) == "command"
+    ]
+    results["phase12_menu_entry_present"] = "\u8f6c\u77e9-\u8f6c\u901f / \u5f31\u78c1\u80fd\u529b..." in labels
+
+    dialog = app._open_capability_view()
+    root.update()
+    results["phase12_dialog_opened"] = bool(dialog.window.winfo_exists())
+    results["phase12_dialog_fits_screen"] = _window_fits_screen(dialog.window)
+
+    headline = dialog.headline_values()
+    results["phase12_solved"] = bool(headline.get("available"))
+    for key in (
+        "base_speed_rpm", "base_speed_resolved", "maximum_speed_rpm",
+        "maximum_speed_bounded", "peak_torque_nm", "peak_power_w",
+        "dc_bus_voltage_v", "current_limit_peak_a", "voltage_limit_phase_peak_v",
+        "modulation", "mtpa_method", "mtpa_id_a", "field_weakening_active",
+        "constant_power_exists", "regions", "evidence", "calibration_status",
+    ):
+        results[f"phase12_{key}"] = headline.get(key)
+
+    results["phase12_evidence_is_model_only"] = headline.get("evidence") == EVIDENCE_STATEMENT
+    results["phase12_calibration_none"] = headline.get("calibration_status") == CALIBRATION_STATUS
+    results["phase12_spmsm_mtpa_id_is_zero"] = (
+        headline.get("mtpa_id_a") is not None and abs(headline["mtpa_id_a"]) < 1e-12
+    )
+
+    # Every tab must render, and the figures must actually draw.
+    tab_labels = tuple(
+        str(dialog.tabs.tab(index, "text")) for index in range(dialog.tabs.index("end"))
+    )
+    results["phase12_tabs"] = list(tab_labels)
+    results["phase12_torque_speed_tab_present"] = "\u8f6c\u77e9-\u8f6c\u901f\u66f2\u7ebf" in tab_labels
+    results["phase12_dq_tab_present"] = "dq \u7535\u6d41\u5e73\u9762" in tab_labels
+    results["phase12_torque_speed_rendered"] = bool(
+        dialog.torque_speed_host.winfo_children()
+    )
+    results["phase12_dq_rendered"] = bool(dialog.dq_host.winfo_children())
+
+    summary = dialog.summary_text.get("1.0", "end")
+    results["phase12_summary_has_base_speed"] = "\u57fa\u901f" in summary
+    results["phase12_summary_has_regions"] = "MTPA_CURRENT_LIMITED" in summary
+    results["phase12_summary_states_model_only"] = "\u672a\u7ecf\u5b9e\u9a8c\u9a8c\u8bc1" in summary
+
+    provenance = dialog.provenance_text.get("1.0", "end")
+    results["phase12_provenance_shows_isotropic"] = "ISOTROPIC_ASSUMPTION" in provenance
+    results["phase12_provenance_shows_psi_source"] = "psi_pm" in provenance
+
+    # Operating-point inspector at base speed and deep in field weakening.
+    dialog.inspect_speed_var.set(f"{headline['base_speed_rpm']:.0f}")
+    at_base = dialog.refresh_inspector()
+    results["phase12_inspector_renders"] = "id" in at_base and "iq" in at_base
+    results["phase12_inspector_shows_constraints"] = "\u8d77\u4f5c\u7528\u7684\u7ea6\u675f" in at_base
+    dialog.inspect_speed_var.set(f"{headline['base_speed_rpm'] * 6.0:.0f}")
+    deep = dialog.refresh_inspector()
+    results["phase12_inspector_deep_fw_renders"] = "id" in deep
+
+    # Switching modulation must change the voltage limit, and by the known ratio.
+    svpwm_limit = headline["voltage_limit_phase_peak_v"]
+    dialog.modulation_var.set(MODULATION_LABELS_ZH[Modulation.SPWM])
+    dialog.refresh()
+    root.update()
+    spwm = dialog.headline_values()
+    results["phase12_spwm_limit_lower"] = spwm["voltage_limit_phase_peak_v"] < svpwm_limit
+    results["phase12_svpwm_advantage_ratio"] = (
+        svpwm_limit / spwm["voltage_limit_phase_peak_v"]
+    )
+    results["phase12_spwm_base_speed_lower"] = spwm["base_speed_rpm"] < headline["base_speed_rpm"]
+    dialog.modulation_var.set(MODULATION_LABELS_ZH[Modulation.SVPWM])
+    dialog.refresh()
+    root.update()
+
+    # Export.
+    export_dir = output.parent / "phase12_capability"
+    exported = dialog.export(export_dir)
+    results["phase12_export_json"] = bool(exported and exported.json_path.is_file())
+    results["phase12_export_csv"] = bool(exported and exported.csv_path.is_file())
+    if exported:
+        text = exported.json_path.read_text(encoding="utf-8")
+        results["phase12_export_no_experimental_claim"] = (
+            "NOT_EXPERIMENTALLY_VALIDATED" in text
+            and "EXPERIMENTALLY_SUPPORTED" not in text
+        )
+        results["phase12_export_declares_peak_basis"] = "PHASE_PEAK" in text
+
+    # Settings must reach the project's persisted preferences.
+    preferences = app._ui_preferences_payload()
+    results["phase12_settings_persisted"] = any(
+        str(key).startswith("capability.") for key in preferences
+    )
+    results["phase12_persisted_modulation"] = preferences.get("capability.modulation")
+    results["phase12_no_derived_curves_persisted"] = not any(
+        "torque" in str(key) or "envelope" in str(key) for key in preferences
+    )
+
+    dialog.window.destroy()
+    return results
+
+
 def _exercise_phase11a_validation_data(root, app, output: Path) -> dict[str, Any]:
     """Phase 11A: File -> New authority, the dashboard summary, and the data manager."""
 
@@ -1747,6 +1857,48 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
             raise RuntimeError("recovery GUI smoke did not pass every recovery gate")
         phase11a_results = _exercise_phase11a_validation_data(root, app, output)
         payload.update(phase11a_results)
+        phase12_results = _exercise_phase12_capability(root, app, output)
+        payload.update(phase12_results)
+        if not all(
+            phase12_results[name]
+            for name in (
+                "phase12_menu_entry_present",
+                "phase12_dialog_opened",
+                "phase12_dialog_fits_screen",
+                "phase12_solved",
+                "phase12_base_speed_resolved",
+                "phase12_evidence_is_model_only",
+                "phase12_calibration_none",
+                "phase12_spmsm_mtpa_id_is_zero",
+                "phase12_torque_speed_tab_present",
+                "phase12_dq_tab_present",
+                "phase12_torque_speed_rendered",
+                "phase12_dq_rendered",
+                "phase12_summary_has_base_speed",
+                "phase12_summary_has_regions",
+                "phase12_summary_states_model_only",
+                "phase12_provenance_shows_isotropic",
+                "phase12_provenance_shows_psi_source",
+                "phase12_inspector_renders",
+                "phase12_inspector_shows_constraints",
+                "phase12_inspector_deep_fw_renders",
+                "phase12_field_weakening_active",
+                "phase12_spwm_limit_lower",
+                "phase12_spwm_base_speed_lower",
+                "phase12_export_json",
+                "phase12_export_csv",
+                "phase12_export_no_experimental_claim",
+                "phase12_export_declares_peak_basis",
+                "phase12_settings_persisted",
+                "phase12_no_derived_curves_persisted",
+            )
+        ):
+            raise RuntimeError("Phase 12 capability GUI smoke did not pass every gate")
+        if abs(payload["phase12_svpwm_advantage_ratio"] - 2.0 / 3.0**0.5) > 1e-9:
+            raise RuntimeError(
+                "Phase 12: SVPWM must exceed SPWM by exactly 2/sqrt(3); got "
+                f"{payload['phase12_svpwm_advantage_ratio']}"
+            )
         if not all(
             phase11a_results[name]
             for name in (
