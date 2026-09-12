@@ -45,6 +45,14 @@ class EvidenceLabel:
     DEFINITION_CONVENTION_MISMATCH = "DEFINITION_CONVENTION_MISMATCH"
     DIAGNOSTIC_ONLY = "DIAGNOSTIC_ONLY"
     HISTORICAL_INTERPRETATION_SUPERSEDED = "HISTORICAL_INTERPRETATION_SUPERSEDED"
+    # Phase 10F. A quantity whose analytical value is a user-supplied ratio is
+    # not a model output, and one with no first-principles model at all cannot
+    # be said to agree with anything.
+    NOT_EXPERIMENTALLY_VALIDATED = "NOT_EXPERIMENTALLY_VALIDATED"
+    EMPIRICAL_INPUT = "EMPIRICAL_INPUT"
+    NO_ANALYTICAL_MODEL = "NO_ANALYTICAL_MODEL"
+    MORE_VALIDATION_REQUIRED = "MORE_VALIDATION_REQUIRED"
+    NOT_AN_INDEPENDENT_PREDICTION = "NOT_AN_INDEPENDENT_PREDICTION"
 
     #: Labels that may be rendered with an affirmative (green) style. Only a
     #: physically measured result qualifies.
@@ -60,6 +68,11 @@ class EvidenceLabel:
             DEFINITION_CONVENTION_MISMATCH,
             DIAGNOSTIC_ONLY,
             HISTORICAL_INTERPRETATION_SUPERSEDED,
+            NOT_EXPERIMENTALLY_VALIDATED,
+            EMPIRICAL_INPUT,
+            NO_ANALYTICAL_MODEL,
+            MORE_VALIDATION_REQUIRED,
+            NOT_AN_INDEPENDENT_PREDICTION,
         }
     )
 
@@ -94,6 +107,8 @@ class ValidationDiagnostics:
     winding: tuple[DiagnosticRow, ...] = ()
     flux: tuple[DiagnosticRow, ...] = ()
     residual: tuple[DiagnosticRow, ...] = ()
+    torque: tuple[DiagnosticRow, ...] = ()
+    cogging: tuple[DiagnosticRow, ...] = ()
     limitations_zh: tuple[str, ...] = ()
 
     @property
@@ -103,6 +118,8 @@ class ValidationDiagnostics:
             ("绕组语义", self.winding),
             ("磁通诊断", self.flux),
             ("残差分解", self.residual),
+            ("转矩验证", self.torque),
+            ("齿槽转矩", self.cogging),
         )
 
 
@@ -250,6 +267,125 @@ def build_validation_diagnostics(
             "本面板不修改任何生产计算结果，也不应用任何修正系数。",
         ),
     )
+
+
+def torque_diagnostic_rows(
+    *,
+    analytical_electromagnetic_torque_nm: float | None,
+    production_shaft_torque_nm: float | None,
+    femm_mean_torque_nm: float | None,
+    femm_ripple_percent: float | None,
+    residual_percent: float | None,
+    current_is_back_solved_from_rated_torque: bool,
+    mesh_sensitivity_percent: float | None = None,
+) -> tuple[DiagnosticRow, ...]:
+    """Phase 10F torque rows, on one stated basis.
+
+    ``production_shaft_torque_nm`` is shown next to the electromagnetic value
+    precisely so a reader can see that they are different quantities. It is
+    never the thing compared against FEMM.
+    """
+
+    rows = [
+        DiagnosticRow(
+            "解析电磁转矩（同基准）",
+            _fmt(analytical_electromagnetic_torque_nm, 6, " N·m"),
+            EvidenceLabel.DIAGNOSTIC_ONLY,
+            "T_em = 3·E_phase_rms·I_phase_rms/ω_mech，与 FEMM 同为气隙电磁基准",
+        ),
+        DiagnosticRow(
+            "生产额定转矩（轴端）",
+            _fmt(production_shaft_torque_nm, 6, " N·m"),
+            EvidenceLabel.DEFINITION_CONVENTION_MISMATCH,
+            "P_rated/ω_mech，是输入派生的轴端量，**不**与 FEMM 同基准，仅供对照",
+        ),
+        DiagnosticRow(
+            "FEMM 电磁转矩（平均）",
+            _fmt(femm_mean_torque_nm, 6, " N·m"),
+            EvidenceLabel.NUMERICAL_FEA,
+            "转子块加权 Maxwell 应力积分 × 平均半径",
+        ),
+        DiagnosticRow("残差 (FEMM 相对解析)", _pct(residual_percent), EvidenceLabel.NUMERICAL_FEA),
+        DiagnosticRow(
+            "FEMM 转矩脉动", _pct(femm_ripple_percent), EvidenceLabel.NUMERICAL_FEA,
+            "峰峰值除以平均值；生产模型的脉动是用户输入系数，不可与此直接比较",
+        ),
+    ]
+    if current_is_back_solved_from_rated_torque:
+        rows.append(
+            DiagnosticRow(
+                "解析转矩的独立性", "非独立预测",
+                EvidenceLabel.NOT_AN_INDEPENDENT_PREDICTION,
+                "相电流由额定转矩反解得到（I = T_rated/Kt），因此 T_em ≡ T_rated 恒成立；"
+                "该对比实际检验的是 Kt，即 k_w·Φ，而不是一个独立的转矩预测",
+            )
+        )
+    if mesh_sensitivity_percent is not None:
+        rows.append(
+            DiagnosticRow("网格敏感性", _pct(mesh_sensitivity_percent), EvidenceLabel.NUMERICAL_FEA)
+        )
+    rows.append(
+        DiagnosticRow("物理台架验证", "尚未进行", EvidenceLabel.NOT_EXPERIMENTALLY_VALIDATED)
+    )
+    return tuple(rows)
+
+
+def cogging_diagnostic_rows(
+    *,
+    femm_peak_to_peak_nm: float | None,
+    mesh_sensitivity_percent: float | None,
+    analytical_status: str,
+    analytical_value_nm: float | None = None,
+    is_coreless: bool = False,
+    signal_above_numerical_floor: bool | None = None,
+) -> tuple[DiagnosticRow, ...]:
+    """Phase 10F cogging rows.
+
+    ``analytical_status`` is one of :attr:`EvidenceLabel.EMPIRICAL_INPUT` or
+    :attr:`EvidenceLabel.NO_ANALYTICAL_MODEL`. There is no path that reports
+    agreement between FEMM and a quantity that has no model behind it.
+    """
+
+    rows = [
+        DiagnosticRow(
+            "FEMM 齿槽转矩峰峰值", _fmt(femm_peak_to_peak_nm, 8, " N·m"),
+            EvidenceLabel.NUMERICAL_FEA, "零定子电流，仅永磁励磁",
+        ),
+        DiagnosticRow("网格敏感性", _pct(mesh_sensitivity_percent), EvidenceLabel.NUMERICAL_FEA),
+    ]
+    if signal_above_numerical_floor is False:
+        rows.append(
+            DiagnosticRow(
+                "信号是否高于数值噪声", "否",
+                EvidenceLabel.MORE_VALIDATION_REQUIRED,
+                "网格敏感性与齿槽幅值同量级，无法将该信号与离散化误差区分开",
+            )
+        )
+    elif signal_above_numerical_floor is True:
+        rows.append(
+            DiagnosticRow("信号是否高于数值噪声", "是", EvidenceLabel.NUMERICAL_FEA)
+        )
+    if is_coreless:
+        rows.append(
+            DiagnosticRow(
+                "解析齿槽转矩", _fmt(analytical_value_nm, 8, " N·m"),
+                EvidenceLabel.NO_ANALYTICAL_MODEL,
+                "无槽定子按构造无齿槽转矩，解析值恒为零；这是一个假设，不是模型预测，"
+                "因此不存在可与 FEMM 比较的解析量",
+            )
+        )
+    else:
+        rows.append(
+            DiagnosticRow(
+                "解析齿槽转矩", _fmt(analytical_value_nm, 8, " N·m"),
+                analytical_status,
+                "由用户输入的齿槽系数乘以额定转矩得到，是经验输入而非首要原理模型",
+            )
+        )
+    rows.append(
+        DiagnosticRow("物理台架验证", "尚未进行", EvidenceLabel.NOT_EXPERIMENTALLY_VALIDATED)
+    )
+    return tuple(rows)
 
 
 _BUDGET_LABELS_ZH = {

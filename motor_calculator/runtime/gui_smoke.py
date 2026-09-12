@@ -926,6 +926,23 @@ def _exercise_phase10a_fea_validation(root, app, output: Path) -> dict[str, Any]
     results["phase10e_numerical_fea_is_not_affirmative"] = (
         EvidenceLabel.NUMERICAL_FEA not in EvidenceLabel.AFFIRMATIVE
     )
+
+    # Phase 10F: a back-EMF run must not display torque or cogging rows. An
+    # empty table would read as "measured and found to be nothing".
+    results["phase10f_no_torque_rows_on_a_back_emf_target"] = not diagnostics.torque
+    results["phase10f_no_cogging_rows_on_a_back_emf_target"] = not diagnostics.cogging
+    results["phase10f_torque_section_declared"] = "转矩验证" in dict(diagnostics.sections)
+    results["phase10f_cogging_section_declared"] = "齿槽转矩" in dict(diagnostics.sections)
+    results["phase10f_new_labels_are_not_affirmative"] = all(
+        label not in EvidenceLabel.AFFIRMATIVE
+        for label in (
+            EvidenceLabel.NOT_EXPERIMENTALLY_VALIDATED,
+            EvidenceLabel.EMPIRICAL_INPUT,
+            EvidenceLabel.NO_ANALYTICAL_MODEL,
+            EvidenceLabel.MORE_VALIDATION_REQUIRED,
+            EvidenceLabel.NOT_AN_INDEPENDENT_PREDICTION,
+        )
+    )
     results["phase10a_no_fea_curves_without_data"] = (
         model.has_real_fea_data is False and not model.has_results
     )

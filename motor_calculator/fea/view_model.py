@@ -295,7 +295,7 @@ class FEAValidationViewModel:
 
         ke = metric("back_emf_constant_phase_rms")
         flux = metric("flux_per_pole")
-        return build_validation_diagnostics(
+        diagnostics = build_validation_diagnostics(
             fidelity_tier=comparison.fidelity_tier,
             ke_analytical=ke.analytical_value if ke else None,
             ke_fea=ke.fea_value if ke else None,
@@ -310,6 +310,75 @@ class FEAValidationViewModel:
             fea_linkage_derived_flux_wb=flux.fea_value if flux else None,
             is_mock=bool(run.used_mock_solver) if run is not None else False,
         )
+        return self._with_torque_sections(diagnostics, case, comparison)
+
+    def _with_torque_sections(self, diagnostics, case, comparison):
+        """Phase 10F. Attach torque or cogging rows when this target has them.
+
+        The rows are only populated for the target that was actually solved, so
+        a back-EMF run never displays an empty torque table and a torque run
+        never implies a cogging result it did not measure.
+        """
+
+        import dataclasses
+
+        from .diagnostics import (
+            EvidenceLabel,
+            cogging_diagnostic_rows,
+            torque_diagnostic_rows,
+        )
+        from .models import FEAValidationTarget
+
+        if not diagnostics.available:
+            return diagnostics
+
+        def metric(name: str):
+            for item in comparison.metrics:
+                if item.quantity == name:
+                    return item
+            return None
+
+        if case.target is FEAValidationTarget.AVERAGE_TORQUE:
+            torque = metric("average_electromagnetic_torque")
+            if torque is None:
+                return diagnostics
+            residual = None
+            if torque.analytical_value and torque.fea_value is not None:
+                residual = (torque.fea_value / torque.analytical_value - 1.0) * 100.0
+            return dataclasses.replace(
+                diagnostics,
+                torque=torque_diagnostic_rows(
+                    analytical_electromagnetic_torque_nm=torque.analytical_value,
+                    production_shaft_torque_nm=torque.analytical_value,
+                    femm_mean_torque_nm=torque.fea_value,
+                    femm_ripple_percent=None,
+                    residual_percent=residual,
+                    # The production model back-solves the phase current from
+                    # rated torque, so the analytical torque is identically the
+                    # rated torque and carries no independent prediction.
+                    current_is_back_solved_from_rated_torque=True,
+                ),
+            )
+
+        if case.target is FEAValidationTarget.COGGING_TORQUE:
+            cogging = metric("cogging_torque_peak")
+            coreless = bool(case.geometry.is_coreless)
+            return dataclasses.replace(
+                diagnostics,
+                cogging=cogging_diagnostic_rows(
+                    femm_peak_to_peak_nm=cogging.fea_value if cogging else None,
+                    mesh_sensitivity_percent=None,
+                    analytical_status=(
+                        EvidenceLabel.NO_ANALYTICAL_MODEL
+                        if coreless
+                        else EvidenceLabel.EMPIRICAL_INPUT
+                    ),
+                    analytical_value_nm=cogging.analytical_value if cogging else None,
+                    is_coreless=coreless,
+                    signal_above_numerical_floor=None,
+                ),
+            )
+        return diagnostics
 
     def results_text_zh(self) -> str:
         if self.last_run is None:
