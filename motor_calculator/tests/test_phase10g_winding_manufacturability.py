@@ -587,8 +587,19 @@ def test_the_winding_package_never_writes_into_the_analytical_kernel():
     package = REPOSITORY_ROOT / "motor_calculator" / "winding"
     for path in sorted(package.glob("*.py")):
         source = path.read_text(encoding="utf-8")
-        for forbidden in ("curve_fit", "least_squares", "polyfit", "calibrat"):
+        for forbidden in ("curve_fit", "least_squares", "polyfit"):
             assert forbidden not in source.lower(), f"{path.name} must not contain {forbidden}"
+        # Calibration may be named only where it is refused or declared absent,
+        # following the Phase 10A bridge guard. Phase 10H exports a
+        # calibration_status of NONE, which is a denial, not an introduction.
+        for line in source.splitlines():
+            lowered = line.lower()
+            if "calibrat" not in lowered:
+                continue
+            assert any(
+                marker in lowered
+                for marker in ("none", "not", "never", "false", "no ", "#", '"')
+            ), f"{path.name}: {line}"
 
 
 def test_the_packaged_build_declares_the_lazily_imported_winding_dialog():
