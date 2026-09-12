@@ -904,6 +904,28 @@ def _exercise_phase10a_fea_validation(root, app, output: Path) -> dict[str, Any]
         or "未检测到 FEMM" in dialog.solver_status_var.get()
     )
     results["phase10a_no_fake_results_shown"] = not model.has_results
+
+    # Phase 10E: the engineering diagnostics tab must exist, must render, and
+    # with no solver run must say so rather than showing an empty comparison.
+    from motor_calculator.fea.diagnostics import CALIBRATION_STATUS, EvidenceLabel
+
+    tab_labels = tuple(
+        str(dialog.tabs.tab(index, "text")) for index in range(dialog.tabs.index("end"))
+    )
+    results["phase10e_diagnostics_tab_present"] = "工程诊断" in tab_labels
+    diagnostics_rendered = dialog.diagnostics_text.get("1.0", "end")
+    results["phase10e_diagnostics_rendered"] = len(diagnostics_rendered.strip()) > 0
+    results["phase10e_calibration_status_shown"] = CALIBRATION_STATUS in diagnostics_rendered
+    results["phase10e_no_corrected_analytical_value"] = (
+        "已修正" not in diagnostics_rendered and "修正后" not in diagnostics_rendered
+    )
+    diagnostics = model.validation_diagnostics()
+    results["phase10e_diagnostics_unavailable_without_a_run"] = not diagnostics.available
+    results["phase10e_evidence_type"] = diagnostics.evidence_type
+    results["phase10e_calibration_status"] = diagnostics.calibration_status
+    results["phase10e_numerical_fea_is_not_affirmative"] = (
+        EvidenceLabel.NUMERICAL_FEA not in EvidenceLabel.AFFIRMATIVE
+    )
     results["phase10a_no_fea_curves_without_data"] = (
         model.has_real_fea_data is False and not model.has_results
     )

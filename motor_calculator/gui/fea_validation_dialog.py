@@ -14,6 +14,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 from typing import Callable, Mapping
 
+from ..fea.diagnostics import render_diagnostics_zh
 from ..fea.models import FEAValidationTarget
 from ..fea.view_model import (
     MODELLING_PARAMETER_NOTICE_ZH,
@@ -151,6 +152,22 @@ class FEAValidationDialog:
         results_scroll.pack(side=tk.RIGHT, fill=tk.Y)
         self.tabs.add(results_frame, text="对比结果")
 
+        # Phase 10E. A bare "analytical vs FEMM: +7.15 %" is not actionable and
+        # reads as a model error when it is mostly two convention mismatches.
+        # This tab shows the decomposition instead. It is its own tab rather
+        # than inline so the default view stays as it was.
+        diagnostics_frame = ttk.Frame(self.tabs)
+        self.diagnostics_text = tk.Text(diagnostics_frame, wrap=tk.WORD, height=18)
+        diagnostics_scroll = ttk.Scrollbar(
+            diagnostics_frame, orient=tk.VERTICAL, command=self.diagnostics_text.yview
+        )
+        self.diagnostics_text.configure(
+            yscrollcommand=diagnostics_scroll.set, state=tk.DISABLED
+        )
+        self.diagnostics_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        diagnostics_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        self.tabs.add(diagnostics_frame, text="工程诊断")
+
     def _build_actions(self) -> None:
         frame = ttk.Frame(self.window)
         frame.pack(fill=tk.X, padx=12, pady=(0, 12))
@@ -189,6 +206,7 @@ class FEAValidationDialog:
             self.solver_status_var.set("无法读取当前设计参数，请先完成一次有效计算。")
             self._set_text(self.review_text, "无法读取当前设计参数。")
             self._set_text(self.results_text, "无法读取当前设计参数。")
+            self._set_text(self.diagnostics_text, "无法读取当前设计参数。")
             return
 
         model = self.view_model
@@ -205,6 +223,10 @@ class FEAValidationDialog:
         self._set_text(
             self.results_text,
             model.results_text_zh() if model.last_run else NO_DATA_PLOT_MESSAGE_ZH,
+        )
+        self._set_text(
+            self.diagnostics_text,
+            render_diagnostics_zh(model.validation_diagnostics()),
         )
 
         can_generate = model.can_generate_case

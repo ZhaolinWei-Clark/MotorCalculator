@@ -258,6 +258,59 @@ class FEAValidationViewModel:
 
         return self.last_run is not None and self.last_run.has_real_fea_data
 
+    def validation_diagnostics(self):
+        """Phase 10E engineering diagnostics for the current run.
+
+        Reports what the comparison layer already produced; computes no new
+        physics and never returns a corrected analytical value. When there is no
+        admissible evidence it returns the unavailable state rather than a
+        partially populated panel.
+        """
+
+        from .comparison import (
+            _ideal_slot_star_winding_factor,
+            _meshed_geometry_winding_factor,
+        )
+        from .diagnostics import build_validation_diagnostics, unavailable_diagnostics
+
+        preview = self.preview()
+        case = preview.case
+        if case is None:
+            return unavailable_diagnostics(
+                "尚未确认建模参数，无法生成验证案例，因此没有可展示的诊断。"
+            )
+
+        run = self.last_run
+        comparison = run.comparison if run is not None else None
+        if comparison is None:
+            return unavailable_diagnostics(
+                "尚无真实求解结果。可生成验证案例与求解脚本，但在实际求解之前不展示任何对比数字。"
+            )
+
+        def metric(name: str):
+            for item in comparison.metrics:
+                if item.quantity == name:
+                    return item
+            return None
+
+        ke = metric("back_emf_constant_phase_rms")
+        flux = metric("flux_per_pole")
+        return build_validation_diagnostics(
+            fidelity_tier=comparison.fidelity_tier,
+            ke_analytical=ke.analytical_value if ke else None,
+            ke_fea=ke.fea_value if ke else None,
+            winding_factor_analytical=case.winding.winding_factor_analytical,
+            winding_factor_meshed=_meshed_geometry_winding_factor(case),
+            winding_factor_ideal_star=_ideal_slot_star_winding_factor(case),
+            analytical_flat_top_flux_wb=flux.analytical_value if flux else None,
+            # The direct air-gap fundamental flux needs a field probe that the
+            # dialog does not run, so it is reported as unmeasured rather than
+            # silently substituted with the linkage-derived value.
+            fea_direct_fundamental_flux_wb=None,
+            fea_linkage_derived_flux_wb=flux.fea_value if flux else None,
+            is_mock=bool(run.used_mock_solver) if run is not None else False,
+        )
+
     def results_text_zh(self) -> str:
         if self.last_run is None:
             return "尚未运行验证。"

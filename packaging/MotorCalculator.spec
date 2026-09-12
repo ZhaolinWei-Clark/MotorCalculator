@@ -25,6 +25,11 @@ hidden_imports = [
     "motor_calculator.fea.service",
     "motor_calculator.fea.view_model",
     "motor_calculator.gui.fea_validation_dialog",
+    # Phase 10E. comparison.py imports this lazily inside a function, so static
+    # analysis cannot see it and the packaged build would lose the meshed
+    # winding factor -- falling back silently to the entered value.
+    "motor_calculator.fea.meshed_winding",
+    "motor_calculator.fea.diagnostics",
     "tkinter.scrolledtext",
 ]
 if importlib.util.find_spec("matplotlib") is not None:
