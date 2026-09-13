@@ -344,6 +344,30 @@ def test_a_manual_override_unlocks_the_field_and_restores_what_was_typed(app):
     assert app._get_params()["k_w"] == pytest.approx(LEGACY_KW)
 
 
+def test_resetting_kw_under_auto_does_not_put_a_stale_default_back(app):
+    """The reset button must not re-open the hole this release closes."""
+
+    _select(app, WindingAuthority.AUTO_FROM_GEOMETRY)
+    app._coil_span_slots_var.set("1")
+    app._reset_input_field("k_w")
+
+    assert float(app.vars["k_w"].get()) == pytest.approx(GEOMETRY_KW, abs=5e-7)
+    assert app._get_params()["k_w"] == pytest.approx(GEOMETRY_KW, abs=1e-9)
+    assert _entry_state(app.entries["k_w"]) == "readonly"
+
+    # The stored manual value is what was reset, so manual mode gives the default.
+    _select(app, WindingAuthority.MANUAL_OVERRIDE)
+    assert float(app.vars["k_w"].get()) == pytest.approx(
+        float(APPLICATION_DEFAULTS["k_w"])
+    )
+
+
+def test_the_locked_slider_says_why_it_cannot_be_dragged(app):
+    _select(app, WindingAuthority.AUTO_FROM_GEOMETRY)
+    app._coil_span_slots_var.set("1")
+    assert "自动推导" in app._guided_input_panel.slider_status_vars["k_w"].get()
+
+
 def test_auto_without_enough_geometry_says_unresolved_and_keeps_the_field_usable(app):
     """The entered value is what production falls back to, so it stays editable."""
 

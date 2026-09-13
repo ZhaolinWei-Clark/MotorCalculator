@@ -618,6 +618,11 @@ class MotorCalculatorAppMixin:
         panel = getattr(self, "_guided_input_panel", None)
         if panel is not None:
             panel.set_field_editable("k_w", not locked)
+            status = panel.slider_status_vars.get("k_w")
+            if status is not None and locked:
+                status.set("由几何自动推导，快速调节不可用")
+            elif status is not None and str(status.get()).startswith("由几何"):
+                status.set("")
 
     def _refresh_winding_factor_summary(self) -> None:
         try:
@@ -962,6 +967,17 @@ class MotorCalculatorAppMixin:
         )
 
     def _reset_input_field(self, field: str) -> None:
+        # RC5.1: resetting `k_w` while an automatic value is in force would put
+        # the frozen manual default back into a field the calculation ignores --
+        # exactly the stale-value state this release removes. The stored manual
+        # value is reset instead, so switching to 手动覆盖 gives the default.
+        if field == "k_w" and self._winding_factor_field_locked:
+            default = canonical_to_display_inputs(
+                {"k_w": APPLICATION_DEFAULTS["k_w"]}, self._display_unit_preferences
+            )["k_w"]
+            self._manual_winding_factor_text = format_engineering_value(float(default))
+            self._refresh_winding_factor_summary()
+            return
         value = canonical_to_display_inputs(
             {field: APPLICATION_DEFAULTS[field]}, self._display_unit_preferences
         )[field]

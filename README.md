@@ -6,7 +6,7 @@ numerical FEA validation for permanent-magnet machines.
 
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Platform Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
-![Tests 1536 passed](https://img.shields.io/badge/tests-1536%20passed%2C%203%20skipped-2ea44f)
+![Tests 1538 passed](https://img.shields.io/badge/tests-1538%20passed%2C%203%20skipped-2ea44f)
 ![Version 1.0.0-rc6](https://img.shields.io/badge/version-1.0.0--rc6-blue)
 ![License Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
@@ -160,7 +160,7 @@ comparison-bridge and convention mismatch, not an unexplained magnetic-circuit e
 
 | Item | Status |
 |---|---|
-| Regression suite | **1536 passed, 3 skipped** |
+| Regression suite | **1538 passed, 3 skipped** |
 | Real FEMM integration | **PASS** (FEMM 4.2.0.0, 2019-04-21 build) |
 | Numerical validation target | No-load back-EMF / `Ke` |
 | Baseline residual, decomposed | **+7.15 % explained**, ≈ **-0.001 %** unresolved remainder |
@@ -396,7 +396,7 @@ FEA validation requires [FEMM](https://www.femm.info/) installed separately.
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Current: **1536 passed, 3 skipped** across 118 test modules. The 3 skips are
+Current: **1538 passed, 3 skipped** across 118 test modules. The 3 skips are
 solver-availability branches that do not apply when FEMM is installed.
 
 Major categories:
