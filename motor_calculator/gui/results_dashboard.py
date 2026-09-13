@@ -24,7 +24,14 @@ from motor_calculator.plots import (
     run_speed_sweep,
     uncertainty_result_to_plot_data,
 )
+from motor_calculator.winding.slot_fill import ManufacturabilityStatus
+from motor_calculator.winding.slot_fill_card import CARD_TITLE_ZH as SLOT_FILL_CARD_TITLE_ZH
 
+
+#: Slot-fill findings that should read as a problem rather than as information.
+_SLOT_FILL_BLOCKING_STATUSES = frozenset(
+    {ManufacturabilityStatus.OVERFILLED, ManufacturabilityStatus.NOT_CALCULABLE}
+)
 
 _STATUS_COLORS = {
     DashboardStatus.NORMAL: "#177245",
@@ -183,6 +190,21 @@ class ResultsDashboard(ttk.Frame):
         self._winding_summary_label.pack(anchor="w")
         self.winding_summary = None
 
+        # RC5.1: slot fill, in full, on the screen a user actually looks at.
+        # Phase 11A surfaced one of the five numbers here and left the rest in
+        # the winding dialog, and an unavailable fill said only "不可用".
+        slot_fill = ttk.LabelFrame(content, text=SLOT_FILL_CARD_TITLE_ZH, padding=8)
+        slot_fill.pack(fill=tk.X, pady=(10, 0))
+        self._slot_fill_var = tk.StringVar(value="尚未运行计算")
+        self._slot_fill_label = ttk.Label(
+            slot_fill,
+            textvariable=self._slot_fill_var,
+            justify=tk.LEFT,
+            wraplength=900,
+        )
+        self._slot_fill_label.pack(anchor="w")
+        self.slot_fill_card = None
+
         gauges = ttk.LabelFrame(content, text="工程范围视图", padding=8)
         gauges.pack(fill=tk.X, pady=(10, 0))
         for column in range(3):
@@ -332,6 +354,31 @@ class ResultsDashboard(ttk.Frame):
             )
         )
 
+    def set_slot_fill_card(self, card) -> None:
+        """Show the slot-fill card, including when there is nothing to show.
+
+        A card with no numbers still carries the reason there are none, so this
+        never renders a bare "不可用".
+        """
+
+        from motor_calculator.winding.slot_fill_card import render_slot_fill_card_zh
+
+        self.slot_fill_card = card
+        if card is None:
+            self._slot_fill_var.set("槽满率：尚未计算绕组。")
+            self._slot_fill_label.configure(foreground="#666666")
+            return
+        self._slot_fill_var.set(render_slot_fill_card_zh(card))
+        if not card.is_available:
+            colour = "#666666"
+        elif card.status in _SLOT_FILL_BLOCKING_STATUSES:
+            colour = "#a4443e"
+        elif card.status == ManufacturabilityStatus.TIGHT:
+            colour = "#8a6d1f"
+        else:
+            colour = "#333333"
+        self._slot_fill_label.configure(foreground=colour)
+
     def _populate_losses(self, data: DashboardData) -> None:
         self.loss_tree.delete(*self.loss_tree.get_children())
         for metric in data.loss_metrics:
@@ -403,6 +450,9 @@ class ResultsDashboard(ttk.Frame):
         self.winding_summary = None
         self._winding_summary_var.set("尚未运行计算")
         self._winding_summary_label.configure(foreground="#666666")
+        self.slot_fill_card = None
+        self._slot_fill_var.set("尚未运行计算")
+        self._slot_fill_label.configure(foreground="#666666")
         self._source_var.set("尚未运行计算")
         self._design_var.set("尚无设计状态")
         for key in self._metric_widgets:

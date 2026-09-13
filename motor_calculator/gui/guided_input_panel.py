@@ -87,6 +87,9 @@ class GuidedInputPanel:
         self.slider_status_vars: dict[str, tk.StringVar] = {}
         self.slider_unit_vars: dict[str, tk.StringVar] = {}
         self.sliders: dict[str, ttk.Scale] = {}
+        # RC5.1: the quick-adjust entries, kept so a field whose value is no
+        # longer the user's to choose can be locked instead of silently ignored.
+        self.quick_entries: dict[str, ttk.Entry] = {}
         self._preset_by_label = {
             preset_name(preset.preset_id, preset.display_name): preset for preset in registry.presets
         }
@@ -175,6 +178,7 @@ class GuidedInputPanel:
             scale.grid(row=row * 2, column=1, sticky="ew", padx=4)
             exact = ttk.Entry(quick, textvariable=self.field_vars[field], width=12)
             exact.grid(row=row * 2, column=2, padx=(3, 2))
+            self.quick_entries[field] = exact
             unit_var = tk.StringVar()
             ttk.Label(quick, textvariable=unit_var, width=6).grid(row=row * 2, column=3, sticky="w")
             ttk.Button(
@@ -305,6 +309,22 @@ class GuidedInputPanel:
                 unit = "-"
             self.slider_unit_vars[field].set(unit)
             self.sync_field(field)
+
+    def set_field_editable(self, field: str, editable: bool) -> None:
+        """Lock or unlock one quick-adjust field.
+
+        A locked field is still shown -- its value is the one production uses --
+        but it cannot be typed into or dragged, because something other than the
+        user decides it. Leaving it editable while ignoring what is typed is the
+        failure mode this exists to prevent.
+        """
+
+        entry = self.quick_entries.get(field)
+        if entry is not None:
+            entry.configure(state=tk.NORMAL if editable else "readonly")
+        slider = self.sliders.get(field)
+        if slider is not None:
+            slider.configure(state=tk.NORMAL if editable else tk.DISABLED)
 
     def set_guidance(self, text: str) -> None:
         self.guidance_var.set(text)

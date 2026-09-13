@@ -43,6 +43,7 @@ from motor_calculator.motor_core.winding_factor import (
     format_winding_factor_summary_zh,
     resolve_winding_factor,
 )
+from motor_calculator.winding.authority import WindingAuthority
 from motor_calculator.input_ux import (
     APPLICATION_DEFAULTS,
     BASIC_INPUT_FIELDS,
@@ -310,6 +311,11 @@ class MotorCalculatorAppMixin:
         self._skew_slots_var = tk.StringVar(value="0")
         self._winding_factor_resolution = None
         self._winding_factor_manual_provenance = WindingFactorProvenance.MANUAL_USER
+        # RC5.1: the number the user typed, kept while an automatic value is in
+        # force so that switching back to manual restores their design rather
+        # than the derived value that temporarily replaced it on screen.
+        self._manual_winding_factor_text = str(self.vars["k_w"].get())
+        self._winding_factor_ux_syncing = False
 
         used_rows = [
             int(widget.grid_info().get("row", 0)) for widget in legacy_frame.grid_slaves()
@@ -321,26 +327,60 @@ class MotorCalculatorAppMixin:
         panel.columnconfigure(1, weight=1)
         self._winding_factor_panel = panel
 
-        ttk.Label(panel, text="模式").grid(row=0, column=0, sticky="w", padx=(0, 4))
+        # RC5.1: the selector is the authority, not a two-state auto/manual
+        # toggle. `_winding_factor_mode_var` stays exactly what it was -- the
+        # RC2 two-state value every existing caller reads -- and is derived from
+        # this selection, so nothing downstream changes meaning.
+        from motor_calculator.winding.authority import (
+            AUTHORITY_CHOICE_LABELS_ZH,
+            SELECTABLE_AUTHORITIES,
+        )
+
+        self._winding_authority_var = tk.StringVar(
+            value=AUTHORITY_CHOICE_LABELS_ZH[WindingAuthority.MANUAL_OVERRIDE]
+        )
+        ttk.Label(panel, text="权威").grid(row=0, column=0, sticky="w", padx=(0, 4))
         mode_combo = ttk.Combobox(
             panel,
-            textvariable=self._winding_factor_mode_var,
-            values=list(WINDING_FACTOR_MODE_LABELS_ZH.values()),
+            textvariable=self._winding_authority_var,
+            values=[AUTHORITY_CHOICE_LABELS_ZH[state] for state in SELECTABLE_AUTHORITIES],
             state="readonly",
-            width=10,
+            width=14,
         )
         mode_combo.grid(row=0, column=1, sticky="ew")
-        mode_combo.bind("<<ComboboxSelected>>", lambda _event: self._refresh_winding_factor_summary())
+        mode_combo.bind("<<ComboboxSelected>>", lambda _event: self._on_winding_authority_selected())
         self._winding_factor_mode_combo = mode_combo
 
-        ttk.Label(panel, text="线圈节距 (槽)").grid(row=1, column=0, sticky="w", padx=(0, 4))
+        # The production value, shown in the panel that owns it. In AUTO this
+        # is also what the k_w input field shows, and that field is locked.
+        self._winding_factor_field_label_var = tk.StringVar(value="绕组系数 k_w")
+        self._winding_factor_value_var = tk.StringVar(value="")
+        ttk.Label(panel, textvariable=self._winding_factor_field_label_var).grid(
+            row=1, column=0, sticky="w", padx=(0, 4)
+        )
+        ttk.Label(
+            panel,
+            textvariable=self._winding_factor_value_var,
+            font=("TkDefaultFont", 9, "bold"),
+        ).grid(row=1, column=1, sticky="w")
+
+        self._winding_factor_source_var = tk.StringVar(value="")
+        ttk.Label(
+            panel,
+            textvariable=self._winding_factor_source_var,
+            wraplength=250,
+            justify=tk.LEFT,
+            foreground="#5A5A5A",
+        ).grid(row=2, column=0, columnspan=2, sticky="w", pady=(0, 2))
+
+        ttk.Label(panel, text="线圈节距 (槽)").grid(row=3, column=0, sticky="w", padx=(0, 4))
         span_entry = ttk.Entry(panel, textvariable=self._coil_span_slots_var, width=10)
-        span_entry.grid(row=1, column=1, sticky="ew")
+        span_entry.grid(row=3, column=1, sticky="ew")
         self._coil_span_entry = span_entry
 
-        ttk.Label(panel, text="斜槽 (槽距)").grid(row=2, column=0, sticky="w", padx=(0, 4))
+        ttk.Label(panel, text="斜槽 (槽距)").grid(row=4, column=0, sticky="w", padx=(0, 4))
         skew_entry = ttk.Entry(panel, textvariable=self._skew_slots_var, width=10)
-        skew_entry.grid(row=2, column=1, sticky="ew")
+        skew_entry.grid(row=4, column=1, sticky="ew")
         self._skew_slots_entry = skew_entry
 
         self._winding_factor_summary_var = tk.StringVar(value="尚未解析")
@@ -351,7 +391,7 @@ class MotorCalculatorAppMixin:
             justify=tk.LEFT,
             foreground="#333333",
         )
-        summary.grid(row=3, column=0, columnspan=2, sticky="w", pady=(4, 0))
+        summary.grid(row=5, column=0, columnspan=2, sticky="w", pady=(4, 0))
         self._winding_factor_summary_label = summary
 
         ToolTip(mode_combo, WINDING_FACTOR_TOOLTIP_ZH)
@@ -359,6 +399,13 @@ class MotorCalculatorAppMixin:
         ToolTip(skew_entry, SKEW_TOOLTIP_ZH)
         for variable in (self._coil_span_slots_var, self._skew_slots_var):
             variable.trace_add("write", lambda *_args: self._refresh_winding_factor_summary())
+        # RC5.1: the mode is also set directly by presets, project restore and
+        # the reset action, not only by the selector. The k_w field has to
+        # follow every one of those, or a mode change can leave the derived
+        # value sitting in a field that manual mode is about to read.
+        self._winding_factor_mode_var.trace_add(
+            "write", lambda *_args: self._refresh_winding_factor_summary()
+        )
         self._refresh_winding_factor_summary()
 
     def _apply_preset_winding_authority(self, preset) -> None:
@@ -404,6 +451,174 @@ class MotorCalculatorAppMixin:
             manual_provenance=self._winding_factor_manual_provenance,
         )
 
+    # ------------------------------------------------------------------
+    # RC5.1: one authority, and a k_w field that tells the truth about it
+    # ------------------------------------------------------------------
+
+    def current_winding_authority(self) -> WindingAuthority:
+        """The production winding-factor authority this session is in.
+
+        Derived from the RC2 two-state mode plus the manual provenance, so it
+        adds a distinction (manual override vs legacy retained) without adding a
+        second stored state that could disagree with the first.
+        """
+
+        if not hasattr(self, "_winding_factor_mode_var"):
+            return WindingAuthority.MANUAL_OVERRIDE
+        if self._selected_winding_factor_mode() is WindingFactorMode.AUTO:
+            return WindingAuthority.AUTO_FROM_GEOMETRY
+        if self._winding_factor_manual_provenance in {
+            WindingFactorProvenance.LEGACY_PROJECT,
+            WindingFactorProvenance.PRESET,
+        }:
+            return WindingAuthority.LEGACY_MANUAL
+        return WindingAuthority.MANUAL_OVERRIDE
+
+    def _on_winding_authority_selected(self) -> None:
+        """Apply an authority the user picked in the input panel."""
+
+        from motor_calculator.winding.authority import AUTHORITY_CHOICE_LABELS_ZH
+
+        label = str(self._winding_authority_var.get()).strip()
+        chosen = WindingAuthority.MANUAL_OVERRIDE
+        for state, text in AUTHORITY_CHOICE_LABELS_ZH.items():
+            if text == label:
+                chosen = state
+                break
+        if chosen is WindingAuthority.AUTO_FROM_GEOMETRY:
+            self._winding_factor_mode_var.set(
+                WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.AUTO]
+            )
+            self._winding_factor_manual_provenance = WindingFactorProvenance.AUTO_GEOMETRY
+        else:
+            self._winding_factor_mode_var.set(
+                WINDING_FACTOR_MODE_LABELS_ZH[WindingFactorMode.MANUAL]
+            )
+            self._winding_factor_manual_provenance = (
+                WindingFactorProvenance.LEGACY_PROJECT
+                if chosen is WindingAuthority.LEGACY_MANUAL
+                else WindingFactorProvenance.MANUAL_USER
+            )
+        self._refresh_winding_factor_summary()
+        dialog = getattr(self, "_winding_dialog", None)
+        if dialog is not None and dialog.window.winfo_exists():
+            dialog.adopt_authority(self.current_winding_authority())
+
+    def _apply_winding_factor_authority_ux(self, resolution) -> None:
+        """Make the k_w control say which of the four states it is in.
+
+        The field is read-only exactly when the typed number is *not* what
+        production uses, and in that case it shows the number that is. Leaving
+        an editable field holding a value the calculation ignores is the defect
+        this method exists to remove.
+        """
+
+        from motor_calculator.winding.authority import (
+            AUTHORITY_CHOICE_LABELS_ZH,
+            AUTHORITY_FIELD_LABELS_ZH,
+            AUTO_SOURCE_NOTE_ZH,
+            LEGACY_RETAINED_NOTE_ZH,
+        )
+
+        # Pure widget state. Headless callers (and the RC2 policy stubs) reach
+        # this through the summary refresh without ever building the panel.
+        if not hasattr(self, "_winding_authority_var"):
+            return
+        if getattr(self, "_winding_factor_ux_syncing", False):
+            return
+        authority = self.current_winding_authority()
+        derived = bool(
+            resolution is not None and resolution.is_auto and resolution.value is not None
+        )
+        # AUTO that could not be derived is UNRESOLVED for display purposes: the
+        # entered value is what production falls back to, so it must stay
+        # editable and must not be presented as an automatic result.
+        displayed = (
+            WindingAuthority.UNRESOLVED
+            if authority is WindingAuthority.AUTO_FROM_GEOMETRY and not derived
+            else authority
+        )
+
+        self._winding_authority_var.set(AUTHORITY_CHOICE_LABELS_ZH[authority])
+        self._winding_factor_field_label_var.set(
+            AUTHORITY_FIELD_LABELS_ZH.get(displayed, "绕组系数 k_w")
+        )
+
+        self._winding_factor_ux_syncing = True
+        try:
+            if derived:
+                current = str(self.vars["k_w"].get())
+                if not self._winding_factor_field_locked:
+                    self._manual_winding_factor_text = current
+                value = f"{float(resolution.value):.6f}"
+                if current != value:
+                    self._set_input_variable_quietly("k_w", value)
+                self._winding_factor_value_var.set(value)
+                self._winding_factor_source_var.set(AUTO_SOURCE_NOTE_ZH)
+                self._set_winding_factor_field_locked(True)
+            else:
+                if self._winding_factor_field_locked:
+                    self._set_input_variable_quietly(
+                        "k_w", self._manual_winding_factor_text
+                    )
+                self._set_winding_factor_field_locked(False)
+                self._manual_winding_factor_text = str(self.vars["k_w"].get())
+                value = (
+                    "未解析"
+                    if resolution is None or resolution.value is None
+                    else f"{float(resolution.value):.6f}"
+                )
+                self._winding_factor_value_var.set(value)
+                if displayed is WindingAuthority.UNRESOLVED:
+                    self._winding_factor_source_var.set(
+                        "自动模式未能解析：绕组几何不足，当前仍使用输入值。"
+                    )
+                elif displayed is WindingAuthority.LEGACY_MANUAL:
+                    self._winding_factor_source_var.set(LEGACY_RETAINED_NOTE_ZH)
+                else:
+                    self._winding_factor_source_var.set("由用户输入")
+        finally:
+            self._winding_factor_ux_syncing = False
+
+    def _set_input_variable_quietly(self, field: str, value: str) -> None:
+        """Mirror a derived value into an input variable without dirtying the project.
+
+        Writing the automatic winding factor into the field that displays it is
+        not a user edit, so it must not mark an unmodified project as changed.
+        """
+
+        suppressed = getattr(self, "_project_suppress_dirty", None)
+        if suppressed is False:
+            self._project_suppress_dirty = True
+        try:
+            self.vars[field].set(value)
+        finally:
+            if suppressed is False:
+                self._project_suppress_dirty = False
+
+    @property
+    def _winding_factor_field_locked(self) -> bool:
+        return bool(getattr(self, "_winding_factor_locked_state", False))
+
+    def _set_winding_factor_field_locked(self, locked: bool) -> None:
+        """Lock or unlock every control that edits ``k_w``.
+
+        Both the legacy advanced entry and the quick-adjust slider edit the same
+        variable, so both must move together or the panel simply relocates the
+        contradiction instead of removing it.
+        """
+
+        self._winding_factor_locked_state = bool(locked)
+        entry = getattr(self, "entries", {}).get("k_w")
+        if entry is not None:
+            try:
+                entry.configure(state="readonly" if locked else tk.NORMAL)
+            except tk.TclError:
+                pass
+        panel = getattr(self, "_guided_input_panel", None)
+        if panel is not None:
+            panel.set_field_editable("k_w", not locked)
+
     def _refresh_winding_factor_summary(self) -> None:
         try:
             parsed = parse_legacy_gui_params(self._collect_raw_params())
@@ -413,6 +628,7 @@ class MotorCalculatorAppMixin:
         resolution = self._resolve_winding_factor_for(parsed)
         self._winding_factor_resolution = resolution
         self._winding_factor_summary_var.set(format_winding_factor_summary_zh(resolution))
+        self._apply_winding_factor_authority_ux(resolution)
 
     def _latest_winding_factor_resolution(self):
         # The panel does not exist while the legacy base class is still being
@@ -983,24 +1199,16 @@ class MotorCalculatorAppMixin:
         dashboard line and the panel can never disagree about a number.
         """
 
-        from motor_calculator.winding.authority import WindingAuthority
         from motor_calculator.winding.evaluation import evaluate_winding
-        from motor_calculator.motor_core.winding_factor import WindingFactorMode
 
         try:
             parameters = self._get_params()
         except (MotorValidationError, MotorCalculationError, KeyError, ValueError):
             return None
-        mode = (
-            self._selected_winding_factor_mode()
-            if hasattr(self, "_winding_factor_mode_var")
-            else WindingFactorMode.MANUAL
-        )
-        authority = (
-            WindingAuthority.AUTO_FROM_GEOMETRY
-            if mode is WindingFactorMode.AUTO
-            else WindingAuthority.MANUAL_OVERRIDE
-        )
+        # RC5.1: the same four-state authority the input panel shows. Collapsing
+        # LEGACY_MANUAL into MANUAL_OVERRIDE here made the dashboard describe a
+        # preserved historical value as a deliberate override.
+        authority = self.current_winding_authority()
         span = str(getattr(self, "_coil_span_slots_var", None) and self._coil_span_slots_var.get() or "").strip()
         if span:
             parameters = dict(parameters)
@@ -1015,8 +1223,21 @@ class MotorCalculatorAppMixin:
             return None
 
     def _entered_winding_factor(self):
-        """The `k_w` the user actually typed, not the AUTO-resolved value."""
+        """The `k_w` the user actually typed, not the AUTO-resolved value.
 
+        While AUTO is in force the visible field mirrors the derived number, so
+        the typed value is read from where it was preserved. The winding panel
+        depends on this: "entered", "ideal slot-star" and "meshed" are three
+        different factors and must not collapse into one because the input field
+        is currently displaying a derived value.
+        """
+
+        preserved = getattr(self, "_manual_winding_factor_text", None)
+        if self._winding_factor_field_locked and preserved not in (None, ""):
+            try:
+                return float(preserved)
+            except (TypeError, ValueError):
+                return None
         try:
             raw = self._collect_raw_params().get("k_w")
             return None if raw in (None, "") else float(raw)
@@ -1033,6 +1254,18 @@ class MotorCalculatorAppMixin:
             return None
         return build_winding_dashboard_summary(evaluation)
 
+    def _slot_fill_card(self):
+        """The dashboard slot-fill card for the current design.
+
+        Unlike the winding summary this is built even when the fill could not be
+        computed, because the card's job in that case is to say which input is
+        missing rather than to disappear.
+        """
+
+        from motor_calculator.winding.slot_fill_card import build_slot_fill_card
+
+        return build_slot_fill_card(self.current_winding_evaluation())
+
     def _open_winding_engineering(self):
         """Open the winding engineering view. Computes only; changes nothing."""
 
@@ -1044,10 +1277,34 @@ class MotorCalculatorAppMixin:
                 self.root,
                 parameters_provider=self._get_params,
                 meshed_factor_provider=self._meshed_winding_factors,
+                # RC5.1: the dialog used to open on LEGACY_MANUAL regardless of
+                # what the session was actually set to, so it could label an
+                # automatically derived number as a preserved historical value.
+                initial_authority=self.current_winding_authority(),
+                manual_winding_factor_provider=self._entered_winding_factor,
+                on_authority_change=self._adopt_winding_authority,
             )
         else:
-            existing.refresh()
+            existing.adopt_authority(self.current_winding_authority())
         return self._winding_dialog
+
+    def _adopt_winding_authority(self, authority) -> None:
+        """Take an authority chosen in the winding dialog as the session's own.
+
+        Without this the dialog is a second place that decides which winding
+        factor production uses, which is exactly the situation this release is
+        removing.
+        """
+
+        from motor_calculator.winding.authority import AUTHORITY_CHOICE_LABELS_ZH
+
+        if not hasattr(self, "_winding_authority_var"):
+            return
+        label = AUTHORITY_CHOICE_LABELS_ZH.get(authority)
+        if label is None:
+            return
+        self._winding_authority_var.set(label)
+        self._on_winding_authority_selected()
 
     def _meshed_winding_factors(self):
         """``(meshed k_w, finite width factor)`` for the current design, or ``(None, None)``.
@@ -1398,6 +1655,11 @@ class MotorCalculatorAppMixin:
                     self.vars[name].set(
                         format_engineering_value(value) if isinstance(value, float) else str(value)
                     )
+            # RC5.1: `_restore_ui_preferences` above resolved the winding factor
+            # against the *previous* design, because the project's own inputs
+            # are only written in the loop just above it. Resolve again now that
+            # they are in place, or the k_w field describes the old project.
+            self._refresh_winding_factor_summary()
             self._user_uncertainty_parameters = self._restore_uncertainty_assumptions(document)
             self._project_notes = document.notes
             self._project_validation_record_ids = list(document.validation_record_ids)
@@ -2145,6 +2407,7 @@ class MotorCalculatorAppMixin:
                 rated_speed_rpm=float(params["n_rated"]),
             )
             self.results_dashboard.set_winding_summary(self._winding_dashboard_summary())
+            self.results_dashboard.set_slot_fill_card(self._slot_fill_card())
             self._latest_result_snapshot = build_result_snapshot(
                 params,
                 self.calc_results.to_dict(),

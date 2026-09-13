@@ -84,9 +84,18 @@ class WindingEngineeringDialog:
         *,
         parameters_provider: Callable[[], Mapping[str, object]],
         meshed_factor_provider: Callable[[], tuple[float | None, float | None]] | None = None,
+        initial_authority: WindingAuthority | None = None,
+        manual_winding_factor_provider: Callable[[], float | None] | None = None,
+        on_authority_change: Callable[[WindingAuthority], None] | None = None,
     ) -> None:
         self._parameters_provider = parameters_provider
         self._meshed_factor_provider = meshed_factor_provider
+        # RC5.1: the session decides the authority; this view shows and edits
+        # it. Defaulting to LEGACY_MANUAL here meant the panel could describe a
+        # geometry-derived value as a preserved historical one.
+        self._initial_authority = initial_authority or WindingAuthority.LEGACY_MANUAL
+        self._manual_winding_factor_provider = manual_winding_factor_provider
+        self._on_authority_change = on_authority_change
 
         self.window = tk.Toplevel(master)
         self.window.title("绕组工程")
@@ -104,6 +113,7 @@ class WindingEngineeringDialog:
         ttk.Button(self.window, text="关闭", command=self.window.destroy).pack(
             side=tk.RIGHT, padx=10, pady=(0, 10)
         )
+        self._apply_authority_state()
         self.refresh()
 
     # ------------------------------------------------------------------
@@ -123,7 +133,7 @@ class WindingEngineeringDialog:
         authority_frame = ttk.LabelFrame(self.window, text="生产绕组系数权威")
         authority_frame.pack(fill=tk.X, padx=10, pady=(0, 8))
         self.authority_var = tk.StringVar(
-            value=AUTHORITY_LABELS_ZH[WindingAuthority.LEGACY_MANUAL]
+            value=AUTHORITY_LABELS_ZH[self._initial_authority]
         )
         ttk.Label(authority_frame, text="模式：").grid(row=0, column=0, sticky=tk.W, padx=(8, 2), pady=6)
         self.authority_combo = ttk.Combobox(
@@ -251,11 +261,31 @@ class WindingEngineeringDialog:
                 return float(raw)
             except ValueError:
                 pass
+        # RC5.1: while AUTO is in force the parameter mapping already carries
+        # the derived value, so reading `k_w` from it would report the automatic
+        # number as the user's manual one. The session supplies the value the
+        # user actually entered.
+        if self._manual_winding_factor_provider is not None:
+            entered = self._manual_winding_factor_provider()
+            if entered is not None:
+                return float(entered)
         value = parameters.get("k_w")
         return float(value) if value is not None else None
 
-    def _on_authority_changed(self) -> None:
-        """Never switch silently: say that results will be recalculated."""
+    def adopt_authority(self, authority: WindingAuthority) -> None:
+        """Show the authority the session is in, without re-notifying it."""
+
+        if authority not in AUTHORITY_LABELS_ZH:
+            return
+        if self.selected_authority() is authority:
+            self.refresh()
+            return
+        self.authority_var.set(AUTHORITY_LABELS_ZH[authority])
+        self._apply_authority_state()
+        self.refresh()
+
+    def _apply_authority_state(self) -> None:
+        """Widget state and explanation for the selected authority."""
 
         authority = self.selected_authority()
         editable = authority is not WindingAuthority.AUTO_FROM_GEOMETRY
@@ -274,6 +304,18 @@ class WindingEngineeringDialog:
                 "历史项目手动值：按原样保留存储的绕组系数，不会自动改用几何值。"
                 "可在上方显式切换模式进行迁移。"
             )
+
+    def _on_authority_changed(self) -> None:
+        """Never switch silently: say that results will be recalculated.
+
+        RC5.1: the choice is also handed back to the session, so the main input
+        panel, the dashboard and this view cannot end up describing different
+        authorities for the same design.
+        """
+
+        self._apply_authority_state()
+        if self._on_authority_change is not None:
+            self._on_authority_change(self.selected_authority())
         self.refresh()
 
     def refresh(self) -> None:

@@ -63,6 +63,37 @@ AUTHORITY_LABELS_ZH = {
     WindingAuthority.UNRESOLVED: "未解析（几何不足且无手动值）",
 }
 
+#: RC5.1: the authority states a user may pick in the main input panel.
+#: ``UNRESOLVED`` is deliberately absent -- it is an outcome, never a choice.
+SELECTABLE_AUTHORITIES = (
+    WindingAuthority.AUTO_FROM_GEOMETRY,
+    WindingAuthority.MANUAL_OVERRIDE,
+    WindingAuthority.LEGACY_MANUAL,
+)
+
+#: Short labels for the input-panel selector. The longer
+#: :data:`AUTHORITY_LABELS_ZH` stays the reporting wording and is unchanged.
+AUTHORITY_CHOICE_LABELS_ZH = {
+    WindingAuthority.AUTO_FROM_GEOMETRY: "自动（几何推导）",
+    WindingAuthority.MANUAL_OVERRIDE: "手动覆盖",
+    WindingAuthority.LEGACY_MANUAL: "旧项目保留",
+}
+
+#: What the numeric ``k_w`` field is called in each state, so the label itself
+#: says whether the number in it is the user's to choose.
+AUTHORITY_FIELD_LABELS_ZH = {
+    WindingAuthority.AUTO_FROM_GEOMETRY: "绕组系数 k_w（自动）",
+    WindingAuthority.MANUAL_OVERRIDE: "绕组系数 k_w（手动覆盖）",
+    WindingAuthority.LEGACY_MANUAL: "绕组系数 k_w（旧项目保留）",
+    WindingAuthority.UNRESOLVED: "绕组系数 k_w（未解析）",
+}
+
+#: Where an automatic value comes from, shown beside the locked field.
+AUTO_SOURCE_NOTE_ZH = "由槽/极/相数与线圈节距自动计算"
+
+#: Shown for a project that predates these semantics.
+LEGACY_RETAINED_NOTE_ZH = "旧项目保留值"
+
 #: Provenance strings a production winding factor may legitimately carry.
 #: ``MESHED_GEOMETRY`` is deliberately absent.
 PRODUCTION_ADMISSIBLE_PROVENANCE = frozenset(
