@@ -6,8 +6,8 @@ numerical FEA validation for permanent-magnet machines.
 
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Platform Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
-![Tests 1036 passed](https://img.shields.io/badge/tests-1036%20passed%2C%203%20skipped-2ea44f)
-![Version 1.0.0-rc4](https://img.shields.io/badge/version-1.0.0--rc4-blue)
+![Tests 1508 passed](https://img.shields.io/badge/tests-1508%20passed%2C%203%20skipped-2ea44f)
+![Version 1.0.0-rc5](https://img.shields.io/badge/version-1.0.0--rc5-blue)
 ![License Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 ---
@@ -25,16 +25,21 @@ its own analytical result — with deterministic case hashing, solver provenance
 sensitivity, and an explicit refusal to let numerical agreement be mistaken for
 experimental proof.
 
-**Current validation maturity:** one geometry-consistent numerical (FEA) comparison of
-no-load back-EMF, at `FEA_TIER_3` fidelity, showing a **+7.15 % residual** that is being
-tracked to the analytical magnetic circuit. **No physical motor has been tested.** See
-[Validation Status](#validation-status).
+**Current validation maturity:** geometry-consistent numerical (FEA) comparison of
+no-load back-EMF at `FEA_TIER_3` fidelity. The original **+7.15 %** analytical-vs-FEMM
+residual has since been **decomposed into four identified, separately-checkable terms**
+with roughly **-0.001 %** unresolved remainder on the baseline case — it was a
+comparison-bridge and convention mismatch, not an unexplained magnetic-circuit error.
+**No physical motor has been tested.** See [Validation Status](#validation-status).
 
 ---
 
 ## Contents
 
 - [Capabilities](#capabilities)
+  - [Winding Engineering & Manufacturability](#winding-engineering--manufacturability)
+  - [Capability Analysis](#capability-analysis-steady-state-motor--inverter)
+  - [Experimental & Public-Reference Evidence](#experimental--public-reference-evidence)
 - [Validation Status](#validation-status)
 - [Known Limitations](#known-limitations)
 - [Architecture](#architecture)
@@ -56,9 +61,39 @@ tracked to the analytical magnetic circuit. **No physical motor has been tested.
 - Lumped magnetic circuit: pole flux, air-gap flux density, permeance, reluctance
 - PMSM (sinusoidal) and BLDC (trapezoidal) electrical semantics with explicit
   phase/line and RMS/peak bases
-- Winding analysis via the slot EMF star — distribution, pitch and skew factors,
-  with automatic geometry-derived or manually entered winding factor
+- Winding analysis via the slot EMF star — distribution `kd`, pitch `kp` and skew `ks`
+  factors, and the resulting fundamental winding factor
 - Geometry and manufacturability checks: slot occupancy, current density, wire fit
+
+### Winding Engineering & Manufacturability
+- Dedicated winding engineering panel: `kd`, `kp`, `ks`, topology classification, and
+  the **production** winding factor shown beside the values it is *not*
+- Three winding factors kept structurally distinct — the value the user entered, the
+  ideal slot-star geometry value, and the meshed-geometry value a 2D FEA slice implies.
+  The meshed value is **diagnostic only** and cannot become production-authoritative
+- Slot fill: gross and usable slot area, bare-copper fill, insulated-envelope fill,
+  and usable-envelope fill against a declared packing factor
+- Manufacturability findings (tight / overfilled / geometrically impossible) surfaced
+  on the main dashboard, not only inside the winding panel
+- **Winding-factor authority** — one decision point with four explicit states:
+  `AUTO_FROM_GEOMETRY`, `MANUAL_OVERRIDE`, `LEGACY_MANUAL`, `UNRESOLVED`.
+  The shipped startup example is geometry-authoritative; projects and presets created
+  before these semantics keep their stored value exactly and are never silently
+  re-derived
+
+### Capability Analysis *(steady-state motor + inverter)*
+- MTPA solved in closed form — `id = 0` exactly for a non-salient machine, and the
+  salient solution checked against the stationarity condition it was derived from
+- Inverter voltage limit derived from the DC bus and modulation strategy
+  (SVPWM `Vdc/sqrt(3)`, SPWM `Vdc/2`), with an explicit, declared utilisation factor
+- Current limit as a dq-magnitude circle, with the phase-RMS → peak conversion explicit
+- **Base speed** solved where the full-current MTPA point first reaches the voltage
+  limit — a property of machine *and* inverter, not the rated speed
+- **Field weakening** maximising torque under both constraints simultaneously
+- Torque-speed and power-speed envelopes, with operating regions classified by
+  **which constraints are active** rather than by speed thresholds
+- dq capability view (current circle, voltage ellipses, MTPA and field-weakening
+  trajectories) and a per-speed operating-point inspector
 
 ### Drive & Control *(simulation sandbox)*
 - dq-frame PMSM model, amplitude-invariant Park/Clarke transforms
@@ -91,20 +126,50 @@ tracked to the analytical magnetic circuit. **No physical motor has been tested.
 - Analytical-vs-FEA comparison with descriptive (never pass/fail) agreement bands
 - **No automatic calibration.** FEA results never modify an analytical parameter
 
+### Experimental & Public-Reference Evidence
+- Structured evidence taxonomy that cannot be confused by construction:
+  `USER_EXPERIMENT`, `PUBLIC_REFERENCE_EXPERIMENT`, `SIMULATED_REFERENCE`,
+  `METHODOLOGY_ONLY`. Reclassification toward a *stronger* claim is refused
+- Measurement CSV import with explicit unit normalisation and refusal to guess:
+  a column named only `Voltage` is rejected with its admissible meanings listed,
+  because line-RMS, phase-RMS and phase-peak differ by up to 73 %
+- Bench-test templates, multi-speed Ke regression, Y/delta resistance semantics,
+  torque-current and efficiency analyses — each stating what it does *not* establish
+- **Machine-compatibility gate**: `SAME_MACHINE`, `COMPATIBLE_REFERENCE`,
+  `DIFFERENT_MACHINE`, `INSUFFICIENT_METADATA`. Another machine's measurements cannot
+  validate this design however small the residual
+- Public-reference integration for the **CREATOR PMSM** open dataset (TU Graz,
+  CC BY-NC 4.0) — back-EMF waveform harmonics, cogging, no-load loss separation and
+  equivalent-circuit parameters, each scalar labelled with its own origin
+  (measured / measurement-derived / FEA-derived / unknown).
+  **No raw dataset is redistributed in this repository** — only citation, DOI,
+  licence, file hashes and adapters
+
 ---
 
 ## Validation Status
 
 | Item | Status |
 |---|---|
-| Regression suite | **1036 passed, 3 skipped** |
+| Regression suite | **1508 passed, 3 skipped** |
 | Real FEMM integration | **PASS** (FEMM 4.2.0.0, 2019-04-21 build) |
 | Numerical validation target | No-load back-EMF / `Ke` |
-| Geometry-consistent residual | **+7.15 %** (FEMM higher than analytical) |
+| Baseline residual, decomposed | **+7.15 % explained**, ≈ **-0.001 %** unresolved remainder |
+| Residual replication | closes on 3 independent designs |
 | FEA model | 2D mean-radius unrolled AFPM slice |
 | FEA fidelity tier | `FEA_TIER_3` |
 | Mesh sensitivity | 0.050 % |
+| Torque comparison | numerical result exists, **not independent** of `Ke` |
+| Coreless cogging | dominated by remesh numerical noise |
+| Public reference processed | CREATOR PMSM — **`DIFFERENT_MACHINE`** |
 | Physical experimental validation | **NOT YET PERFORMED** |
+
+**The residual decomposition.** The original +7.15 % analytical-vs-FEMM gap was traced
+to four separately-checkable terms — a winding-geometry mismatch between the analytical
+model and the meshed 2D slice, a flat-top vs fundamental flux convention, a waveform /
+axial-averaging effect, and the 4.44 form-factor rounding constant — two of which pull
+in opposite directions. It was a comparison-bridge problem, not an unexplained
+magnetic-circuit error. This is an *explanation*, not experimental validation.
 
 ![Analytical vs FEMM Ke comparison](docs/assets/ke_validation_phase10c.png)
 
@@ -162,12 +227,35 @@ Read this section before drawing engineering conclusions.
   decoupled from speed and flux density.
 - **Thermal modeling is simplified.** Static temperature rise is not predicted rather
   than being predicted badly.
-- **The speed sweep is not a torque-speed capability envelope.** It is a point-by-point
-  recomputation; the loss model is speed-decoupled and must not be extrapolated.
+- **The dashboard speed sweep is still not a capability envelope.** It remains a
+  point-by-point recomputation with a speed-decoupled loss model and must not be
+  extrapolated. The **Capability Analysis** view added in `1.0.0-rc5` is the separate,
+  constraint-solved torque-speed envelope; the two are different tools and are not
+  interchangeable.
 - **BLDC same-basis voltage margin is unsupported** (`NOT_ENOUGH_SEMANTICS`) — BLDC has
   no sinusoidal phasor basis, and no equivalent is fabricated.
-- **Torque and cogging have not been FEA-validated** (`NOT_YET_VALIDATED`). The coreless
-  reference has no cogging by construction.
+- **Torque is not independently FEA-validated.** A loaded-torque numerical result does
+  exist, but its residual tracks the back-EMF residual to within 0.13 pp, so it
+  re-measures the same disagreement rather than testing a new one.
+- **Coreless cogging is numerical noise, not a cogging measurement.** The peak-to-peak
+  result roughly halves with each mesh refinement (0.187 → 0.119 → 0.063 N·m), which is
+  the signature of remeshing noise in a machine that has no slots to cog against.
+- **The capability solver assumes `Ld = Lq`** for the AFPM reference, under a declared
+  `ISOTROPIC_ASSUMPTION`: the production model exposes one synchronous inductance, and
+  no saliency is invented. A genuinely salient machine will have its reluctance torque
+  and field-weakening range understated unless Ld and Lq are supplied explicitly.
+- **An unbounded electrical speed result is not an unbounded rotor speed.** When the
+  current limit exceeds the machine's characteristic current `ψ/Ld`, no electrical
+  steady-state speed bound is found within the configured search range, and the
+  reported figure is the *search ceiling*, flagged as unbounded. Mechanical stress,
+  bearing limits, rotor retention, thermal limits, switching-frequency limits and
+  control-bandwidth limits are **not modeled** by this electrical capability solver.
+- **Public reference data is from a different machine.** The CREATOR PMSM is a
+  radial-flux inset PMSM (4 poles, 6 slots); the reference design here is a 16-pole,
+  24-slot axial-flux machine. Successfully reproducing CREATOR's published values
+  validates *this software's processing chain*, not this design.
+- **Windows binaries are unsigned.** SmartScreen and Defender may warn on first run.
+  Verify the published SHA-256 checksums before installing.
 - **No manufacturing certification, no standards-compliance claim.**
 - **No automatic model calibration** — by design.
 
@@ -215,7 +303,7 @@ normally without it; only the validation features become unavailable.
 | `motor_calculator/gui/` | Tkinter GUI, dashboards, dialogs |
 | `motor_calculator/plots/` | Dashboard data, charts, CSV/figure export |
 | `motor_calculator/project/` | `.motorproj` save/load, autosave, crash recovery |
-| `motor_calculator/tests/` | 107 test modules |
+| `motor_calculator/tests/` | 117 test modules |
 | `validation_data/` | Reference cases, reconstructed literature data, FEA evidence bundles |
 | `docs/` | Engineering documentation and phase reports (largely Chinese) |
 | `installer/`, `packaging/`, `work/` | Inno Setup script, PyInstaller spec, build/utility scripts |
@@ -296,7 +384,7 @@ FEA validation requires [FEMM](https://www.femm.info/) installed separately.
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Current: **1036 passed, 3 skipped** across 107 test modules. The 3 skips are
+Current: **1508 passed, 3 skipped** across 117 test modules. The 3 skips are
 solver-availability branches that do not apply when FEMM is installed.
 
 Major categories:
@@ -342,7 +430,12 @@ Run only the real-solver tests:
 Single-file prototype → modular, testable core → corrected electrical semantics
 (phase/line, RMS/peak, Ke/Kt) → drive and control modeling → Windows productization
 (installer, project files, crash recovery) → corrected PMSM voltage semantics →
-FEMM numerical validation bridge → real-solver Ke validation.
+FEMM numerical validation bridge → real-solver Ke validation → **residual decomposition
+and cross-design replication** → **torque/cogging numerical assessment** → **winding
+engineering and manufacturability** → **a single production winding-factor authority,
+with legacy projects preserved** → **experimental / public-reference evidence framework
+and CREATOR integration** → **steady-state MTPA, field-weakening and torque-speed
+capability**.
 
 Detailed engineering history, including formula-change approvals and validation
 campaigns, is in [`docs/`](docs/) (largely Chinese).
