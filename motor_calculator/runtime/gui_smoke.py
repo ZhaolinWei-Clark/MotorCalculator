@@ -1562,6 +1562,165 @@ def _exercise_phase10a_fea_validation(root, app, output: Path) -> dict[str, Any]
     return results
 
 
+def _exercise_rc51_customer_winding_ui(root, app) -> dict[str, Any]:
+    """RC5.1: what a customer actually sees for k_w and for slot fill.
+
+    A. a new AUTO project           -- k_w read-only, showing the production value
+    B. a legacy/manual project      -- stored value kept, labelled as such
+    C. slot fill unavailable        -- the missing input is named
+
+    Every assertion is about a visible widget, because the defect this covers
+    was invisible to every non-GUI test: the numbers were right everywhere
+    except on the screen.
+    """
+
+    from motor_calculator.winding.authority import (
+        AUTHORITY_CHOICE_LABELS_ZH,
+        AUTHORITY_FIELD_LABELS_ZH,
+        WindingAuthority,
+    )
+    from motor_calculator.winding.evaluation import evaluate_winding
+    from motor_calculator.winding.slot_fill_card import build_slot_fill_card
+
+    results: dict[str, Any] = {}
+
+    def select(authority):
+        app._winding_authority_var.set(AUTHORITY_CHOICE_LABELS_ZH[authority])
+        app._on_winding_authority_selected()
+        root.update()
+
+    def state(widget):
+        return str(widget.cget("state"))
+
+    geometry_kw = 3.0 ** 0.5 / 2.0
+
+    # --- A. a new AUTO project ---------------------------------------------
+    select(WindingAuthority.MANUAL_OVERRIDE)
+    app.vars["k_w"].set("0.755")
+    app._refresh_winding_factor_summary()
+    root.update()
+    results["rc51_stale_value_accepted_in_manual"] = app._get_params()["k_w"] == 0.755
+
+    app._coil_span_slots_var.set("1")
+    select(WindingAuthority.AUTO_FROM_GEOMETRY)
+    results["rc51_auto_authority"] = app.current_winding_authority().value
+    results["rc51_auto_field_is_readonly"] = state(app.entries["k_w"]) == "readonly"
+    results["rc51_auto_quick_entry_is_readonly"] = (
+        state(app._guided_input_panel.quick_entries["k_w"]) == "readonly"
+    )
+    results["rc51_auto_slider_disabled"] = (
+        state(app._guided_input_panel.sliders["k_w"]) == "disabled"
+    )
+    results["rc51_auto_field_label"] = app._winding_factor_field_label_var.get()
+    results["rc51_auto_label_says_auto"] = (
+        app._winding_factor_field_label_var.get()
+        == AUTHORITY_FIELD_LABELS_ZH[WindingAuthority.AUTO_FROM_GEOMETRY]
+    )
+    results["rc51_auto_source_note_present"] = bool(app._winding_factor_source_var.get())
+    results["rc51_no_stale_value_remains"] = "0.755" != str(app.vars["k_w"].get())
+
+    left_panel = float(app.vars["k_w"].get())
+    production = float(app._get_params()["k_w"])
+    dashboard = float(app._winding_dashboard_summary().production_winding_factor)
+    dialog = app._open_winding_engineering()
+    root.update()
+    dialog_value = float(dialog._production.value)
+    results["rc51_dialog_adopts_session_authority"] = (
+        dialog.selected_authority() is WindingAuthority.AUTO_FROM_GEOMETRY
+    )
+    results["rc51_dialog_keeps_entered_distinct"] = (
+        dialog._evaluation.report.factors.entered == 0.755
+    )
+    dialog.window.destroy()
+    root.update()
+    app.run_analysis()
+    root.update()
+    exported = float(app.rc2_export_payload()["winding_factor"])
+
+    results["rc51_left_panel_kw"] = left_panel
+    results["rc51_production_kw"] = production
+    results["rc51_dashboard_kw"] = dashboard
+    results["rc51_dialog_kw"] = dialog_value
+    results["rc51_exported_kw"] = exported
+    results["rc51_all_surfaces_agree"] = all(
+        abs(value - geometry_kw) <= 5.0e-7
+        for value in (left_panel, production, dashboard, dialog_value, exported)
+    )
+
+    # --- the dashboard slot-fill card --------------------------------------
+    card_text = app.results_dashboard._slot_fill_var.get()
+    results["rc51_slot_fill_card_packed"] = (
+        app.results_dashboard._slot_fill_label.winfo_manager() == "pack"
+    )
+    results["rc51_slot_fill_shows_copper_fill"] = "铜填充率（可用槽面积）" in card_text
+    results["rc51_slot_fill_shows_envelope_fill"] = "绝缘包络填充率（可用槽面积）" in card_text
+    results["rc51_slot_fill_shows_status"] = "状态" in card_text
+    results["rc51_slot_fill_status_is_chinese"] = "FEASIBLE" not in card_text
+    results["rc51_slot_fill_shows_areas"] = all(
+        label in card_text
+        for label in ("总槽面积", "可用槽面积", "裸铜面积", "绝缘后导体包络面积")
+    )
+    card = app.results_dashboard.slot_fill_card
+    results["rc51_usable_copper_fill"] = card.usable_copper_fill
+    results["rc51_usable_envelope_fill"] = card.usable_envelope_fill
+    results["rc51_gross_copper_fill"] = card.gross_copper_fill
+    results["rc51_gross_envelope_fill"] = card.gross_envelope_fill
+    results["rc51_gross_slot_area_mm2"] = card.gross_slot_area_mm2
+    results["rc51_usable_slot_area_mm2"] = card.usable_slot_area_mm2
+    results["rc51_bare_copper_area_mm2"] = card.bare_copper_area_mm2
+    results["rc51_envelope_area_mm2"] = card.envelope_area_mm2
+    results["rc51_manufacturability_status"] = card.status
+
+    # --- B. a legacy/manual project ----------------------------------------
+    select(WindingAuthority.LEGACY_MANUAL)
+    app.vars["k_w"].set("0.93")
+    app._refresh_winding_factor_summary()
+    root.update()
+    results["rc51_legacy_authority"] = app.current_winding_authority().value
+    results["rc51_legacy_value_preserved"] = app._get_params()["k_w"] == 0.93
+    results["rc51_legacy_field_editable"] = state(app.entries["k_w"]) == "normal"
+    results["rc51_legacy_label_says_legacy"] = (
+        app._winding_factor_field_label_var.get()
+        == AUTHORITY_FIELD_LABELS_ZH[WindingAuthority.LEGACY_MANUAL]
+    )
+    results["rc51_legacy_note"] = app._winding_factor_source_var.get()
+    results["rc51_legacy_dashboard_authority"] = (
+        app._winding_dashboard_summary().authority
+    )
+
+    # --- AUTO without enough geometry is UNRESOLVED, not a silent number ----
+    select(WindingAuthority.AUTO_FROM_GEOMETRY)
+    app._coil_span_slots_var.set("")
+    root.update()
+    results["rc51_unresolved_label"] = (
+        app._winding_factor_field_label_var.get()
+        == AUTHORITY_FIELD_LABELS_ZH[WindingAuthority.UNRESOLVED]
+    )
+    results["rc51_unresolved_keeps_field_editable"] = state(app.entries["k_w"]) == "normal"
+    app._coil_span_slots_var.set("1")
+    root.update()
+
+    # --- C. slot fill unavailable ------------------------------------------
+    unavailable = build_slot_fill_card(
+        evaluate_winding(
+            {**app._get_params(), "d_wire": 0.0},
+            authority=WindingAuthority.AUTO_FROM_GEOMETRY,
+        )
+    )
+    app.results_dashboard.set_slot_fill_card(unavailable)
+    root.update()
+    unavailable_text = app.results_dashboard._slot_fill_var.get()
+    results["rc51_unavailable_names_the_field"] = "d_wire" in unavailable_text
+    results["rc51_unavailable_gives_a_reason"] = "原因" in unavailable_text
+    results["rc51_unavailable_missing_fields"] = list(unavailable.missing_fields)
+
+    # Leave the session on the shipped startup authority.
+    select(WindingAuthority.AUTO_FROM_GEOMETRY)
+    app.run_analysis()
+    root.update()
+    return results
+
+
 def run_real_gui_smoke(root, app, output_path: Path) -> None:
     """Exercise the real GUI, persist evidence/export, write JSON, then exit."""
 
@@ -1859,6 +2018,43 @@ def run_real_gui_smoke(root, app, output_path: Path) -> None:
         payload.update(phase11a_results)
         phase12_results = _exercise_phase12_capability(root, app, output)
         payload.update(phase12_results)
+        rc51_results = _exercise_rc51_customer_winding_ui(root, app)
+        payload.update(rc51_results)
+        if not all(
+            rc51_results[name]
+            for name in (
+                "rc51_stale_value_accepted_in_manual",
+                "rc51_auto_field_is_readonly",
+                "rc51_auto_quick_entry_is_readonly",
+                "rc51_auto_slider_disabled",
+                "rc51_auto_label_says_auto",
+                "rc51_auto_source_note_present",
+                "rc51_no_stale_value_remains",
+                "rc51_dialog_adopts_session_authority",
+                "rc51_dialog_keeps_entered_distinct",
+                "rc51_all_surfaces_agree",
+                "rc51_slot_fill_card_packed",
+                "rc51_slot_fill_shows_copper_fill",
+                "rc51_slot_fill_shows_envelope_fill",
+                "rc51_slot_fill_shows_status",
+                "rc51_slot_fill_status_is_chinese",
+                "rc51_slot_fill_shows_areas",
+                "rc51_legacy_value_preserved",
+                "rc51_legacy_field_editable",
+                "rc51_legacy_label_says_legacy",
+                "rc51_unresolved_label",
+                "rc51_unresolved_keeps_field_editable",
+                "rc51_unavailable_names_the_field",
+                "rc51_unavailable_gives_a_reason",
+            )
+        ):
+            raise RuntimeError("RC5.1 customer winding/slot-fill UI gate did not pass")
+        if rc51_results["rc51_auto_authority"] != "AUTO_FROM_GEOMETRY":
+            raise RuntimeError("RC5.1: AUTO selection did not take effect")
+        if rc51_results["rc51_legacy_authority"] != "LEGACY_MANUAL":
+            raise RuntimeError(
+                "RC5.1: a legacy project must not be reported as a manual override"
+            )
         if not all(
             phase12_results[name]
             for name in (
