@@ -1,5 +1,9 @@
 # MotorCalculator v1.0.0-rc5 — Customer Preview
 
+> **Superseded by v1.0.0-rc6**, a corrective release that fixes how the winding
+> factor and slot fill are presented. Everything described here still applies;
+> see [`release_notes_v1.0.0_rc6.md`](release_notes_v1.0.0_rc6.md).
+
 **Release channel:** release candidate · engineering preview
 **Platform:** Windows x64
 **Previous release:** v1.0.0-rc4

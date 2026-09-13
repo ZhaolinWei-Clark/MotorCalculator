@@ -19,7 +19,7 @@
         "flux_per_pole_wb": 0.0003429919194211033,
         "torque_constant_nm_per_phase_rms_a": 0.2704899819628649
       },
-      "application_version": "1.0.0-rc5",
+      "application_version": "1.0.0-rc6",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
       "case_id": "357ad0548395a5bb4b217661660d5f1e4ef8ddec02a5428f5207de740d82f2e0",
       "geometry": {
@@ -226,7 +226,7 @@
         "flux_per_pole_wb": 0.0003429919194211033,
         "torque_constant_nm_per_phase_rms_a": 0.2704899819628649
       },
-      "application_version": "1.0.0-rc5",
+      "application_version": "1.0.0-rc6",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
       "case_id": "6613e84c87615da23c75642be75da7f452cd7d979e0d07933cfa105f975e7b67",
       "geometry": {
@@ -434,7 +434,7 @@
         "flux_per_pole_wb": 0.0003429919194211033,
         "torque_constant_nm_per_phase_rms_a": 0.2704899819628649
       },
-      "application_version": "1.0.0-rc5",
+      "application_version": "1.0.0-rc6",
       "back_emf_extraction_method": "magnetostatic solve at each rotor position; phase flux linkage read from the circuit property; back-EMF obtained as e = omega_mech * d(lambda)/d(theta_mech) by spectral differentiation of the periodic flux-linkage waveform",
       "case_id": "73adc05548850eda516d83ee08850bdb4f93a3fd33f090b3245ae1f8b2da2f3e",
       "geometry": {

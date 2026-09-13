@@ -6,8 +6,8 @@ numerical FEA validation for permanent-magnet machines.
 
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Platform Windows](https://img.shields.io/badge/Platform-Windows-0078D6?logo=windows&logoColor=white)
-![Tests 1508 passed](https://img.shields.io/badge/tests-1508%20passed%2C%203%20skipped-2ea44f)
-![Version 1.0.0-rc5](https://img.shields.io/badge/version-1.0.0--rc5-blue)
+![Tests 1536 passed](https://img.shields.io/badge/tests-1536%20passed%2C%203%20skipped-2ea44f)
+![Version 1.0.0-rc6](https://img.shields.io/badge/version-1.0.0--rc6-blue)
 ![License Apache 2.0](https://img.shields.io/badge/license-Apache--2.0-blue)
 
 ---
@@ -80,6 +80,15 @@ comparison-bridge and convention mismatch, not an unexplained magnetic-circuit e
   The shipped startup example is geometry-authoritative; projects and presets created
   before these semantics keep their stored value exactly and are never silently
   re-derived
+- The input panel **shows the authority it is in and the value that authority
+  produced.** The `k_w` control is read-only exactly when what is typed in it is not
+  what production uses, and then displays the number that is — so the panel, the
+  dashboard, the winding view, the report and the export can never show a user two
+  different winding factors (`1.0.0-rc6`)
+- **Slot fill on the main dashboard** — both usable fills, the finding in plain
+  Chinese, and all four areas and ratios behind it. When a fill cannot be computed
+  the card names the missing parameters instead of printing "unavailable"
+  (`1.0.0-rc6`)
 
 ### Capability Analysis *(steady-state motor + inverter)*
 - MTPA solved in closed form — `id = 0` exactly for a non-salient machine, and the
@@ -151,7 +160,7 @@ comparison-bridge and convention mismatch, not an unexplained magnetic-circuit e
 
 | Item | Status |
 |---|---|
-| Regression suite | **1508 passed, 3 skipped** |
+| Regression suite | **1536 passed, 3 skipped** |
 | Real FEMM integration | **PASS** (FEMM 4.2.0.0, 2019-04-21 build) |
 | Numerical validation target | No-load back-EMF / `Ke` |
 | Baseline residual, decomposed | **+7.15 % explained**, ≈ **-0.001 %** unresolved remainder |
@@ -256,6 +265,9 @@ Read this section before drawing engineering conclusions.
   validates *this software's processing chain*, not this design.
 - **Windows binaries are unsigned.** SmartScreen and Defender may warn on first run.
   Verify the published SHA-256 checksums before installing.
+- **Slot-fill packing factor and threshold bands are engineering assumptions**
+  (`ENGINEERING_ASSUMPTION`), common practice for random-wound round wire rather than
+  a standard. The dashboard card states this next to the numbers.
 - **No manufacturing certification, no standards-compliance claim.**
 - **No automatic model calibration** — by design.
 
@@ -303,7 +315,7 @@ normally without it; only the validation features become unavailable.
 | `motor_calculator/gui/` | Tkinter GUI, dashboards, dialogs |
 | `motor_calculator/plots/` | Dashboard data, charts, CSV/figure export |
 | `motor_calculator/project/` | `.motorproj` save/load, autosave, crash recovery |
-| `motor_calculator/tests/` | 117 test modules |
+| `motor_calculator/tests/` | 118 test modules |
 | `validation_data/` | Reference cases, reconstructed literature data, FEA evidence bundles |
 | `docs/` | Engineering documentation and phase reports (largely Chinese) |
 | `installer/`, `packaging/`, `work/` | Inno Setup script, PyInstaller spec, build/utility scripts |
@@ -384,7 +396,7 @@ FEA validation requires [FEMM](https://www.femm.info/) installed separately.
 .venv\Scripts\python.exe -m pytest -q
 ```
 
-Current: **1508 passed, 3 skipped** across 117 test modules. The 3 skips are
+Current: **1536 passed, 3 skipped** across 118 test modules. The 3 skips are
 solver-availability branches that do not apply when FEMM is installed.
 
 Major categories:

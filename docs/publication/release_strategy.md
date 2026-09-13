@@ -1,9 +1,10 @@
 # Release Strategy — v1.0.0-rc4
 
-> **Superseded by v1.0.0-rc5.** This document is the RC4 record and is kept as-is:
+> **Superseded by v1.0.0-rc6.** This document is the RC4 record and is kept as-is:
 > its statements were accurate for that build and rewriting them would destroy a
 > release history. The current release is described in
-> [`release_notes_v1.0.0_rc5.md`](release_notes_v1.0.0_rc5.md).
+> [`release_notes_v1.0.0_rc6.md`](release_notes_v1.0.0_rc6.md); the intervening
+> release is [`release_notes_v1.0.0_rc5.md`](release_notes_v1.0.0_rc5.md).
 > RC4 was published; its artifacts and checksums below remain valid for RC4.
 
 **Status: artifacts built and verified locally. No tag created, nothing uploaded.**
